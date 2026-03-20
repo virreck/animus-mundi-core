@@ -1,73 +1,37 @@
-# React + TypeScript + Vite
+Animus Mundi Core
+=================
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Animus Mundi Core** is a TypeScript-based investigation engine designed for a narrative-driven RPG centered on spiritual-industrial displacement. Players take on the role of an investigator navigating a world where the boundary between reality and the esoteric is thinning.
 
-Currently, two official plugins are available:
+🛠 Core Systems
+---------------
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+-   **The Open Tome UI**: A specialized React interface simulating an investigator's field journal, featuring a dual-page layout for simultaneous navigation and data analysis.
 
-## React Compiler
+-   **Ars Goetia Index**: A data-driven manifest of 72 Goetic entities, each requiring specific "intel tags" gathered from the environment to be identified and banished.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+-   **Yōroku (Yokai Contracts)**: A library of 52 unique Yokai entities that can be bound via Obols to provide utility in the field, ranging from sensory enhancement to stealth and enforcement.
 
-## Expanding the ESLint configuration
+-   **Narrative Engine**: A state-based branching dialogue system that tracks player choices, inventory changes, and world state.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+🚀 Technical Stack
+------------------
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+-   **Framework**: React (Vite).
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+-   **Language**: TypeScript for strict type safety across game data.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+-   **State Management**: A custom Reducer-based engine for handling complex game logic and delta-based state updates.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+🗺 Roadmap
+----------
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+The project is currently transitioning from a standalone prototype to a fully indexed system. Upcoming priorities include:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+-   **Logic Fog**: Implementing a visibility layer so the Grimoire only reveals Goetic entries as relevant intel is gathered.
+
+-   **Utility Alignment**: Updating the `activationCost` and `gameUtility` logic for Yokai to integrate directly with the investigation loop.
+
+-   **System Meters**: Re-implementing the **Sector Entropy (Chaos)** and **Humanity** meters to track the consequences of player actions.
+
+-   **UI Polish**: Refining the parchment aesthetic and adding custom iconography for different entity classes.
