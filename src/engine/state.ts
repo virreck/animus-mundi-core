@@ -46,16 +46,13 @@ export const initialGameState: GameState = {
   flags: {}
 };
 
-// --- 5. NARRATIVE & LOGIC TYPES (Add to bottom of state.ts) ---
-
-import type { GameAction } from './reducer'; // We need to import the actions so choices can trigger them
+// --- 5. NARRATIVE & LOGIC TYPES ---
+import type { GameAction } from './reducer';
 
 export interface Choice {
   id: string;
   label: string;
-  // A function that checks the current state to see if the button should be shown/clickable
   condition?: (state: GameState) => boolean; 
-  // An array of actions that fire when the player clicks this choice
   actions: GameAction[]; 
 }
 
@@ -69,8 +66,8 @@ export interface NarrativeNode {
 export interface GoetiaDef {
   id: GoetiaId;
   name: string;
-  title: string; // e.g., "The Pale Rider's Vanguard"
+  title: string; 
   description: string;
-  requiredIntel: IntelTag[]; // The clues needed to identify them
-  sealCost: Record<ItemId, number>; // What items are needed to banish them
+  requiredIntel: IntelTag[]; 
+  sealCost: Record<ItemId, number>; 
 }
