@@ -10,6 +10,7 @@ export type GameAction =
   | { type: 'ADVANCE_TIME'; payload: number }
   | { type: 'MODIFY_INVENTORY'; payload: { itemId: ItemId; amount: number } }
   | { type: 'ADD_LEAD'; payload: Lead }
+  | { type: 'IDENTIFY_GOETIA'; payload: GoetiaId } // <-- NEW
   | { type: 'SEAL_GOETIA'; payload: GoetiaId }
   | { type: 'RESET_GAME' };
 
@@ -38,6 +39,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'ADD_LEAD':
       if (state.activeLeads.some(lead => lead.id === action.payload.id)) return state;
       return { ...state, activeLeads: [...state.activeLeads, action.payload] };
+    case 'IDENTIFY_GOETIA': // <-- NEW
+      if (state.identifiedGoetia.includes(action.payload)) return state;
+      return { ...state, identifiedGoetia: [...state.identifiedGoetia, action.payload] };
     case 'SEAL_GOETIA':
       if (state.sealedGoetia.includes(action.payload)) return state;
       return { ...state, sealedGoetia: [...state.sealedGoetia, action.payload] };

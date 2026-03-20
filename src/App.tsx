@@ -20,11 +20,10 @@ const theme = {
 };
 
 export default function App() {
-  const { state, dispatch, draftContract, advanceTime, resetGame, sealGoetia } = useEngine();
+  const { state, dispatch, draftContract, advanceTime, resetGame, identifyGoetia, sealGoetia } = useEngine(); // Added identifyGoetia here
   const [currentTab, setCurrentTab] = useState<'MAP' | 'GRIMOIRE' | 'YOROKU' | 'JOURNAL' | 'INVENTORY'>('MAP');
   const [selectedGoetiaId, setSelectedGoetiaId] = useState<string | null>(null);
   
-  // --- TOAST NOTIFICATION SYSTEM ---
   const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
 
   const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' = 'ALERT') => {
@@ -110,8 +109,15 @@ export default function App() {
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {ALL_GOETIA.map(goetia => {
-                      const isIdentified = goetia.requiredIntel.every(tag => state.intelLog.includes(tag));
+                      const hasAllIntel = goetia.requiredIntel.every(tag => state.intelLog.includes(tag));
+                      const isIdentified = state.identifiedGoetia.includes(goetia.id);
                       const isSealed = state.sealedGoetia.includes(goetia.id);
+
+                      // Visual cue if ready to identify
+                      let indexLabel = `UNKNOWN ENTITY (#${goetia.id.substring(0,4).toUpperCase()})`;
+                      if (isSealed) indexLabel = `封 ${goetia.name} (SEALED)`;
+                      else if (isIdentified) indexLabel = goetia.name;
+                      else if (hasAllIntel) indexLabel = `[!] TARGET DATA ACQUIRED`;
 
                       return (
                         <button 
@@ -120,15 +126,12 @@ export default function App() {
                           style={{
                             padding: '12px',
                             backgroundColor: selectedGoetiaId === goetia.id ? 'rgba(122, 25, 25, 0.1)' : 'transparent',
-                            color: theme.textInk,
+                            color: hasAllIntel && !isIdentified ? theme.accentRed : theme.textInk,
                             border: `1px solid ${selectedGoetiaId === goetia.id ? theme.accentRed : theme.borderBronze}`,
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            fontFamily: theme.fontSerif,
-                            fontWeight: 'bold'
+                            textAlign: 'left', cursor: 'pointer', fontFamily: theme.fontSerif, fontWeight: 'bold'
                           }}
                         >
-                          {isSealed ? `封 ${goetia.name} (SEALED)` : isIdentified ? goetia.name : `UNKNOWN ENTITY (#${goetia.id.substring(0,4).toUpperCase()})`}
+                          {indexLabel}
                         </button>
                       );
                     })}
@@ -231,7 +234,8 @@ export default function App() {
                 <>
                    {selectedGoetiaId ? (() => {
                      const target = ALL_GOETIA.find(g => g.id === selectedGoetiaId)!;
-                     const isIdentified = target.requiredIntel.every(tag => state.intelLog.includes(tag));
+                     const hasAllIntel = target.requiredIntel.every(tag => state.intelLog.includes(tag));
+                     const isIdentified = state.identifiedGoetia.includes(target.id);
                      const isSealed = state.sealedGoetia.includes(target.id);
                      const canAffordSeal = Object.entries(target.sealCost).every(([item, amount]) => (state.inventory[item] || 0) >= amount);
 
@@ -240,8 +244,16 @@ export default function App() {
                          <h2 style={{ borderBottom: `2px solid ${theme.accentRed}`, paddingBottom: '10px', letterSpacing: '2px' }}>
                            {isIdentified ? target.name.toUpperCase() : "TARGET OBSCURED"}
                          </h2>
-                         {isIdentified && <p style={{ fontStyle: 'italic', color: theme.accentRed, fontWeight: 'bold' }}>{target.title}</p>}
-                         <p style={{ lineHeight: '1.6' }}>{isIdentified ? target.description : "Gather more evidence in the field to reveal the identity of this lieutenant."}</p>
+
+                         {/* Only show the lore once they've manually identified it */}
+                         {isIdentified ? (
+                           <>
+                             <p style={{ fontStyle: 'italic', color: theme.accentRed, fontWeight: 'bold' }}>{target.title}</p>
+                             <p style={{ lineHeight: '1.6' }}>{target.description}</p>
+                           </>
+                         ) : (
+                           <p style={{ lineHeight: '1.6', color: '#666', fontStyle: 'italic' }}>Identity hidden. Compile required intel to reveal the lieutenant's true nature.</p>
+                         )}
 
                          <div style={{ marginTop: '30px', padding: '15px', border: `1px dashed ${theme.borderBronze}` }}>
                            <h3 style={{ fontSize: '1rem', marginBottom: '15px' }}>REQUIRED INTEL</h3>
@@ -257,6 +269,23 @@ export default function App() {
                            </ul>
                          </div>
 
+                         {/* The Big Identify Button */}
+                         {hasAllIntel && !isIdentified && (
+                           <div style={{ marginTop: '40px', textAlign: 'center' }}>
+                             <p style={{ color: theme.accentRed, fontStyle: 'italic', marginBottom: '15px' }}>Data sufficient. A pattern emerges...</p>
+                             <button 
+                               onClick={() => {
+                                 identifyGoetia(target.id);
+                                 addToast(`Target Identity Confirmed: ${target.name}`, 'ALERT');
+                               }}
+                               style={{ padding: '15px 30px', fontSize: '1.1rem', backgroundColor: '#3a0c0c', color: 'white', border: `2px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontSerif, letterSpacing: '2px', boxShadow: '0 4px 15px rgba(122, 25, 25, 0.4)' }}
+                             >
+                               IDENTIFY ENTITY
+                             </button>
+                           </div>
+                         )}
+
+                         {/* The Sealing Ritual Interface (Only appears after identification) */}
                          {isIdentified && !isSealed && (
                            <div style={{ marginTop: '30px', backgroundColor: theme.bgWood, padding: '20px', color: theme.textParchment, border: `1px solid ${theme.accentRed}` }}>
                              <h3 style={{ marginTop: 0, color: theme.accentRed }}>INITIATE BANISHMENT</h3>
@@ -278,7 +307,7 @@ export default function App() {
                                    dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } });
                                  });
                                  sealGoetia(target.id);
-                                 addToast(`${target.name} has been sealed.`, 'ALERT');
+                                 addToast(`${target.name} has been banished.`, 'ALERT');
                                }}
                                disabled={!canAffordSeal}
                                style={{ padding: '10px', width: '100%', marginTop: '15px', backgroundColor: canAffordSeal ? '#3a0c0c' : '#222', color: canAffordSeal ? 'white' : '#555', border: 'none', cursor: canAffordSeal ? 'pointer' : 'not-allowed', fontFamily: theme.fontSerif }}
