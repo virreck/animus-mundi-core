@@ -8,8 +8,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Flashlight / True Sight: Reveals hidden Goetic sigils.",
     "costDescription": "Constant supply of lamp oil.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "lamp_oil"
     }
   },
   {
@@ -19,9 +20,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Rear-View Sensor: Prevents back-attacks/ambushes.",
     "costDescription": "A \"prank\" performed on a neutral NPC.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "03_satori",
@@ -30,8 +30,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Interrogation: Detects lies during questioning.",
     "costDescription": "Temporary Sanity/MP drain.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "humanity": 10
     }
   },
   {
@@ -41,9 +42,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Room Scanner: Sees everyone inside a building.",
     "costDescription": "Must be used in a room with windows.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "05_yosuzume",
@@ -52,9 +52,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Proximity Alarm: Chirps near Goetic entities.",
     "costDescription": "Small offerings of grain/seed.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "06_ungaiky_",
@@ -63,8 +62,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Remote Viewing: A live CCTV feed of a distant room.",
     "costDescription": "Requires a silver-backed mirror focus.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "silver_mirror"
     }
   },
   {
@@ -74,9 +74,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Dream Forensics: Extracts memories from the sleeping.",
     "costDescription": "Player loses 1 \"Positive Memory\" (buff).",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "08_yamabiko",
@@ -85,9 +84,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Sonic Echo: Eavesdrop through thick walls.",
     "costDescription": "Must shout a specific vocal command.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "09_tenjo_name",
@@ -96,9 +94,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Ceiling Scout: Reveals attic traps or hidden items.",
     "costDescription": "Room must be in total darkness.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "10_hiderigami",
@@ -107,8 +104,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Thermal Tracker: Detects \"Cold Spots\" (Death/Ghost).",
     "costDescription": "Drains player hydration/water items.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "water_flask"
     }
   },
   {
@@ -118,9 +116,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Event Forecast: Predicts upcoming world \"Symptoms.\"",
     "costDescription": "Draw and share the Amabie’s likeness.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "12_ao_and_",
@@ -129,9 +126,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Ghost Summoner: Forces spirits to manifest.",
     "costDescription": "Tells a \"Scary Story\" (Time skip).",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "13_inugami",
@@ -140,8 +136,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Sensor",
     "gameUtility": "Bloodhound: Tracks targets via DNA/Scent.",
     "costDescription": "A drop of the Player's own blood.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "humanity": 5
     }
   },
   {
@@ -151,9 +148,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Smoke Form: Drift through keyholes and vents.",
     "costDescription": "Only works near an active fire/hearth.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "15_nurikabe",
@@ -162,9 +158,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Exit Blocker: Traps a suspect in a dead-end.",
     "costDescription": "Player must remain stationary.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "16_kamaitachi",
@@ -173,9 +168,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Lock Breaker: Silently slices bolts/chains.",
     "costDescription": "High Wind-Essence cost.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "17_ittan_momen",
@@ -184,9 +178,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Glider / Capture: Aerial mobility or a straitjacket.",
     "costDescription": "Must be \"washed\" at a shrine after use.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "18_nurarihyon",
@@ -195,8 +188,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Social Stealth: NPCs ignore your presence.",
     "costDescription": "A high-quality meal or tea offering.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "food_ration"
     }
   },
   {
@@ -206,9 +200,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Identity Theft: Copy the face of a nearby NPC.",
     "costDescription": "Player cannot speak for the duration.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "20_kasa_obake",
@@ -217,9 +210,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Rain Shield: Blocks \"Pestilence\" acid rain.",
     "costDescription": "Occupies the \"Off-Hand\" equipment slot.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "21_takaonna",
@@ -228,8 +220,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Verticality: Peer into 2nd-story windows.",
     "costDescription": "Strains physical stamina/health.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "humanity": 5
     }
   },
   {
@@ -239,8 +232,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Blindness: Stuns guards with spiritual sand.",
     "costDescription": "Requires a pouch of \"Sacred Sand.\"",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "sacred_sand"
     }
   },
   {
@@ -250,9 +244,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Evidence Eraser: Cleans blood/fingerprints.",
     "costDescription": "Requires a \"dirty\" crime scene to summon.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "24_kodama",
@@ -261,9 +254,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Forest Path: Teleport between old-growth trees.",
     "costDescription": "Cannot be used in concrete/urban zones.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "25_betobeto_san",
@@ -272,9 +264,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Stealth",
     "gameUtility": "Distraction: Phantom footsteps lead guards away.",
     "costDescription": "Player must politely \"step aside\" to trigger.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "26_kameosa",
@@ -283,8 +274,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Item Duplicator: Temporary infinite small items.",
     "costDescription": "Requires a liquid catalyst (Water/Sake).",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "water_flask"
     }
   },
   {
@@ -294,9 +286,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Loot Booster: Better clues/items found in-base.",
     "costDescription": "Must be \"housed\" in the Player's HQ.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "28_kappa",
@@ -305,8 +296,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Medic: Heals broken bones and physical injury.",
     "costDescription": "A fresh cucumber or local water source.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "cucumber"
     }
   },
   {
@@ -316,9 +308,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Curse Transfer: Moves debuffs from Player to NPC.",
     "costDescription": "Drains a large amount of Player Gold.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "30_f_rin_bi",
@@ -327,9 +318,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Energy Recharge: Restores MP/Shikigami points.",
     "costDescription": "Requires a windy environment.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "31_nezumi_otoko",
@@ -338,9 +328,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Black Market: Buy/Sell \"Illegal\" esoteric goods.",
     "costDescription": "Takes a high commission on all sales.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "32_futakuchi_onna",
@@ -349,8 +338,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Double-Casting: Use two Yokai simultaneously.",
     "costDescription": "Consumes double \"Food\" resources.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "food_ration"
     }
   },
   {
@@ -360,9 +350,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Fire Extinguisher: Localized rain puts out fires.",
     "costDescription": "Player gets \"Soaked\" (Speed debuff).",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "34_umi_b_zu",
@@ -371,8 +360,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Fog Cover: Massive smoke screen for escapes.",
     "costDescription": "Only usable near large bodies of water.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "water_flask"
     }
   },
   {
@@ -382,9 +372,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Money Cleansing: Purifies \"Cursed\" Horseman Gold.",
     "costDescription": "Requires a ritual washing at a spring.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "36_ky_bi_no_kitsune",
@@ -393,8 +382,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Utility",
     "gameUtility": "Master Catalyst: Massive buff to all Yokai stats.",
     "costDescription": "Requires a permanent, heavy sacrifice.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "humanity": 20
     }
   },
   {
@@ -404,8 +394,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "Kinetic Strike: Wind gust blows back objects.",
     "costDescription": "High cooldown; spiritual fatigue.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "humanity": 10
     }
   },
   {
@@ -415,9 +406,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "Shadow Trap: Paralyzes a target via their shadow.",
     "costDescription": "Can only be used in bright light.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "39_wany_d_",
@@ -426,8 +416,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "Fire Wall: Flaming wheel protects your perimeter.",
     "costDescription": "Drains \"Fuel\" items from inventory.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "fuel_item"
     }
   },
   {
@@ -437,9 +428,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "Heavy Siege: Smashes through walls/barriers.",
     "costDescription": "Requires 10+ \"Corpse\" markers nearby.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "41_jor_gumo",
@@ -448,9 +438,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "Crowd Control: Binds multiple enemies in silk.",
     "costDescription": "Vulnerable to Fire-based Goetic attacks.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "42_nekomata",
@@ -459,8 +448,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "Body Puppet: Reanimates a fallen enemy.",
     "costDescription": "Consumes a \"Spirit Thread\" item.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "spirit_thread"
     }
   },
   {
@@ -470,9 +460,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "EMP / Stun: Disables electronics/Goetia.",
     "costDescription": "Requires a thunder/power source.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "44_basan",
@@ -481,8 +470,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "Ghost Fire: Cold fire damages spirits only.",
     "costDescription": "Player must \"feed\" it wood or paper.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "ink": 1
     }
   },
   {
@@ -492,8 +482,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "Life Leech: Steals HP from a target.",
     "costDescription": "Increases Player \"Corruption\" level.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "humanity": 20
     }
   },
   {
@@ -503,8 +494,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Enforcer",
     "gameUtility": "Aggro Draw: Forces all enemies to attack it.",
     "costDescription": "High Sanity cost to summon.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "humanity": 10
     }
   },
   {
@@ -514,8 +506,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Shikigami",
     "gameUtility": "Decoy: Creates a paper clone of the player.",
     "costDescription": "Consumes 1 Paper Doll item.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "requiredItemId": "paper_doll"
     }
   },
   {
@@ -525,9 +518,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Shikigami",
     "gameUtility": "Bodyguards: Passive physical defense buff.",
     "costDescription": "Constant drain on Spirit Energy.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "49_origami_tsuru",
@@ -536,8 +528,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Shikigami",
     "gameUtility": "Messenger: Delivers a seal to a distant target.",
     "costDescription": "Name must be written on the paper.",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "ink": 1
     }
   },
   {
@@ -547,9 +540,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Shikigami",
     "gameUtility": "Curse Eater: Absorbs one status effect.",
     "costDescription": "Doll is destroyed upon use.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "51_cho_gata",
@@ -558,9 +550,8 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Shikigami",
     "gameUtility": "Tracer: Paper butterfly tracks an NPC.",
     "costDescription": "Requires a physical touch.",
-    "baseCost": {
-      "obols": 100
-    }
+    "draftCost": 50,
+    "activationCost": {}
   },
   {
     "id": "52_ofuda",
@@ -569,8 +560,9 @@ export const allYokai: YokaiContract[] = [
     "utilityClass": "Shikigami",
     "gameUtility": "Banishment: Final strike against a Goetia.",
     "costDescription": "High crafting cost (Rare Ink/Paper).",
-    "baseCost": {
-      "obols": 100
+    "draftCost": 50,
+    "activationCost": {
+      "ink": 1
     }
   }
 ];

@@ -1,70 +1,72 @@
 // src/engine/state.ts
 
-export type IntelTag = string; 
-export type GoetiaId = string; 
-export type YokaiId = string;  
-export type NodeId = string;   
-export type ItemId = string; 
+// --- 1. Core ID Types ---
+export type IntelTag = string;
+export type YokaiId = string;
+export type NodeId = string;
+export type ItemId = string;
+export type GoetiaId = string;
 
+// --- 2. Supporting Interfaces ---
 export interface Lead {
   id: string;
   text: string;
-  resolved: boolean;
+  resolved?: boolean;
+  // Add any other properties your Leads use here (e.g., relatedNode, isResolved)
 }
 
-export interface GameState {
-  humanity: number;       
-  globalChaos: number;    
-  inventory: Record<ItemId, number>; 
-  activeContracts: YokaiId[]; 
-  intelLog: IntelTag[];       
-  identifiedGoetia: GoetiaId[]; // <-- NEW: Tracking manual identification
-  sealedGoetia: GoetiaId[];   
-  activeLeads: Lead[];
-  currentNode: NodeId;    
-  flags: Record<string, boolean>; 
+export interface ActionEffect {
+  type: string;
+  payload?: any;
 }
-
-export const initialGameState: GameState = {
-  humanity: 100,
-  globalChaos: 10, 
-  inventory: {
-    "obols": 50,
-    "dragons_blood_ink": 3,
-    "paper_doll": 5
-  },
-  activeContracts: [],
-  intelLog: [],
-  identifiedGoetia: [], // <-- NEW
-  sealedGoetia: [],
-  activeLeads: [
-    { id: "lead_01", text: "Investigate the corrupted cameras in Westminster.", resolved: false }
-  ],
-  currentNode: "london_hub",
-  flags: {}
-};
-
-import type { GameAction } from './reducer';
 
 export interface Choice {
-  id: string;
   label: string;
-  condition?: (state: GameState) => boolean; 
-  actions: GameAction[]; 
+  effects?: ActionEffect[];
+  next?: string;
 }
 
-export interface NarrativeNode {
-  id: NodeId;
-  title: string;
-  text: string;
-  choices: Choice[];
+// --- 3. The Unified Game State ---
+export interface GameState {
+  // 🔹 Core Esoteric Resources (Top-Level)
+  humanity: number;       // Your spiritual health
+  ink: number;            // Dragon's Blood Ink (vital for sealing/contracts)
+
+  // 🔹 General Inventory
+  // Obols, lamp_oil, sacred_sand, etc., live inside this dictionary
+  inventory: Record<ItemId, number>;
+
+  // 🔹 Loadout & Progression
+  activeContracts: YokaiId[];
+  intelLog: IntelTag[];
+  activeLeads: Lead[];
+  identifiedGoetia: GoetiaId[];
+  sealedGoetia: GoetiaId[];
+
+  // 🔹 World Tracking
+  currentNode: NodeId;
+  globalChaos: number;
+  flags: Record<string, boolean>;
 }
 
-export interface GoetiaDef {
-  id: GoetiaId;
-  name: string;
-  title: string; 
-  description: string;
-  requiredIntel: IntelTag[]; 
-  sealCost: Record<ItemId, number>; 
-}
+// --- 4. The Starting Conditions ---
+export const initialGameState: GameState = {
+  humanity: 100,
+  ink: 3,
+  
+  // Start with 50 Obols in the inventory dictionary
+  inventory: {
+    "obols": 50, 
+    "lamp_oil": 1
+  },
+
+  activeContracts: [],
+  intelLog: [],
+  activeLeads: [],
+  identifiedGoetia: [],
+  sealedGoetia: [],
+  
+  currentNode: "london_hub",
+  globalChaos: 10,
+  flags: {}
+};

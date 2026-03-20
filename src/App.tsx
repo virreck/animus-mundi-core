@@ -4,6 +4,16 @@ import { useEngine } from './ui/hooks/useEngine';
 import { katashiro } from './content/yokai/shikigami';
 import { murmur } from './content/goetia/murmur';
 import { caterhamChurchyard } from './content/narrative/caterham_churchyard';
+import type { GameAction } from './engine/reducer';
+import type { GameState } from './engine/state';
+
+// 1. Define exactly what the UI expects a choice to look like
+interface NarrativeChoice {
+  id: string;
+  label: string;
+  condition?: (state: GameState) => boolean;
+  actions: GameAction[];
+}
 
 const ALL_GOETIA = [murmur];
 
@@ -20,7 +30,7 @@ const theme = {
 };
 
 export default function App() {
-  const { state, dispatch, draftContract, advanceTime, resetGame, identifyGoetia, sealGoetia } = useEngine(); // Added identifyGoetia here
+  const { state, dispatch, draftContract, advanceTime, resetGame, identifyGoetia, sealGoetia } = useEngine();
   const [currentTab, setCurrentTab] = useState<'MAP' | 'GRIMOIRE' | 'YOROKU' | 'JOURNAL' | 'INVENTORY'>('MAP');
   const [selectedGoetiaId, setSelectedGoetiaId] = useState<string | null>(null);
   
@@ -35,6 +45,9 @@ export default function App() {
   };
 
   const formatNode = (nodeId: string) => nodeId.replace(/_/g, ' ').toUpperCase();
+
+  // Safely cast the choices from the imported file
+  const availableChoices = caterhamChurchyard.choices as unknown as NarrativeChoice[];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: theme.bgDark, color: theme.textParchment, fontFamily: theme.fontSerif }}>
@@ -109,11 +122,11 @@ export default function App() {
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {ALL_GOETIA.map(goetia => {
-                      const hasAllIntel = goetia.requiredIntel.every(tag => state.intelLog.includes(tag));
+                      // Fix: Explicitly type tag as string
+                      const hasAllIntel = goetia.requiredIntel.every((tag: string) => state.intelLog.includes(tag));
                       const isIdentified = state.identifiedGoetia.includes(goetia.id);
                       const isSealed = state.sealedGoetia.includes(goetia.id);
 
-                      // Visual cue if ready to identify
                       let indexLabel = `UNKNOWN ENTITY (#${goetia.id.substring(0,4).toUpperCase()})`;
                       if (isSealed) indexLabel = `封 ${goetia.name} (SEALED)`;
                       else if (isIdentified) indexLabel = goetia.name;
@@ -143,13 +156,13 @@ export default function App() {
                 <>
                   <h2 style={{ borderBottom: `2px solid ${theme.accentRed}`, paddingBottom: '10px' }}>AVAILABLE CONTRACTS</h2>
                   <div style={{ border: `1px solid ${theme.borderBronze}`, padding: '15px', marginTop: '20px', backgroundColor: 'rgba(0,0,0,0.05)' }}>
-                    <h3 style={{ margin: '0 0 10px 0' }}>{katashiro.name}</h3>
-                    <p style={{ fontStyle: 'italic', fontSize: '0.9rem' }}>{katashiro.utility}</p>
-                    <p style={{ fontFamily: theme.fontSans, fontWeight: 'bold' }}>COST: {katashiro.cost} OBOLS</p>
+                    <h3 style={{ margin: '0 0 10px 0' }}>{katashiro.nameEn}</h3>
+                    <p style={{ fontStyle: 'italic', fontSize: '0.9rem' }}>{katashiro.gameUtility}</p>
+                    <p style={{ fontFamily: theme.fontSans, fontWeight: 'bold' }}>COST: {katashiro.draftCost} OBOLS</p>
                     <button 
                       onClick={() => {
-                        draftContract(katashiro.id, katashiro.cost);
-                        if ((state.inventory["obols"] || 0) >= katashiro.cost) addToast(`Bound contract: ${katashiro.name}`, 'ALERT');
+                        draftContract(katashiro.id, katashiro.draftCost);
+                        if ((state.inventory["obols"] || 0) >= katashiro.draftCost) addToast(`Bound contract: ${katashiro.nameEn}`, 'ALERT');
                       }} 
                       style={{ padding: '8px 15px', backgroundColor: theme.bgDark, color: theme.textParchment, border: 'none', cursor: 'pointer', fontFamily: theme.fontSerif, borderBottom: `2px solid ${theme.accentRed}` }}
                     >
@@ -163,7 +176,8 @@ export default function App() {
                 <>
                   <h2 style={{ borderBottom: `2px solid ${theme.accentRed}`, paddingBottom: '10px' }}>FORENSIC & RITUAL KIT</h2>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginTop: '20px' }}>
-                    {Object.entries(state.inventory)
+                    {/* Fix: Explicitly cast the entries as a string and number array */}
+                    {(Object.entries(state.inventory) as [string, number][])
                       .filter(([key]) => key !== 'obols')
                       .map(([key, amount]) => (
                         <div key={key} style={{ border: `1px solid ${theme.borderBronze}`, padding: '15px', textAlign: 'center', backgroundColor: 'rgba(0,0,0,0.03)' }}>
@@ -199,13 +213,15 @@ export default function App() {
                 <>
                    <h2 style={{ borderBottom: `2px solid ${theme.accentRed}`, paddingBottom: '10px', letterSpacing: '2px' }}>AVAILABLE ACTIONS</h2>
                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
-                     {caterhamChurchyard.choices
-                       .filter(choice => !choice.condition || choice.condition(state))
-                       .map(choice => (
+                     {/* Fix: Explicitly typed filter and map over the cast choices */}
+                     {availableChoices
+                       .filter((choice: NarrativeChoice) => !choice.condition || choice.condition(state))
+                       .map((choice: NarrativeChoice) => (
                          <button 
                            key={choice.id}
                            onClick={() => {
-                             choice.actions.forEach(action => {
+                             // Fix: Explicitly type the action as GameAction
+                             choice.actions.forEach((action: GameAction) => {
                                dispatch(action);
                                if (action.type === 'GATHER_INTEL') {
                                  addToast(`Log updated: ${formatNode(action.payload)}`, 'INTEL');
@@ -234,10 +250,12 @@ export default function App() {
                 <>
                    {selectedGoetiaId ? (() => {
                      const target = ALL_GOETIA.find(g => g.id === selectedGoetiaId)!;
-                     const hasAllIntel = target.requiredIntel.every(tag => state.intelLog.includes(tag));
+                     // Fix: Type tag as string
+                     const hasAllIntel = target.requiredIntel.every((tag: string) => state.intelLog.includes(tag));
                      const isIdentified = state.identifiedGoetia.includes(target.id);
                      const isSealed = state.sealedGoetia.includes(target.id);
-                     const canAffordSeal = Object.entries(target.sealCost).every(([item, amount]) => (state.inventory[item] || 0) >= amount);
+                     // Fix: Cast sealCost entries to let TS know it's a number
+                     const canAffordSeal = (Object.entries(target.sealCost) as [string, number][]).every(([item, amount]) => (state.inventory[item] || 0) >= amount);
 
                      return (
                        <div>
@@ -245,7 +263,6 @@ export default function App() {
                            {isIdentified ? target.name.toUpperCase() : "TARGET OBSCURED"}
                          </h2>
 
-                         {/* Only show the lore once they've manually identified it */}
                          {isIdentified ? (
                            <>
                              <p style={{ fontStyle: 'italic', color: theme.accentRed, fontWeight: 'bold' }}>{target.title}</p>
@@ -258,7 +275,8 @@ export default function App() {
                          <div style={{ marginTop: '30px', padding: '15px', border: `1px dashed ${theme.borderBronze}` }}>
                            <h3 style={{ fontSize: '1rem', marginBottom: '15px' }}>REQUIRED INTEL</h3>
                            <ul style={{ listStyleType: 'none', padding: 0 }}>
-                             {target.requiredIntel.map(tag => {
+                             {/* Fix: Type tag as string */}
+                             {target.requiredIntel.map((tag: string) => {
                                const found = state.intelLog.includes(tag);
                                return (
                                  <li key={tag} style={{ color: found ? '#4a7c59' : '#888', marginBottom: '8px', fontFamily: theme.fontSans, fontSize: '0.9rem' }}>
@@ -269,7 +287,6 @@ export default function App() {
                            </ul>
                          </div>
 
-                         {/* The Big Identify Button */}
                          {hasAllIntel && !isIdentified && (
                            <div style={{ marginTop: '40px', textAlign: 'center' }}>
                              <p style={{ color: theme.accentRed, fontStyle: 'italic', marginBottom: '15px' }}>Data sufficient. A pattern emerges...</p>
@@ -285,13 +302,13 @@ export default function App() {
                            </div>
                          )}
 
-                         {/* The Sealing Ritual Interface (Only appears after identification) */}
                          {isIdentified && !isSealed && (
                            <div style={{ marginTop: '30px', backgroundColor: theme.bgWood, padding: '20px', color: theme.textParchment, border: `1px solid ${theme.accentRed}` }}>
                              <h3 style={{ marginTop: 0, color: theme.accentRed }}>INITIATE BANISHMENT</h3>
                              <p style={{ fontSize: '0.85rem', fontFamily: theme.fontSans, marginBottom: '15px' }}>Required Catalysts:</p>
                              <ul style={{ listStyleType: 'none', padding: 0, fontSize: '0.85rem', fontFamily: theme.fontSans }}>
-                               {Object.entries(target.sealCost).map(([item, amount]) => (
+                               {/* Fix: Cast sealCost entries */}
+                               {(Object.entries(target.sealCost) as [string, number][]).map(([item, amount]) => (
                                  <li key={item} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                                    <span>{formatNode(item)} x{amount}</span>
                                    <span style={{ color: (state.inventory[item] || 0) >= amount ? '#4a7c59' : theme.accentRed }}>
@@ -303,7 +320,8 @@ export default function App() {
                              
                              <button 
                                onClick={() => {
-                                 Object.entries(target.sealCost).forEach(([item, amount]) => {
+                                 // Fix: Cast sealCost entries here too
+                                 (Object.entries(target.sealCost) as [string, number][]).forEach(([item, amount]) => {
                                    dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } });
                                  });
                                  sealGoetia(target.id);
@@ -397,9 +415,17 @@ function NavBtn({ active, onClick, children }: { active: boolean, onClick: () =>
     <button 
       onClick={onClick}
       style={{ 
-        padding: '12px 15px', textAlign: 'left', backgroundColor: active ? 'rgba(255,255,255,0.05)' : 'transparent', 
-        color: active ? '#d4c7b0' : '#8c7b61', border: 'none', borderLeft: active ? `4px solid #a30000` : '4px solid transparent',
-        cursor: 'pointer', fontFamily: '"Trebuchet MS", sans-serif', letterSpacing: '2px', fontSize: '0.9rem', transition: 'all 0.2s'
+        padding: '12px 15px', 
+        textAlign: 'left', 
+        backgroundColor: active ? 'rgba(255,255,255,0.05)' : 'transparent', 
+        color: active ? '#d4c7b0' : '#8c7b61', 
+        border: 'none', 
+        borderLeft: active ? '4px solid #a30000' : '4px solid transparent',
+        cursor: 'pointer', 
+        fontFamily: '"Trebuchet MS", sans-serif', 
+        letterSpacing: '2px', 
+        fontSize: '0.9rem', 
+        transition: 'all 0.2s'
       }}
     >
       {children}

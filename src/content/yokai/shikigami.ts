@@ -1,10 +1,15 @@
-// src/content/yokai/shikigami.ts
-import type { YokaiId } from '../../engine/state';
+import type { YokaiContract } from './types';
 
-export const katashiro = {
-  id: "katashiro_decoy" as YokaiId,
-  name: "Katashiro (形代)",
-  type: "shikigami",
-  utility: "Creates a paper clone of the player to absorb one status effect.",
-  cost: 15
+export const katashiro: YokaiContract = {
+  id: "47_katashiro",
+  nameEn: "Katashiro",
+  kanji: "形代",
+  utilityClass: "Shikigami",
+  gameUtility: "Decoy: Creates a paper clone of the player to absorb one fatal hit.",
+  costDescription: "Consumes 1 Paper Doll item.",
+  draftCost: 15,
+  activationCost: {
+    requiredItemId: "paper_doll",
+    humanity: 2
+  }
 };

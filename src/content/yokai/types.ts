@@ -1,13 +1,22 @@
 export type YokaiClass = 'Sensor' | 'Stealth' | 'Utility' | 'Enforcer' | 'Shikigami';
 
+// A strictly typed cost object that the Engine can read
+export interface ActivationCost {
+  obols?: number;
+  ink?: number;
+  humanity?: number;
+  requiredItemId?: string; // e.g., "lamp_oil", "sacred_sand", "spirit_thread"
+}
+
 export interface YokaiContract {
-  id: string;          // e.g., "01_chochin_obake"
-  nameEn: string;      // "Chōchin-obake"
-  kanji: string;       // "提灯お化け"
+  id: string;          
+  nameEn: string;      
+  kanji: string;       
   utilityClass: YokaiClass; 
-  gameUtility: string; // "Flashlight / True Sight: Reveals hidden Goetic sigils."
-  costDescription: string; // "Constant supply of lamp oil."
+  gameUtility: string; 
+  costDescription: string; // The lore-friendly text (e.g., "Constant supply of lamp oil.")
   
-  // Mechanical hooks for the Engine
-  baseCost: { obols?: number; ink?: number; humanity?: number };
+  // The mechanical costs
+  draftCost: number;             // How many Obols it costs to equip them at the Hub
+  activationCost: ActivationCost; // What it costs to actually click their button in the field
 }
