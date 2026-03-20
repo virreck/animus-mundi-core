@@ -1,0 +1,54 @@
+ID | Name | Kanji | Class | Utility | Cost
+---------------------------------------------------------
+01 | Chōchin-obake | 提灯お化け | Sensor | Flashlight / True Sight: Reveals hidden Goetic sigils. | Constant supply of lamp oil.
+02 | Shirime | 尻目 | Sensor | Rear-View Sensor: Prevents back-attacks/ambushes. | A "prank" performed on a neutral NPC.
+03 | Satori | 覚 | Sensor | Interrogation: Detects lies during questioning. | Temporary Sanity/MP drain.
+04 | Mokumokuren | 目目連 | Sensor | Room Scanner: Sees everyone inside a building. | Must be used in a room with windows.
+05 | Yosuzume | 夜雀 | Sensor | Proximity Alarm: Chirps near Goetic entities. | Small offerings of grain/seed.
+06 | Ungaikyō | 雲外鏡 | Sensor | Remote Viewing: A live CCTV feed of a distant room. | Requires a silver-backed mirror focus.
+07 | Baku | 獏 | Sensor | Dream Forensics: Extracts memories from the sleeping. | Player loses 1 "Positive Memory" (buff).
+08 | Yamabiko | 山彦 | Sensor | Sonic Echo: Eavesdrop through thick walls. | Must shout a specific vocal command.
+09 | Tenjo-name | 天井舐 | Sensor | Ceiling Scout: Reveals attic traps or hidden items. | Room must be in total darkness.
+10 | Hiderigami | 魃 | Sensor | Thermal Tracker: Detects "Cold Spots" (Death/Ghost). | Drains player hydration/water items.
+11 | Amabie | アマビエ | Sensor | Event Forecast: Predicts upcoming world "Symptoms." | Draw and share the Amabie’s likeness.
+12 | Ao-andō | 青行燈 | Sensor | Ghost Summoner: Forces spirits to manifest. | Tells a "Scary Story" (Time skip).
+13 | Inugami | 犬神 | Sensor | Bloodhound: Tracks targets via DNA/Scent. | A drop of the Player's own blood.
+14 | Enenra | 煙々羅 | Stealth | Smoke Form: Drift through keyholes and vents. | Only works near an active fire/hearth.
+15 | Nurikabe | ぬりかべ | Stealth | Exit Blocker: Traps a suspect in a dead-end. | Player must remain stationary.
+16 | Kamaitachi | 鎌鼬 | Stealth | Lock Breaker: Silently slices bolts/chains. | High Wind-Essence cost.
+17 | Ittan-momen | 一反木綿 | Stealth | Glider / Capture: Aerial mobility or a straitjacket. | Must be "washed" at a shrine after use.
+18 | Nurarihyon | ぬらりひょん | Stealth | Social Stealth: NPCs ignore your presence. | A high-quality meal or tea offering.
+19 | Noppera-bō | のっぺら坊 | Stealth | Identity Theft: Copy the face of a nearby NPC. | Player cannot speak for the duration.
+20 | Kasa-obake | 傘お化け | Stealth | Rain Shield: Blocks "Pestilence" acid rain. | Occupies the "Off-Hand" equipment slot.
+21 | Takaonna | 高女 | Stealth | Verticality: Peer into 2nd-story windows. | Strains physical stamina/health.
+22 | Sunakake-baba | 砂かけ婆 | Stealth | Blindness: Stuns guards with spiritual sand. | Requires a pouch of "Sacred Sand."
+23 | Akaname | 垢嘗 | Stealth | Evidence Eraser: Cleans blood/fingerprints. | Requires a "dirty" crime scene to summon.
+24 | Kodama | 木霊 | Stealth | Forest Path: Teleport between old-growth trees. | Cannot be used in concrete/urban zones.
+25 | Betobeto-san | べとべとさん | Stealth | Distraction: Phantom footsteps lead guards away. | Player must politely "step aside" to trigger.
+26 | Kameosa | 瓶長 | Utility | Item Duplicator: Temporary infinite small items. | Requires a liquid catalyst (Water/Sake).
+27 | Zashiki-warashi | 座敷童子 | Utility | Loot Booster: Better clues/items found in-base. | Must be "housed" in the Player's HQ.
+28 | Kappa | 河童 | Utility | Medic: Heals broken bones and physical injury. | A fresh cucumber or local water source.
+29 | Binbōgami | 貧乏神 | Utility | Curse Transfer: Moves debuffs from Player to NPC. | Drains a large amount of Player Gold.
+30 | Fūrin-bi | 風鈴火 | Utility | Energy Recharge: Restores MP/Shikigami points. | Requires a windy environment.
+31 | Nezumi-otoko | ねずみ男 | Utility | Black Market: Buy/Sell "Illegal" esoteric goods. | Takes a high commission on all sales.
+32 | Futakuchi-onna | 二口女 | Utility | Double-Casting: Use two Yokai simultaneously. | Consumes double "Food" resources.
+33 | Amefuri-kozō | 雨降小僧 | Utility | Fire Extinguisher: Localized rain puts out fires. | Player gets "Soaked" (Speed debuff).
+34 | Umi-bōzu | 海坊主 | Utility | Fog Cover: Massive smoke screen for escapes. | Only usable near large bodies of water.
+35 | Zeniarai-benten | 銭洗弁天 | Utility | Money Cleansing: Purifies "Cursed" Horseman Gold. | Requires a ritual washing at a spring.
+36 | Kyūbi-no-kitsune | 九尾の狐 | Utility | Master Catalyst: Massive buff to all Yokai stats. | Requires a permanent, heavy sacrifice.
+37 | Tengu | 天狗 | Enforcer | Kinetic Strike: Wind gust blows back objects. | High cooldown; spiritual fatigue.
+38 | Ushioni | 牛鬼 | Enforcer | Shadow Trap: Paralyzes a target via their shadow. | Can only be used in bright light.
+39 | Wanyūdō | 輪入道 | Enforcer | Fire Wall: Flaming wheel protects your perimeter. | Drains "Fuel" items from inventory.
+40 | Gashadokuro | がしゃどくろ | Enforcer | Heavy Siege: Smashes through walls/barriers. | Requires 10+ "Corpse" markers nearby.
+41 | Jorōgumo | 絡新婦 | Enforcer | Crowd Control: Binds multiple enemies in silk. | Vulnerable to Fire-based Goetic attacks.
+42 | Nekomata | 猫又 | Enforcer | Body Puppet: Reanimates a fallen enemy. | Consumes a "Spirit Thread" item.
+43 | Raijū | 雷獣 | Enforcer | EMP / Stun: Disables electronics/Goetia. | Requires a thunder/power source.
+44 | Basan | 波山 | Enforcer | Ghost Fire: Cold fire damages spirits only. | Player must "feed" it wood or paper.
+45 | Kurozuka | 黒塚 | Enforcer | Life Leech: Steals HP from a target. | Increases Player "Corruption" level.
+46 | Hannya | 般若 | Enforcer | Aggro Draw: Forces all enemies to attack it. | High Sanity cost to summon.
+47 | Katashiro | 形代 | Shikigami | Decoy: Creates a paper clone of the player. | Consumes 1 Paper Doll item.
+48 | Zenki & Goki | 前鬼・後鬼 | Shikigami | Bodyguards: Passive physical defense buff. | Constant drain on Spirit Energy.
+49 | Origami-Tsuru | 折鶴 | Shikigami | Messenger: Delivers a seal to a distant target. | Name must be written on the paper.
+50 | Hitogata | 人形 | Shikigami | Curse Eater: Absorbs one status effect. | Doll is destroyed upon use.
+51 | Cho-gata | 蝶形 | Shikigami | Tracer: Paper butterfly tracks an NPC. | Requires a physical touch.
+52 | Ofuda | 御札 | Shikigami | Banishment: Final strike against a Goetia. | High crafting cost (Rare Ink/Paper).
