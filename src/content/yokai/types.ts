@@ -1,11 +1,19 @@
+// src/content/yokai/types.ts
 export type YokaiClass = 'Sensor' | 'Stealth' | 'Utility' | 'Enforcer' | 'Shikigami';
 
-// A strictly typed cost object that the Engine can read
 export interface ActivationCost {
   obols?: number;
   ink?: number;
   humanity?: number;
-  requiredItemId?: string; // e.g., "lamp_oil", "sacred_sand", "spirit_thread"
+  requiredItemId?: string; 
+}
+
+// NEW: The complex draft cost
+export interface ContractCost {
+  obols?: number;
+  humanity?: number;
+  ink?: number;
+  tributeItemId?: string; 
 }
 
 export interface YokaiContract {
@@ -14,9 +22,8 @@ export interface YokaiContract {
   kanji: string;       
   utilityClass: YokaiClass; 
   gameUtility: string; 
-  costDescription: string; // The lore-friendly text (e.g., "Constant supply of lamp oil.")
+  costDescription: string; 
   
-  // The mechanical costs
-  draftCost: number;             // How many Obols it costs to equip them at the Hub
-  activationCost: ActivationCost; // What it costs to actually click their button in the field
+  draftCost: ContractCost;       // <-- Now a structured object
+  activationCost: ActivationCost; 
 }
