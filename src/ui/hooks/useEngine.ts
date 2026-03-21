@@ -7,6 +7,20 @@ import { gameReducer } from '../../engine/reducer';
 export function useEngine() {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
 
+// Add these inside your useEngine hook return object:
+    modifyFaction: (factionId: FactionId, amount: number) => 
+      dispatch({ type: 'MODIFY_FACTION', payload: { factionId, amount } }),
+
+    modifyHumanity: (amount: number) => 
+      dispatch({ type: 'MODIFY_HUMANITY', payload: amount }),
+
+    setFlag: (flagId: string, value: boolean) => 
+      dispatch({ type: 'SET_FLAG', payload: { flagId, value } }),
+
+    resolveLead: (leadId: string) => 
+      dispatch({ type: 'RESOLVE_LEAD', payload: leadId }),
+
+
   const draftContract = (yokaiId: YokaiId, cost: number) => dispatch({ type: 'DRAFT_CONTRACT', payload: { yokaiId, cost } });
   const advanceTime = (chaosAmount: number) => dispatch({ type: 'ADVANCE_TIME', payload: chaosAmount });
   const travelTo = (nodeId: NodeId) => dispatch({ type: 'TRAVEL', payload: nodeId });
