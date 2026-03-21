@@ -1,12 +1,13 @@
+// src/engine/reducer.ts
 import type { GameState, IntelTag, YokaiId, NodeId, ItemId, Lead, GoetiaId } from './state';
 import { initialGameState } from './state';
-import type { ActivationCost } from '../content/yokai/types'; // <-- Import the cost type
+import type { ActivationCost, ContractCost } from '../content/yokai/types';
 
 export type GameAction = 
   | { type: 'TRAVEL'; payload: NodeId }
   | { type: 'GATHER_INTEL'; payload: IntelTag }
-  | { type: 'DRAFT_CONTRACT'; payload: { yokaiId: YokaiId; cost: number } }
-  | { type: 'EXECUTE_YOKAI'; payload: { yokaiId: YokaiId; costs: ActivationCost } } // <-- UPDATED
+  | { type: 'DRAFT_CONTRACT'; payload: { yokaiId: YokaiId; costs: ContractCost } } // <-- UPDATED
+  | { type: 'EXECUTE_YOKAI'; payload: { yokaiId: YokaiId; costs: ActivationCost } } 
   | { type: 'ADVANCE_TIME'; payload: number }
   | { type: 'MODIFY_INVENTORY'; payload: { itemId: ItemId; amount: number } }
   | { type: 'ADD_LEAD'; payload: Lead }
@@ -23,47 +24,47 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.intelLog.includes(action.payload)) return state;
       return { ...state, intelLog: [...state.intelLog, action.payload] };
       
-    case 'DRAFT_CONTRACT':
-      const currentObols = state.inventory["obols"] || 0;
-      if (currentObols < action.payload.cost) return state; 
+    case 'DRAFT_CONTRACT': {
+      // --- NEW DRAFT LOGIC ---
+      const { yokaiId, costs } = action.payload;
+      const currentInventory = { ...state.inventory };
+
+      // 1. Validation
+      if (costs.obols && (currentInventory["obols"] || 0) < costs.obols) return state;
+      if (costs.humanity && state.humanity < costs.humanity) return state;
+      if (costs.ink && state.ink < costs.ink) return state;
+      if (costs.tributeItemId && (currentInventory[costs.tributeItemId] || 0) < 1) return state;
+
+      // 2. Execution (Deduct Inventory Items)
+      if (costs.obols) currentInventory["obols"] -= costs.obols;
+      if (costs.tributeItemId) {
+        currentInventory[costs.tributeItemId] -= 1;
+        if (currentInventory[costs.tributeItemId] <= 0) delete currentInventory[costs.tributeItemId];
+      }
+
+      // 3. Execution (Deduct Core Resources & Bind)
       return {
         ...state,
-        inventory: { ...state.inventory, "obols": currentObols - action.payload.cost },
-        activeContracts: [...state.activeContracts, action.payload.yokaiId]
+        humanity: state.humanity - (costs.humanity || 0),
+        ink: state.ink - (costs.ink || 0),
+        inventory: currentInventory,
+        activeContracts: [...state.activeContracts, yokaiId]
       };
+    }
       
     case 'EXECUTE_YOKAI': {
-      // --- NEW LOGIC INTEGRATED HERE ---
       const { yokaiId, costs } = action.payload;
       const newInventory = { ...state.inventory };
 
-      // 1. Validation: Check if player has the required resources
-      if (costs.humanity && state.humanity < costs.humanity) {
-        console.warn("Insufficient Humanity.");
-        return state;
-      }
-      if (costs.ink && state.ink < costs.ink) {
-        console.warn("Insufficient Ink.");
-        return state;
-      }
-      if (costs.requiredItemId) {
-        const itemCount = newInventory[costs.requiredItemId] || 0;
-        if (itemCount < 1) {
-          console.warn(`Missing required item: ${costs.requiredItemId}`);
-          return state;
-        }
-      }
+      if (costs.humanity && state.humanity < costs.humanity) return state;
+      if (costs.ink && state.ink < costs.ink) return state;
+      if (costs.requiredItemId && (newInventory[costs.requiredItemId] || 0) < 1) return state;
 
-      // 2. Execution: Deduct the inventory item if required
       if (costs.requiredItemId) {
         newInventory[costs.requiredItemId] -= 1;
-        // Clean up empty slots
-        if (newInventory[costs.requiredItemId] <= 0) {
-          delete newInventory[costs.requiredItemId];
-        }
+        if (newInventory[costs.requiredItemId] <= 0) delete newInventory[costs.requiredItemId];
       }
 
-      // 3. Apply state changes and burn the contract
       return {
         ...state,
         humanity: state.humanity - (costs.humanity || 0),
@@ -78,10 +79,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       
     case 'MODIFY_INVENTORY':
       const currentAmount = state.inventory[action.payload.itemId] || 0;
-      return { 
-        ...state, 
-        inventory: { ...state.inventory, [action.payload.itemId]: currentAmount + action.payload.amount } 
-      };
+      return { ...state, inventory: { ...state.inventory, [action.payload.itemId]: currentAmount + action.payload.amount } };
       
     case 'ADD_LEAD':
       if (state.activeLeads.some(lead => lead.id === action.payload.id)) return state;
