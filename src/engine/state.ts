@@ -1,18 +1,16 @@
 // src/engine/state.ts
 
-// --- 1. Core ID Types ---
 export type IntelTag = string;
 export type YokaiId = string;
 export type NodeId = string;
 export type ItemId = string;
 export type GoetiaId = string;
+export type FactionId = string; // <-- NEW
 
-// --- 2. Supporting Interfaces ---
 export interface Lead {
   id: string;
   text: string;
-  resolved?: boolean;
-  // Add any other properties your Leads use here (e.g., relatedNode, isResolved)
+  resolved?: boolean; 
 }
 
 export interface ActionEffect {
@@ -21,43 +19,50 @@ export interface ActionEffect {
 }
 
 export interface Choice {
+  id: string;
   label: string;
-  effects?: ActionEffect[];
-  next?: string;
+  condition?: (state: GameState) => boolean;
+  actions: any[]; 
 }
 
-// --- 3. The Unified Game State ---
+export interface NarrativeNode {
+  id: string;
+  title: string;
+  text: string;
+  choices: Choice[];
+}
+
 export interface GameState {
-  // 🔹 Core Esoteric Resources (Top-Level)
-  humanity: number;       // Your spiritual health
-  ink: number;            // Dragon's Blood Ink (vital for sealing/contracts)
-
-  // 🔹 General Inventory
-  // Obols, lamp_oil, sacred_sand, etc., live inside this dictionary
+  humanity: number;       
+  ink: number;            
   inventory: Record<ItemId, number>;
+  
+  // --- NEW: Faction Standing ---
+  factions: Record<FactionId, number>;
 
-  // 🔹 Loadout & Progression
   activeContracts: YokaiId[];
   intelLog: IntelTag[];
   activeLeads: Lead[];
   identifiedGoetia: GoetiaId[];
   sealedGoetia: GoetiaId[];
 
-  // 🔹 World Tracking
   currentNode: NodeId;
   globalChaos: number;
-  flags: Record<string, boolean>;
+  flags: Record<string, boolean>; // For narrative memory
 }
 
-// --- 4. The Starting Conditions ---
 export const initialGameState: GameState = {
   humanity: 100,
   ink: 3,
-  
-  // Start with 50 Obols in the inventory dictionary
   inventory: {
     "obols": 50, 
     "lamp_oil": 1
+  },
+  
+  // Base standing: 50 is neutral. 0 is Kill-on-Sight. 100 is Exalted.
+  factions: {
+    "malleus": 50,
+    "underworld": 50
   },
 
   activeContracts: [],
