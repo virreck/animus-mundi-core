@@ -1,3 +1,4 @@
+// src/content/yokai/index.ts
 import type { YokaiContract } from './types';
 
 export const allYokai: YokaiContract[] = [
@@ -6,21 +7,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Chōchin-obake",
     "kanji": "提灯お化け",
     "utilityClass": "Sensor",
-    "gameUtility": "Flashlight / True Sight: Reveals hidden Goetic sigils.",
+    "gameUtility": "Instantly reveals 1 hidden Intel tag at the current Node without advancing Sector Entropy.",
     "costDescription": "Constant supply of lamp oil.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "lamp_oil"
-    }
+    "draftCost": { "obols": 20 },
+    "activationCost": { "requiredItemId": "lamp_oil" }
   },
   {
     "id": "02_shirime",
     "nameEn": "Shirime",
     "kanji": "尻目",
     "utilityClass": "Sensor",
-    "gameUtility": "Rear-View Sensor: Prevents back-attacks/ambushes.",
+    "gameUtility": "Passive: Automatically negates the first Goetic Ambush event, preventing a forced Humanity drain.",
     "costDescription": "A \"prank\" performed on a neutral NPC.",
-    "draftCost": 50,
+    "draftCost": { "obols": 35 },
     "activationCost": {}
   },
   {
@@ -28,21 +27,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Satori",
     "kanji": "覚",
     "utilityClass": "Sensor",
-    "gameUtility": "Interrogation: Detects lies during questioning.",
+    "gameUtility": "Guarantees a successful Interrogation action, granting an Active Lead while bypassing NPC deception.",
     "costDescription": "Temporary Sanity/MP drain.",
-    "draftCost": 50,
-    "activationCost": {
-      "humanity": 10
-    }
+    "draftCost": { "obols": 40 },
+    "activationCost": { "humanity": 10 }
   },
   {
     "id": "04_mokumokuren",
     "nameEn": "Mokumokuren",
     "kanji": "目目連",
     "utilityClass": "Sensor",
-    "gameUtility": "Room Scanner: Sees everyone inside a building.",
+    "gameUtility": "Scans the current Node, permanently marking all interactive choices and potential item drops.",
     "costDescription": "Must be used in a room with windows.",
-    "draftCost": 50,
+    "draftCost": { "obols": 30 },
     "activationCost": {}
   },
   {
@@ -50,9 +47,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Yosuzume",
     "kanji": "夜雀",
     "utilityClass": "Sensor",
-    "gameUtility": "Proximity Alarm: Chirps near Goetic entities.",
+    "gameUtility": "Passive: Alerts the player if the unidentified Goetia's required Intel is present at the current Node.",
     "costDescription": "Small offerings of grain/seed.",
-    "draftCost": 50,
+    "draftCost": { "obols": 25 },
     "activationCost": {}
   },
   {
@@ -60,31 +57,29 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Ungaikyō",
     "kanji": "雲外鏡",
     "utilityClass": "Sensor",
-    "gameUtility": "Remote Viewing: A live CCTV feed of a distant room.",
+    "gameUtility": "Allows the player to Gather Intel from an adjacent Node without triggering a Travel action.",
     "costDescription": "Requires a silver-backed mirror focus.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "silver_mirror"
-    }
+    "draftCost": { "obols": 60 },
+    "activationCost": { "requiredItemId": "silver_mirror" }
   },
   {
     "id": "07_baku",
     "nameEn": "Baku",
     "kanji": "獏",
     "utilityClass": "Sensor",
-    "gameUtility": "Dream Forensics: Extracts memories from the sleeping.",
+    "gameUtility": "Extracts 1 piece of Goetic Intel from a sleeping or unconscious NPC.",
     "costDescription": "Player loses 1 \"Positive Memory\" (buff).",
-    "draftCost": 50,
-    "activationCost": {}
+    "draftCost": { "obols": 50 },
+    "activationCost": { "humanity": 5 }
   },
   {
     "id": "08_yamabiko",
     "nameEn": "Yamabiko",
     "kanji": "山彦",
     "utilityClass": "Sensor",
-    "gameUtility": "Sonic Echo: Eavesdrop through thick walls.",
+    "gameUtility": "Bypasses locked doors to intercept audio-based Intel tags (e.g., 'necrotic_whispers').",
     "costDescription": "Must shout a specific vocal command.",
-    "draftCost": 50,
+    "draftCost": { "obols": 30 },
     "activationCost": {}
   },
   {
@@ -92,9 +87,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Tenjo-name",
     "kanji": "天井舐",
     "utilityClass": "Sensor",
-    "gameUtility": "Ceiling Scout: Reveals attic traps or hidden items.",
+    "gameUtility": "Reveals hidden items added to your Inventory dictionary (Catalysts, Obols) at the current Node.",
     "costDescription": "Room must be in total darkness.",
-    "draftCost": 50,
+    "draftCost": { "obols": 25 },
     "activationCost": {}
   },
   {
@@ -102,53 +97,49 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Hiderigami",
     "kanji": "魃",
     "utilityClass": "Sensor",
-    "gameUtility": "Thermal Tracker: Detects \"Cold Spots\" (Death/Ghost).",
+    "gameUtility": "Automatically detects Death/Famine aligned Goetia presence and prevents associated passive penalties.",
     "costDescription": "Drains player hydration/water items.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "water_flask"
-    }
+    "draftCost": { "obols": 45 },
+    "activationCost": { "requiredItemId": "water_flask" }
   },
   {
     "id": "11_amabie",
     "nameEn": "Amabie",
     "kanji": "アマビエ",
     "utilityClass": "Sensor",
-    "gameUtility": "Event Forecast: Predicts upcoming world \"Symptoms.\"",
+    "gameUtility": "Permanently reduces Sector Entropy by 15% upon successful execution.",
     "costDescription": "Draw and share the Amabie’s likeness.",
-    "draftCost": 50,
-    "activationCost": {}
+    "draftCost": { "ink": 1 },
+    "activationCost": { "ink": 1 }
   },
   {
     "id": "12_ao_and_",
     "nameEn": "Ao-andō",
     "kanji": "青行燈",
     "utilityClass": "Sensor",
-    "gameUtility": "Ghost Summoner: Forces spirits to manifest.",
+    "gameUtility": "Forces a Goetic manifestation, immediately unlocking 2 Intel tags but advancing Time heavily.",
     "costDescription": "Tells a \"Scary Story\" (Time skip).",
-    "draftCost": 50,
-    "activationCost": {}
+    "draftCost": { "obols": 50 },
+    "activationCost": { "humanity": 15 }
   },
   {
     "id": "13_inugami",
     "nameEn": "Inugami",
     "kanji": "犬神",
     "utilityClass": "Sensor",
-    "gameUtility": "Bloodhound: Tracks targets via DNA/Scent.",
+    "gameUtility": "Tracks a specific Active Lead, revealing the exact Node required to resolve it.",
     "costDescription": "A drop of the Player's own blood.",
-    "draftCost": 50,
-    "activationCost": {
-      "humanity": 5
-    }
+    "draftCost": { "humanity": 10 },
+    "activationCost": { "humanity": 5 }
   },
   {
     "id": "14_enenra",
     "nameEn": "Enenra",
     "kanji": "煙々羅",
     "utilityClass": "Stealth",
-    "gameUtility": "Smoke Form: Drift through keyholes and vents.",
+    "gameUtility": "Bypasses physical barriers (Locked Doors, Vents) to access restricted narrative choices.",
     "costDescription": "Only works near an active fire/hearth.",
-    "draftCost": 50,
+    "draftCost": { "obols": 40 },
     "activationCost": {}
   },
   {
@@ -156,9 +147,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Nurikabe",
     "kanji": "ぬりかべ",
     "utilityClass": "Stealth",
-    "gameUtility": "Exit Blocker: Traps a suspect in a dead-end.",
+    "gameUtility": "Traps a fleeing entity, preventing a target Goetia from changing its current Node.",
     "costDescription": "Player must remain stationary.",
-    "draftCost": 50,
+    "draftCost": { "obols": 35 },
     "activationCost": {}
   },
   {
@@ -166,9 +157,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Kamaitachi",
     "kanji": "鎌鼬",
     "utilityClass": "Stealth",
-    "gameUtility": "Lock Breaker: Silently slices bolts/chains.",
+    "gameUtility": "Instantly destroys a mechanical lock or physical binding without generating Sector Entropy.",
     "costDescription": "High Wind-Essence cost.",
-    "draftCost": 50,
+    "draftCost": { "obols": 45 },
     "activationCost": {}
   },
   {
@@ -176,9 +167,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Ittan-momen",
     "kanji": "一反木綿",
     "utilityClass": "Stealth",
-    "gameUtility": "Glider / Capture: Aerial mobility or a straitjacket.",
+    "gameUtility": "Allows safe descent from high elevations or acts as a temporary straitjacket for hostile NPCs.",
     "costDescription": "Must be \"washed\" at a shrine after use.",
-    "draftCost": 50,
+    "draftCost": { "obols": 30 },
     "activationCost": {}
   },
   {
@@ -186,21 +177,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Nurarihyon",
     "kanji": "ぬらりひょん",
     "utilityClass": "Stealth",
-    "gameUtility": "Social Stealth: NPCs ignore your presence.",
+    "gameUtility": "Grants complete invisibility to standard NPCs, bypassing social barriers or guards.",
     "costDescription": "A high-quality meal or tea offering.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "food_ration"
-    }
+    "draftCost": { "obols": 20, "tributeItemId": "food_ration" },
+    "activationCost": { "requiredItemId": "food_ration" }
   },
   {
     "id": "19_noppera_b_",
     "nameEn": "Noppera-bō",
     "kanji": "のっぺら坊",
     "utilityClass": "Stealth",
-    "gameUtility": "Identity Theft: Copy the face of a nearby NPC.",
+    "gameUtility": "Copies the identity of an NPC, unlocking faction-specific dialogue choices.",
     "costDescription": "Player cannot speak for the duration.",
-    "draftCost": 50,
+    "draftCost": { "obols": 55 },
     "activationCost": {}
   },
   {
@@ -208,9 +197,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Kasa-obake",
     "kanji": "傘お化け",
     "utilityClass": "Stealth",
-    "gameUtility": "Rain Shield: Blocks \"Pestilence\" acid rain.",
+    "gameUtility": "Passive: Nullifies environmental hazards (Acid Rain, Toxic Fog) at corrupted Nodes.",
     "costDescription": "Occupies the \"Off-Hand\" equipment slot.",
-    "draftCost": 50,
+    "draftCost": { "obols": 25 },
     "activationCost": {}
   },
   {
@@ -218,33 +207,29 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Takaonna",
     "kanji": "高女",
     "utilityClass": "Stealth",
-    "gameUtility": "Verticality: Peer into 2nd-story windows.",
+    "gameUtility": "Grants access to 2nd-story or elevated narrative paths without triggering alarms.",
     "costDescription": "Strains physical stamina/health.",
-    "draftCost": 50,
-    "activationCost": {
-      "humanity": 5
-    }
+    "draftCost": { "obols": 30 },
+    "activationCost": { "humanity": 5 }
   },
   {
     "id": "22_sunakake_baba",
     "nameEn": "Sunakake-baba",
     "kanji": "砂かけ婆",
     "utilityClass": "Stealth",
-    "gameUtility": "Blindness: Stuns guards with spiritual sand.",
+    "gameUtility": "Stuns all hostile entities at the current Node, allowing a free Escape action.",
     "costDescription": "Requires a pouch of \"Sacred Sand.\"",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "sacred_sand"
-    }
+    "draftCost": { "obols": 40 },
+    "activationCost": { "requiredItemId": "sacred_sand" }
   },
   {
     "id": "23_akaname",
     "nameEn": "Akaname",
     "kanji": "垢嘗",
     "utilityClass": "Stealth",
-    "gameUtility": "Evidence Eraser: Cleans blood/fingerprints.",
+    "gameUtility": "Erases forensic evidence (blood, prints), reducing Sector Entropy caused by the player's violent actions.",
     "costDescription": "Requires a \"dirty\" crime scene to summon.",
-    "draftCost": 50,
+    "draftCost": { "obols": 45 },
     "activationCost": {}
   },
   {
@@ -252,9 +237,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Kodama",
     "kanji": "木霊",
     "utilityClass": "Stealth",
-    "gameUtility": "Forest Path: Teleport between old-growth trees.",
+    "gameUtility": "Teleports the player between any two Forest/Park Nodes without advancing Time.",
     "costDescription": "Cannot be used in concrete/urban zones.",
-    "draftCost": 50,
+    "draftCost": { "obols": 50 },
     "activationCost": {}
   },
   {
@@ -262,9 +247,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Betobeto-san",
     "kanji": "べとべとさん",
     "utilityClass": "Stealth",
-    "gameUtility": "Distraction: Phantom footsteps lead guards away.",
+    "gameUtility": "Creates a phantom distraction, forcing security NPCs to abandon their current post.",
     "costDescription": "Player must politely \"step aside\" to trigger.",
-    "draftCost": 50,
+    "draftCost": { "obols": 25 },
     "activationCost": {}
   },
   {
@@ -272,21 +257,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Kameosa",
     "kanji": "瓶長",
     "utilityClass": "Utility",
-    "gameUtility": "Item Duplicator: Temporary infinite small items.",
+    "gameUtility": "Duplicates one non-rare Inventory item (e.g., Lamp Oil, Sacred Sand). Cannot duplicate Obols or Ink.",
     "costDescription": "Requires a liquid catalyst (Water/Sake).",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "water_flask"
-    }
+    "draftCost": { "obols": 60 },
+    "activationCost": { "requiredItemId": "water_flask" }
   },
   {
     "id": "27_zashiki_warashi",
     "nameEn": "Zashiki-warashi",
     "kanji": "座敷童子",
     "utilityClass": "Utility",
-    "gameUtility": "Loot Booster: Better clues/items found in-base.",
+    "gameUtility": "Passive: Increases the amount of Obols generated when resolving Active Leads.",
     "costDescription": "Must be \"housed\" in the Player's HQ.",
-    "draftCost": 50,
+    "draftCost": { "obols": 100 },
     "activationCost": {}
   },
   {
@@ -294,21 +277,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Kappa",
     "kanji": "河童",
     "utilityClass": "Utility",
-    "gameUtility": "Medic: Heals broken bones and physical injury.",
+    "gameUtility": "Restores 25 Humanity. Can only be used near a water source Node.",
     "costDescription": "A fresh cucumber or local water source.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "cucumber"
-    }
+    "draftCost": { "obols": 40 },
+    "activationCost": { "requiredItemId": "cucumber" }
   },
   {
     "id": "29_binb_gami",
     "nameEn": "Binbōgami",
     "kanji": "貧乏神",
     "utilityClass": "Utility",
-    "gameUtility": "Curse Transfer: Moves debuffs from Player to NPC.",
+    "gameUtility": "Transfers a Goetic Curse debuff from the Player to a target NPC.",
     "costDescription": "Drains a large amount of Player Gold.",
-    "draftCost": 50,
+    "draftCost": { "obols": 75 },
     "activationCost": {}
   },
   {
@@ -316,9 +297,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Fūrin-bi",
     "kanji": "風鈴火",
     "utilityClass": "Utility",
-    "gameUtility": "Energy Recharge: Restores MP/Shikigami points.",
+    "gameUtility": "Restores 1 Dragon's Blood Ink. Requires an outdoor/windy Node.",
     "costDescription": "Requires a windy environment.",
-    "draftCost": 50,
+    "draftCost": { "obols": 80 },
     "activationCost": {}
   },
   {
@@ -326,9 +307,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Nezumi-otoko",
     "kanji": "ねずみ男",
     "utilityClass": "Utility",
-    "gameUtility": "Black Market: Buy/Sell \"Illegal\" esoteric goods.",
+    "gameUtility": "Opens a black market shop UI anywhere, allowing Obols to be traded for missing Catalysts.",
     "costDescription": "Takes a high commission on all sales.",
-    "draftCost": 50,
+    "draftCost": { "obols": 75 },
     "activationCost": {}
   },
   {
@@ -336,21 +317,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Futakuchi-onna",
     "kanji": "二口女",
     "utilityClass": "Utility",
-    "gameUtility": "Double-Casting: Use two Yokai simultaneously.",
+    "gameUtility": "Passive: Increases the Player's active Tether capacity, allowing 4 Yokai contracts instead of 3.",
     "costDescription": "Consumes double \"Food\" resources.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "food_ration"
-    }
+    "draftCost": { "obols": 150 },
+    "activationCost": { "requiredItemId": "food_ration" }
   },
   {
     "id": "33_amefuri_koz_",
     "nameEn": "Amefuri-kozō",
     "kanji": "雨降小僧",
     "utilityClass": "Utility",
-    "gameUtility": "Fire Extinguisher: Localized rain puts out fires.",
+    "gameUtility": "Extinguishes fires, unlocking paths blocked by War-aligned Goetic fire events.",
     "costDescription": "Player gets \"Soaked\" (Speed debuff).",
-    "draftCost": 50,
+    "draftCost": { "obols": 35 },
     "activationCost": {}
   },
   {
@@ -358,21 +337,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Umi-bōzu",
     "kanji": "海坊主",
     "utilityClass": "Utility",
-    "gameUtility": "Fog Cover: Massive smoke screen for escapes.",
+    "gameUtility": "Generates massive fog cover, resetting the current Node's hostile alert state to zero.",
     "costDescription": "Only usable near large bodies of water.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "water_flask"
-    }
+    "draftCost": { "obols": 55 },
+    "activationCost": { "requiredItemId": "water_flask" }
   },
   {
     "id": "35_zeniarai_benten",
     "nameEn": "Zeniarai-benten",
     "kanji": "銭洗弁天",
     "utilityClass": "Utility",
-    "gameUtility": "Money Cleansing: Purifies \"Cursed\" Horseman Gold.",
+    "gameUtility": "Purifies Cursed Obols (dropped by Goetia), converting them into usable currency.",
     "costDescription": "Requires a ritual washing at a spring.",
-    "draftCost": 50,
+    "draftCost": { "obols": 60 },
     "activationCost": {}
   },
   {
@@ -380,33 +357,29 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Kyūbi-no-kitsune",
     "kanji": "九尾の狐",
     "utilityClass": "Utility",
-    "gameUtility": "Master Catalyst: Massive buff to all Yokai stats.",
+    "gameUtility": "Massive Catalyst: Fully restores Humanity and resets Sector Entropy to 0.",
     "costDescription": "Requires a permanent, heavy sacrifice.",
-    "draftCost": 50,
-    "activationCost": {
-      "humanity": 20
-    }
+    "draftCost": { "obols": 300 },
+    "activationCost": { "humanity": 50 }
   },
   {
     "id": "37_tengu",
     "nameEn": "Tengu",
     "kanji": "天狗",
     "utilityClass": "Enforcer",
-    "gameUtility": "Kinetic Strike: Wind gust blows back objects.",
+    "gameUtility": "Kinetic Strike: Destroys physical barricades or knocks back minor demonic enemies.",
     "costDescription": "High cooldown; spiritual fatigue.",
-    "draftCost": 50,
-    "activationCost": {
-      "humanity": 10
-    }
+    "draftCost": { "obols": 60 },
+    "activationCost": { "humanity": 10 }
   },
   {
     "id": "38_ushioni",
     "nameEn": "Ushioni",
     "kanji": "牛鬼",
     "utilityClass": "Enforcer",
-    "gameUtility": "Shadow Trap: Paralyzes a target via their shadow.",
+    "gameUtility": "Shadow Trap: Paralyzes a target entity, removing the Time penalty for sealing rituals.",
     "costDescription": "Can only be used in bright light.",
-    "draftCost": 50,
+    "draftCost": { "obols": 75 },
     "activationCost": {}
   },
   {
@@ -414,21 +387,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Wanyūdō",
     "kanji": "輪入道",
     "utilityClass": "Enforcer",
-    "gameUtility": "Fire Wall: Flaming wheel protects your perimeter.",
+    "gameUtility": "Fire Wall: Prevents Sector Entropy from increasing for the next 3 actions at this Node.",
     "costDescription": "Drains \"Fuel\" items from inventory.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "fuel_item"
-    }
+    "draftCost": { "obols": 70 },
+    "activationCost": { "requiredItemId": "fuel_item" }
   },
   {
     "id": "40_gashadokuro",
     "nameEn": "Gashadokuro",
     "kanji": "がしゃどくろ",
     "utilityClass": "Enforcer",
-    "gameUtility": "Heavy Siege: Smashes through walls/barriers.",
+    "gameUtility": "Heavy Siege: Smashes through Goetic Barriers, granting immediate access to the Boss Node.",
     "costDescription": "Requires 10+ \"Corpse\" markers nearby.",
-    "draftCost": 50,
+    "draftCost": { "obols": 120 },
     "activationCost": {}
   },
   {
@@ -436,9 +407,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Jorōgumo",
     "kanji": "絡新婦",
     "utilityClass": "Enforcer",
-    "gameUtility": "Crowd Control: Binds multiple enemies in silk.",
+    "gameUtility": "Crowd Control: Binds multiple lesser demons, preventing them from draining Humanity during investigations.",
     "costDescription": "Vulnerable to Fire-based Goetic attacks.",
-    "draftCost": 50,
+    "draftCost": { "obols": 65 },
     "activationCost": {}
   },
   {
@@ -446,21 +417,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Nekomata",
     "kanji": "猫又",
     "utilityClass": "Enforcer",
-    "gameUtility": "Body Puppet: Reanimates a fallen enemy.",
+    "gameUtility": "Reanimates a fallen NPC to extract one final Intel tag before they pass on.",
     "costDescription": "Consumes a \"Spirit Thread\" item.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "spirit_thread"
-    }
+    "draftCost": { "obols": 55 },
+    "activationCost": { "requiredItemId": "spirit_thread" }
   },
   {
     "id": "43_raij_",
     "nameEn": "Raijū",
     "kanji": "雷獣",
     "utilityClass": "Enforcer",
-    "gameUtility": "EMP / Stun: Disables electronics/Goetia.",
+    "gameUtility": "EMP/Stun: Disables electronic security systems and stuns synthetic Goetic constructs.",
     "costDescription": "Requires a thunder/power source.",
-    "draftCost": 50,
+    "draftCost": { "obols": 60 },
     "activationCost": {}
   },
   {
@@ -468,57 +437,49 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Basan",
     "kanji": "波山",
     "utilityClass": "Enforcer",
-    "gameUtility": "Ghost Fire: Cold fire damages spirits only.",
+    "gameUtility": "Ghost Fire: Destroys cursed objects that passively raise Sector Entropy.",
     "costDescription": "Player must \"feed\" it wood or paper.",
-    "draftCost": 50,
-    "activationCost": {
-      "ink": 1
-    }
+    "draftCost": { "obols": 50 },
+    "activationCost": { "ink": 1 }
   },
   {
     "id": "45_kurozuka",
     "nameEn": "Kurozuka",
     "kanji": "黒塚",
     "utilityClass": "Enforcer",
-    "gameUtility": "Life Leech: Steals HP from a target.",
+    "gameUtility": "Life Leech: Steals 20 Humanity from an NPC target, but significantly raises Sector Entropy.",
     "costDescription": "Increases Player \"Corruption\" level.",
-    "draftCost": 50,
-    "activationCost": {
-      "humanity": 20
-    }
+    "draftCost": { "obols": 80 },
+    "activationCost": { "humanity": 20 }
   },
   {
     "id": "46_hannya",
     "nameEn": "Hannya",
     "kanji": "般若",
     "utilityClass": "Enforcer",
-    "gameUtility": "Aggro Draw: Forces all enemies to attack it.",
+    "gameUtility": "Aggro Draw: Forces all active curses to target the Yokai instead of the player, sparing Humanity.",
     "costDescription": "High Sanity cost to summon.",
-    "draftCost": 50,
-    "activationCost": {
-      "humanity": 10
-    }
+    "draftCost": { "obols": 75 },
+    "activationCost": { "humanity": 10 }
   },
   {
     "id": "47_katashiro",
     "nameEn": "Katashiro",
     "kanji": "形代",
     "utilityClass": "Shikigami",
-    "gameUtility": "Decoy: Creates a paper clone of the player.",
+    "gameUtility": "Decoy: Creates a paper clone to automatically absorb one lethal Humanity drain.",
     "costDescription": "Consumes 1 Paper Doll item.",
-    "draftCost": 50,
-    "activationCost": {
-      "requiredItemId": "paper_doll"
-    }
+    "draftCost": { "obols": 15 },
+    "activationCost": { "requiredItemId": "paper_doll" }
   },
   {
     "id": "48_zenki___goki",
     "nameEn": "Zenki & Goki",
     "kanji": "前鬼・後鬼",
     "utilityClass": "Shikigami",
-    "gameUtility": "Bodyguards: Passive physical defense buff.",
+    "gameUtility": "Passive: Reduces all incoming Humanity damage by 2 while the contract is in the Tether.",
     "costDescription": "Constant drain on Spirit Energy.",
-    "draftCost": 50,
+    "draftCost": { "obols": 40 },
     "activationCost": {}
   },
   {
@@ -526,21 +487,19 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Origami-Tsuru",
     "kanji": "折鶴",
     "utilityClass": "Shikigami",
-    "gameUtility": "Messenger: Delivers a seal to a distant target.",
+    "gameUtility": "Messenger: Allows the player to execute a Seal Goetia action from an adjacent Node.",
     "costDescription": "Name must be written on the paper.",
-    "draftCost": 50,
-    "activationCost": {
-      "ink": 1
-    }
+    "draftCost": { "ink": 1 },
+    "activationCost": { "ink": 1 }
   },
   {
     "id": "50_hitogata",
     "nameEn": "Hitogata",
     "kanji": "人形",
     "utilityClass": "Shikigami",
-    "gameUtility": "Curse Eater: Absorbs one status effect.",
+    "gameUtility": "Curse Eater: Immediately removes one negative status effect (e.g., Poison, Sickness).",
     "costDescription": "Doll is destroyed upon use.",
-    "draftCost": 50,
+    "draftCost": { "obols": 25 },
     "activationCost": {}
   },
   {
@@ -548,9 +507,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Cho-gata",
     "kanji": "蝶形",
     "utilityClass": "Shikigami",
-    "gameUtility": "Tracer: Paper butterfly tracks an NPC.",
+    "gameUtility": "Tracer: Marks an NPC. Their movement across the Map will no longer raise Sector Entropy.",
     "costDescription": "Requires a physical touch.",
-    "draftCost": 50,
+    "draftCost": { "obols": 25 },
     "activationCost": {}
   },
   {
@@ -558,11 +517,9 @@ export const allYokai: YokaiContract[] = [
     "nameEn": "Ofuda",
     "kanji": "御札",
     "utilityClass": "Shikigami",
-    "gameUtility": "Banishment: Final strike against a Goetia.",
+    "gameUtility": "Acts as a wildcard Catalyst during a Sealing Ritual, substituting for one missing item.",
     "costDescription": "High crafting cost (Rare Ink/Paper).",
-    "draftCost": 50,
-    "activationCost": {
-      "ink": 1
-    }
+    "draftCost": { "obols": 45 },
+    "activationCost": { "ink": 1 }
   }
 ];
