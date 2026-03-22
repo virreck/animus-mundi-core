@@ -8,7 +8,9 @@ import type { ContractCost } from '../../content/yokai/types';
 export function useEngine() {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
 
-  // --- NEW NARRATIVE ACTIONS ---
+  const startInvestigation = (name: string, portrait: string, agency: string) => 
+    dispatch({ type: 'START_INVESTIGATION', payload: { name, portrait, agency } });
+
   const modifyFaction = (factionId: FactionId, amount: number) => 
     dispatch({ type: 'MODIFY_FACTION', payload: { factionId, amount } });
 
@@ -21,7 +23,6 @@ export function useEngine() {
   const resolveLead = (leadId: string) => 
     dispatch({ type: 'RESOLVE_LEAD', payload: leadId });
 
-  // --- CORE SYSTEM ACTIONS ---
   const draftContract = (yokaiId: YokaiId, costs: ContractCost) => 
     dispatch({ type: 'DRAFT_CONTRACT', payload: { yokaiId, costs } });
     
@@ -40,10 +41,10 @@ export function useEngine() {
   const resetGame = () => 
     dispatch({ type: 'RESET_GAME' });
 
-  // Expose everything to the UI
   return { 
     state, 
     dispatch, 
+    startInvestigation,
     modifyFaction,
     modifyHumanity,
     setFlag,
