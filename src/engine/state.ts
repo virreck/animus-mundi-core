@@ -36,6 +36,11 @@ export interface GameState {
   humanity: number;       
   ink: number;            
   inventory: Record<ItemId, number>;
+
+  gameStage: 'START_SCREEN' | 'ACTIVE';
+  playerName: string;                   
+  playerPortrait: string;               
+  agencyName: string;                  
   
   // --- NEW: Faction Standing ---
   factions: Record<FactionId, number>;
@@ -52,6 +57,10 @@ export interface GameState {
 }
 
 export const initialGameState: GameState = {
+  gameStage: 'START_SCREEN',
+  playerName: 'Unknown Operative',
+  playerPortrait: 'sigil_1',
+  agencyName: 'Independent
   humanity: 100,
   ink: 3,
   inventory: {
