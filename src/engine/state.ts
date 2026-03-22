@@ -60,7 +60,7 @@ export const initialGameState: GameState = {
   gameStage: 'START_SCREEN',
   playerName: 'Unknown Operative',
   playerPortrait: 'sigil_1',
-  agencyName: 'Independent
+  agencyName: 'Independent',
   humanity: 100,
   ink: 3,
   inventory: {
