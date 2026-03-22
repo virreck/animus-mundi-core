@@ -14,7 +14,6 @@ interface NarrativeChoice {
   actions: GameAction[];
 }
 
-// Blending traditional parchment/wood with digital phosphor terminals
 const theme = {
   bgDark: '#0a0908',
   bgWood: '#1a1614',
@@ -23,32 +22,101 @@ const theme = {
   textParchment: '#eaddc3', 
   textInk: '#2b2621',
   accentRed: '#7a1919',
-  accentGreen: '#4a7c59', // Terminal success green
+  accentGreen: '#4a7c59', 
   fontSerif: '"Palatino Linotype", "Book Antiqua", Palatino, serif',
   fontSans: '"Trebuchet MS", "Lucida Grande", sans-serif',
-  fontMono: '"Courier New", Courier, monospace', // For the digital occult UI
+  fontMono: '"Courier New", Courier, monospace', 
+};
+
+// --- THE TERMINAL BOOT SCREEN ---
+const StartScreen = ({ onStart }: { onStart: (name: string, portrait: string, agency: string) => void }) => {
+  const [name, setName] = useState('');
+  const [agency, setAgency] = useState('');
+  const [portrait, setPortrait] = useState('☿'); 
+
+  const sigils = ['☿', '♄', '♆', '♅', '♃'];
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: theme.bgDark, color: theme.accentGreen, fontFamily: theme.fontMono }}>
+      <div style={{ width: '500px', border: `2px solid ${theme.accentGreen}`, padding: '40px', backgroundColor: '#050505', boxShadow: '0 0 20px rgba(74, 124, 89, 0.2)' }}>
+        <h1 style={{ textAlign: 'center', borderBottom: `1px dashed ${theme.accentGreen}`, paddingBottom: '20px', letterSpacing: '4px' }}>THAUMATURGIC_OS v3.1</h1>
+        
+        <div style={{ marginTop: '30px' }}>
+          <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; INPUT OPERATIVE DESIGNATION:</label>
+          <input 
+            type="text" 
+            value={name} 
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Vergil" 
+            style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.accentGreen, border: `1px solid ${theme.accentGreen}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }}
+          />
+
+          <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; INPUT AFFILIATED AGENCY:</label>
+          <input 
+            type="text" 
+            value={agency} 
+            onChange={(e) => setAgency(e.target.value)}
+            placeholder="e.g. Independent Consultations" 
+            style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.accentGreen, border: `1px solid ${theme.accentGreen}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }}
+          />
+
+          <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; SELECT TETHER SIGIL (PORTRAIT PROFILE):</label>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
+            {sigils.map(sigil => (
+              <button
+                key={sigil}
+                onClick={() => setPortrait(sigil)}
+                style={{
+                  flex: 1, padding: '15px', fontSize: '1.5rem', cursor: 'pointer',
+                  backgroundColor: portrait === sigil ? theme.accentGreen : 'black',
+                  color: portrait === sigil ? 'black' : theme.accentGreen,
+                  border: `1px solid ${theme.accentGreen}`
+                }}
+              >
+                {sigil}
+              </button>
+            ))}
+          </div>
+
+          <button 
+            onClick={() => onStart(name, portrait, agency)}
+            style={{ width: '100%', padding: '15px', backgroundColor: theme.accentRed, color: theme.textParchment, border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '2px' }}
+          >
+            INITIALIZE TETHER PROTOCOL
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default function App() {
-  const { state, dispatch, draftContract, advanceTime, resetGame, identifyGoetia, sealGoetia } = useEngine();
+  const { state, dispatch, draftContract, advanceTime, resetGame, identifyGoetia, sealGoetia, startInvestigation } = useEngine();
   const [currentTab, setCurrentTab] = useState<'MAP' | 'CODEX' | 'KAGE_NO_SHO' | 'JOURNAL' | 'INVENTORY'>('MAP');
   const [selectedGoetiaId, setSelectedGoetiaId] = useState<string | null>(null);
-  
-  // State for the new Sealing Mini-Game
   const [activeSealTarget, setActiveSealTarget] = useState<string | null>(null);
-  
   const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
+
+  // Dynamic Text Injection
+  const injectNarrative = (text: string) => {
+    if (!text) return "";
+    return text
+      .replace(/\{playerName\}/g, state.playerName)
+      .replace(/\{agencyName\}/g, state.agencyName);
+  };
 
   const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' | 'SEAL' = 'ALERT') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
+    setTimeout(() => { setToasts(prev => prev.filter(t => t.id !== id)); }, 4000);
   };
 
   const formatNode = (nodeId: string) => nodeId.replace(/_/g, ' ').toUpperCase();
   const availableChoices = caterhamChurchyard.choices as unknown as NarrativeChoice[];
+
+  if (state.gameStage === 'START_SCREEN') {
+    return <StartScreen onStart={startInvestigation} />;
+  }
 
   // --- THE SEALING MINI-GAME COMPONENT ---
   const SealingTerminal = ({ target, sealCost }: { target: any, sealCost: Record<string, number> }) => {
@@ -57,15 +125,15 @@ export default function App() {
     const [timeLeft, setTimeLeft] = useState(8);
     const [wardSequence, setWardSequence] = useState<string[]>([]);
     
-    const requiredSequence = ['☿', '♄', '♆']; // Mercury, Saturn, Neptune
-    const keypad = ['☿', '♃', '♄', '♅', '♆']; // Options including dummy buttons
+    const requiredSequence = ['☿', '♄', '♆']; 
+    const keypad = ['☿', '♃', '♄', '♅', '♆']; 
 
     useEffect(() => {
       if (phase === 'WARDING' && timeLeft > 0) {
         const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
         return () => clearTimeout(timer);
       } else if (phase === 'WARDING' && timeLeft <= 0) {
-        executeFinalSeal(false); // Failed the warding, messy seal
+        executeFinalSeal(false); 
       }
     }, [phase, timeLeft]);
 
@@ -75,7 +143,7 @@ export default function App() {
         setPhase('WARDING');
       } else {
         addToast("Signature mismatch. Connection unstable.", "ALERT");
-        dispatch({ type: 'MODIFY_HUMANITY', payload: -2 }); // Penalty for wrong name
+        dispatch({ type: 'MODIFY_HUMANITY', payload: -2 }); 
       }
     };
 
@@ -85,9 +153,9 @@ export default function App() {
       
       if (newSequence.length === requiredSequence.length) {
         if (newSequence.every((val, index) => val === requiredSequence[index])) {
-          executeFinalSeal(true); // Perfect seal
+          executeFinalSeal(true); 
         } else {
-          setWardSequence([]); // Reset on wrong sequence
+          setWardSequence([]); 
           dispatch({ type: 'MODIFY_HUMANITY', payload: -2 });
         }
       }
@@ -95,12 +163,9 @@ export default function App() {
 
     const executeFinalSeal = (isClean: boolean) => {
       setPhase('COMPLETE');
-      
-      // Consume the items
       (Object.entries(sealCost) as [string, number][]).forEach(([item, amount]) => {
         dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } });
       });
-      
       sealGoetia(target.id);
       setActiveSealTarget(null);
 
@@ -108,7 +173,7 @@ export default function App() {
         addToast(`BANISHMENT SUCCESSFUL. Target ${target.name} sealed.`, 'SEAL');
       } else {
         addToast(`MESSY BANISHMENT. Backlash caused Sector Entropy spike.`, 'ALERT');
-        dispatch({ type: 'ADVANCE_TIME', payload: 15 }); // 15% penalty for missing the timer!
+        dispatch({ type: 'ADVANCE_TIME', payload: 15 }); 
       }
     };
 
@@ -168,16 +233,28 @@ export default function App() {
       <style>{`@keyframes blink { 50% { opacity: 0; } }`}</style>
       
       {/* --- TOP BAR --- */}
-      <div style={{ padding: '10px 20px', backgroundColor: theme.bgWood, borderBottom: `2px solid ${theme.borderBronze}`, fontSize: '0.9rem', fontFamily: theme.fontSans, letterSpacing: '1px' }}>
-        <span>LOCATION: <strong>{formatNode(state.currentNode)}</strong></span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 20px', backgroundColor: theme.bgWood, borderBottom: `2px solid ${theme.borderBronze}`, fontSize: '0.9rem', fontFamily: theme.fontMono, letterSpacing: '1px' }}>
+        <span>ACTIVE_NODE: <strong style={{color: theme.accentRed}}>{formatNode(state.currentNode)}</strong></span>
+        
+        <span style={{ color: theme.accentGreen }}>
+          AUTH_USER: <strong style={{ color: theme.textParchment }}>{state.playerName.toUpperCase()}</strong> 
+          <span style={{ margin: '0 10px', opacity: 0.5 }}>//</span> 
+          AGENCY: <strong style={{ color: theme.textParchment }}>{state.agencyName.toUpperCase()}</strong>
+        </span>
       </div>
 
       <div style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
         
         {/* --- LEFT SIDEBAR --- */}
         <div style={{ width: '220px', backgroundColor: theme.bgWood, borderRight: `2px solid ${theme.borderBronze}`, display: 'flex', flexDirection: 'column', padding: '20px' }}>
+          
+          <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: `1px solid ${theme.borderBronze}`, paddingBottom: '20px' }}>
+             <div style={{ fontSize: '3rem', color: theme.accentGreen, marginBottom: '10px', fontFamily: theme.fontMono }}>{state.playerPortrait}</div>
+             <div style={{ fontFamily: theme.fontMono, fontSize: '0.8rem', color: theme.borderBronze }}>OP_DESIGNATION</div>
+             <div style={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>{state.playerName}</div>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', borderBottom: `1px solid ${theme.borderBronze}`, paddingBottom: '20px', marginBottom: '20px' }}>
-            {/* UPDATED TAB NAMES */}
             <NavBtn active={currentTab === 'KAGE_NO_SHO'} onClick={() => setCurrentTab('KAGE_NO_SHO')}>KAGE NO SHO</NavBtn>
             <NavBtn active={currentTab === 'CODEX'} onClick={() => setCurrentTab('CODEX')}>GOETIAN CODEX</NavBtn>
             <NavBtn active={currentTab === 'MAP'} onClick={() => setCurrentTab('MAP')}>MAP</NavBtn>
@@ -216,7 +293,7 @@ export default function App() {
             ⏳ WAIT (+5 CHAOS)
           </button>
           <button onClick={resetGame} style={{ padding: '10px', backgroundColor: '#3a0c0c', color: theme.textParchment, border: 'none', cursor: 'pointer', fontFamily: theme.fontSans }}>
-            RESET SIMULATION
+            TERMINATE SESSION
           </button>
         </div>
 
@@ -230,10 +307,10 @@ export default function App() {
               {currentTab === 'MAP' && (
                 <>
                   <h2 style={{ borderBottom: `2px solid ${theme.accentRed}`, paddingBottom: '10px', textTransform: 'uppercase', letterSpacing: '2px' }}>
-                    {caterhamChurchyard.title}
+                    {injectNarrative(caterhamChurchyard.title)}
                   </h2>
                   <p style={{ lineHeight: '1.8', fontSize: '1.05rem', marginTop: '20px' }}>
-                    {caterhamChurchyard.text}
+                    {injectNarrative(caterhamChurchyard.text)}
                   </p>
                 </>
               )}
@@ -293,7 +370,11 @@ export default function App() {
                   <h2 style={{ borderBottom: `2px solid ${theme.accentRed}`, paddingBottom: '10px' }}>KAGE NO SHO</h2>
                   <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: '#555' }}>Forge pacts through mutual exchange to bind spirits to your Tether.</p>
                   
-                  {allYokai.filter(y => y.utilityClass === 'Shikigami').map(yokai => {
+                  {allYokai.filter(y => {
+                    if (y.utilityClass === 'Shikigami') return true;
+                    if (y.unlockFlag && state.flags[y.unlockFlag]) return true;
+                    return false;
+                  }).map(yokai => {
                     const cost = yokai.draftCost;
                     const canAfford = (
                       (!cost.obols || (state.inventory["obols"] || 0) >= cost.obols) &&
@@ -412,7 +493,7 @@ export default function App() {
                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2a2421'}
                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = theme.bgWood}
                          >
-                           <span style={{ color: theme.accentRed, marginRight: '10px' }}>&gt;</span> {choice.label}
+                           <span style={{ color: theme.accentRed, marginRight: '10px' }}>&gt;</span> {injectNarrative(choice.label)}
                          </button>
                      ))}
                    </div>
@@ -475,7 +556,6 @@ export default function App() {
                            </div>
                          )}
 
-                         {/* THE NEW SEALING LOGIC INJECTION */}
                          {isIdentified && !isSealed && Object.keys(sealCost).length > 0 && (
                            <div style={{ marginTop: '30px', backgroundColor: theme.bgWood, padding: '20px', color: theme.textParchment, border: `1px solid ${theme.accentRed}` }}>
                              <h3 style={{ marginTop: 0, color: theme.accentRed }}>REQUIRED CATALYSTS</h3>
@@ -490,7 +570,6 @@ export default function App() {
                                ))}
                              </ul>
                              
-                             {/* Render either the button or the Terminal Component */}
                              {!activeSealTarget ? (
                                <button 
                                  onClick={() => setActiveSealTarget(target.id)}
