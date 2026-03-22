@@ -1,32 +1,58 @@
 // src/ui/hooks/useEngine.ts
 import { useReducer } from 'react';
-import type { YokaiId, NodeId, GoetiaId } from '../../engine/state';
+import type { YokaiId, NodeId, GoetiaId, FactionId } from '../../engine/state';
 import { initialGameState } from '../../engine/state';
 import { gameReducer } from '../../engine/reducer';
+import type { ContractCost } from '../../content/yokai/types';
 
 export function useEngine() {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
 
-// Add these inside your useEngine hook return object:
-    modifyFaction: (factionId: FactionId, amount: number) => 
-      dispatch({ type: 'MODIFY_FACTION', payload: { factionId, amount } }),
+  // --- NEW NARRATIVE ACTIONS ---
+  const modifyFaction = (factionId: FactionId, amount: number) => 
+    dispatch({ type: 'MODIFY_FACTION', payload: { factionId, amount } });
 
-    modifyHumanity: (amount: number) => 
-      dispatch({ type: 'MODIFY_HUMANITY', payload: amount }),
+  const modifyHumanity = (amount: number) => 
+    dispatch({ type: 'MODIFY_HUMANITY', payload: amount });
 
-    setFlag: (flagId: string, value: boolean) => 
-      dispatch({ type: 'SET_FLAG', payload: { flagId, value } }),
+  const setFlag = (flagId: string, value: boolean) => 
+    dispatch({ type: 'SET_FLAG', payload: { flagId, value } });
 
-    resolveLead: (leadId: string) => 
-      dispatch({ type: 'RESOLVE_LEAD', payload: leadId }),
+  const resolveLead = (leadId: string) => 
+    dispatch({ type: 'RESOLVE_LEAD', payload: leadId });
 
+  // --- CORE SYSTEM ACTIONS ---
+  const draftContract = (yokaiId: YokaiId, costs: ContractCost) => 
+    dispatch({ type: 'DRAFT_CONTRACT', payload: { yokaiId, costs } });
+    
+  const advanceTime = (chaosAmount: number = 2) => 
+    dispatch({ type: 'ADVANCE_TIME', payload: chaosAmount });
+    
+  const travelTo = (nodeId: NodeId) => 
+    dispatch({ type: 'TRAVEL', payload: nodeId });
+    
+  const identifyGoetia = (goetiaId: GoetiaId) => 
+    dispatch({ type: 'IDENTIFY_GOETIA', payload: goetiaId });
+    
+  const sealGoetia = (goetiaId: GoetiaId) => 
+    dispatch({ type: 'SEAL_GOETIA', payload: goetiaId });
+    
+  const resetGame = () => 
+    dispatch({ type: 'RESET_GAME' });
 
-  const draftContract = (yokaiId: YokaiId, cost: number) => dispatch({ type: 'DRAFT_CONTRACT', payload: { yokaiId, cost } });
-  const advanceTime = (chaosAmount: number) => dispatch({ type: 'ADVANCE_TIME', payload: chaosAmount });
-  const travelTo = (nodeId: NodeId) => dispatch({ type: 'TRAVEL', payload: nodeId });
-  const identifyGoetia = (goetiaId: GoetiaId) => dispatch({ type: 'IDENTIFY_GOETIA', payload: goetiaId }); // <-- NEW
-  const sealGoetia = (goetiaId: GoetiaId) => dispatch({ type: 'SEAL_GOETIA', payload: goetiaId });
-  const resetGame = () => dispatch({ type: 'RESET_GAME' });
-
-  return { state, dispatch, draftContract, advanceTime, travelTo, identifyGoetia, sealGoetia, resetGame };
+  // Expose everything to the UI
+  return { 
+    state, 
+    dispatch, 
+    modifyFaction,
+    modifyHumanity,
+    setFlag,
+    resolveLead,
+    draftContract, 
+    advanceTime, 
+    travelTo, 
+    identifyGoetia, 
+    sealGoetia, 
+    resetGame 
+  };
 }
