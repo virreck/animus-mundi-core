@@ -18,6 +18,7 @@ export type GameAction =
   | { type: 'MODIFY_HUMANITY'; payload: number }
   | { type: 'SET_FLAG'; payload: { flagId: string; value: boolean } }
   | { type: 'RESOLVE_LEAD'; payload: string }
+  | { type: 'LOAD_GAME'; payload: GameState }
   | { type: 'RESET_GAME' };
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -123,6 +124,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           lead.id === action.payload ? { ...lead, resolved: true } : lead
         )
       };
+
+    case 'LOAD_GAME':
+      return action.payload;
       
     case 'RESET_GAME':
       return initialGameState;

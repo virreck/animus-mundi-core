@@ -1,12 +1,33 @@
 // src/ui/hooks/useEngine.ts
-import { useReducer } from 'react';
-import type { YokaiId, NodeId, GoetiaId, FactionId } from '../../engine/state';
+import { useReducer, useEffect } from 'react';
+import type { YokaiId, NodeId, GoetiaId, FactionId, GameState } from '../../engine/state';
 import { initialGameState } from '../../engine/state';
 import { gameReducer } from '../../engine/reducer';
 import type { ContractCost } from '../../content/yokai/types';
 
+const SAVE_KEY = 'thaumaturgic_os_save_v1';
+
 export function useEngine() {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
+
+  // --- AUTO-SAVE DAEMON ---
+  useEffect(() => {
+    if (state.gameStage === 'ACTIVE') {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    }
+  }, [state]);
+
+  const loadGame = () => {
+    const savedData = localStorage.getItem(SAVE_KEY);
+    if (savedData) {
+      try {
+        const parsedState: GameState = JSON.parse(savedData);
+        dispatch({ type: 'LOAD_GAME', payload: parsedState });
+      } catch (error) {
+        console.error("Failed to parse local save data.", error);
+      }
+    }
+  };
 
   const startInvestigation = (name: string, portrait: string, agency: string) => 
     dispatch({ type: 'START_INVESTIGATION', payload: { name, portrait, agency } });
@@ -38,13 +59,16 @@ export function useEngine() {
   const sealGoetia = (goetiaId: GoetiaId) => 
     dispatch({ type: 'SEAL_GOETIA', payload: goetiaId });
     
-  const resetGame = () => 
+  const resetGame = () => {
+    localStorage.removeItem(SAVE_KEY); // Wipe the hard drive
     dispatch({ type: 'RESET_GAME' });
+  };
 
   return { 
     state, 
     dispatch, 
     startInvestigation,
+    loadGame,
     modifyFaction,
     modifyHumanity,
     setFlag,

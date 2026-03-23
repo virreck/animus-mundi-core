@@ -27,19 +27,43 @@ const theme = {
 };
 
 // --- THE TERMINAL BOOT SCREEN ---
-const StartScreen = ({ onStart }: { onStart: (name: string, portrait: string, agency: string) => void }) => {
+const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: string, agency: string) => void, onLoad: () => void }) => {
   const [name, setName] = useState('');
   const [agency, setAgency] = useState('');
   const [portrait, setPortrait] = useState('☿'); 
 
   const sigils = ['☿', '♄', '♆', '♅', '♃'];
 
+  // Check for local save data
+  const savedData = localStorage.getItem('thaumaturgic_os_save_v1');
+  let savedOperative = null;
+  if (savedData) {
+    try {
+      savedOperative = JSON.parse(savedData).playerName;
+    } catch (e) {}
+  }
+
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono }}>
       <div style={{ width: '500px', border: `2px solid ${theme.textTerminal}`, padding: '40px', backgroundColor: theme.bgPanel, boxShadow: `0 0 20px rgba(74, 124, 89, 0.2)` }}>
         <h1 style={{ textAlign: 'center', borderBottom: `1px dashed ${theme.textTerminal}`, paddingBottom: '20px', letterSpacing: '4px', color: theme.textBright }}>THAUMATURGIC_OS v3.1</h1>
         
-        <div style={{ marginTop: '30px' }}>
+        {/* --- NEW: RESUME PROTOCOL --- */}
+        {savedOperative && (
+          <div style={{ marginTop: '30px', padding: '20px', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgDark, textAlign: 'center' }}>
+            <p style={{ color: theme.textMuted, fontSize: '0.85rem', marginBottom: '10px' }}>PREVIOUS SESSION DETECTED IN LOCAL MEMORY:</p>
+            <button 
+              onClick={onLoad}
+              style={{ width: '100%', padding: '15px', backgroundColor: theme.textTerminal, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '2px', animation: 'slowPulse 2.5s ease-in-out infinite' }}
+            >
+              &gt; RESUME: OP_{savedOperative.toUpperCase()}
+            </button>
+            <div style={{ marginTop: '20px', borderBottom: `1px dashed ${theme.borderTerminal}` }}></div>
+            <p style={{ color: theme.textMuted, fontSize: '0.85rem', marginTop: '20px' }}>OR INITIALIZE NEW INSTANCE BELOW (WILL OVERWRITE DATA):</p>
+          </div>
+        )}
+
+        <div style={{ marginTop: savedOperative ? '20px' : '30px' }}>
           <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; INPUT OPERATIVE DESIGNATION:</label>
           <input 
             type="text" 
@@ -412,7 +436,7 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
 };
 
 export default function App() {
-  const { state, dispatch, draftContract, advanceTime, resetGame, identifyGoetia, sealGoetia, startInvestigation } = useEngine();
+  const { state, dispatch, draftContract, advanceTime, resetGame, identifyGoetia, sealGoetia, startInvestigation, loadGame } = useEngine();
   const [currentTab, setCurrentTab] = useState<'MAP' | 'CODEX' | 'KAGE_NO_SHO' | 'JOURNAL' | 'INVENTORY'>('MAP');
   const [selectedGoetiaId, setSelectedGoetiaId] = useState<string | null>(null);
   const [activeSealTarget, setActiveSealTarget] = useState<string | null>(null);
@@ -437,7 +461,7 @@ export default function App() {
   const availableChoices = caterhamChurchyard.choices as unknown as NarrativeChoice[];
 
   if (state.gameStage === 'START_SCREEN') {
-    return <StartScreen onStart={startInvestigation} />;
+    return <StartScreen onStart={startInvestigation} onLoad={loadGame} />;
   }
 
   return (
