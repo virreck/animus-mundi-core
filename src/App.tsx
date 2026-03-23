@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useEngine } from './ui/hooks/useEngine';
 import { caterhamChurchyard } from './content/narrative/caterham_churchyard';
 import { allGoetia } from './content/goetia';
@@ -88,7 +88,30 @@ const StartScreen = ({ onStart }: { onStart: (name: string, portrait: string, ag
   );
 };
 
-// --- MOVED OUTSIDE: THE SEALING MINI-GAME MODAL COMPONENT ---
+// --- CRYPTOGRAPHIC MATRIX LIBRARY ---
+const MAX_TIME = 15;
+
+const SEAL_PATTERNS = [
+  {
+    id: "HEPTAGRAM_PROTOCOL",
+    nodes: [ { id: 0, x: 50, y: 5 }, { id: 1, x: 85, y: 22 }, { id: 2, x: 95, y: 60 }, { id: 3, x: 70, y: 92 }, { id: 4, x: 30, y: 92 }, { id: 5, x: 5, y: 60 }, { id: 6, x: 15, y: 22 } ],
+    sequence: [0, 3, 6, 2, 5, 1, 4, 0]
+  },
+  {
+    id: "PENTAGRAM_PROTOCOL",
+    nodes: [ { id: 0, x: 50, y: 5 }, { id: 1, x: 95, y: 38 }, { id: 2, x: 78, y: 92 }, { id: 3, x: 22, y: 92 }, { id: 4, x: 5, y: 38 } ],
+    sequence: [0, 2, 4, 1, 3, 0]
+  },
+  {
+    id: "HEXAGRAM_PROTOCOL", // Unicursal Hexagram
+    nodes: [ { id: 0, x: 50, y: 5 }, { id: 1, x: 90, y: 25 }, { id: 2, x: 90, y: 75 }, { id: 3, x: 50, y: 95 }, { id: 4, x: 10, y: 75 }, { id: 5, x: 10, y: 25 } ],
+    sequence: [0, 2, 4, 1, 5, 3, 0]
+  }
+];
+
+
+
+// --- THE SEALING MINI-GAME MODAL COMPONENT ---
 interface SealingTerminalProps {
   target: any;
   sealCost: Record<string, number>;
@@ -99,28 +122,35 @@ interface SealingTerminalProps {
 }
 
 const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addToast }: SealingTerminalProps) => {
+  // Select a random sealing matrix pattern on mount
+  const [matrix] = useState(() => SEAL_PATTERNS[Math.floor(Math.random() * SEAL_PATTERNS.length)]);
+
   const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE'>('AUTH');
   const [nameInput, setNameInput] = useState('');
-  const [timeLeft, setTimeLeft] = useState(8);
-  const [wardSequence, setWardSequence] = useState<string[]>([]);
   
+  // Tracing State
+  const [timeLeft, setTimeLeft] = useState(MAX_TIME);
+  const [path, setPath] = useState<number[]>([]);
+  const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Completion State
   const [typedName, setTypedName] = useState(''); 
-  const [showSealed, setShowSealed] = useState(false); // <-- NEW: Controls the pause
+  const [showSealed, setShowSealed] = useState(false); 
   const [isCleanSeal, setIsCleanSeal] = useState(true);
-  
-  const requiredSequence = ['☿', '♄', '♆']; 
-  const keypad = ['☿', '♃', '♄', '♅', '♆']; 
 
+  // --- TIMER LOGIC ---
   useEffect(() => {
+    let timer: ReturnType<typeof setInterval>; // <-- Updated type definition
     if (phase === 'WARDING' && timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
-      return () => clearTimeout(timer);
+      timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     } else if (phase === 'WARDING' && timeLeft <= 0) {
       executeFinalSeal(false); 
     }
+    return () => clearInterval(timer);
   }, [phase, timeLeft]);
 
-  // --- UPDATED TYPEWRITER EFFECT ---
+  // --- TYPEWRITER LOGIC ---
   useEffect(() => {
     if (phase === 'COMPLETE') {
       const fullName = target.name.toUpperCase();
@@ -130,14 +160,104 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
         i++;
         if (i >= fullName.length) {
           clearInterval(interval);
-          // NEW: Wait 1.2 seconds after typing finishes before showing the SEALED stamp
           setTimeout(() => setShowSealed(true), 1200); 
         }
-      }, 300); // SLOWED DOWN: 300ms per letter
+      }, 300); 
       return () => clearInterval(interval);
     }
   }, [phase, target.name]);
 
+ // --- NEW: Watch for trace completion securely ---
+  useEffect(() => {
+    if (phase === 'WARDING' && path.length === matrix.sequence.length) {
+      executeFinalSeal(true); // Fire completion only when the state officially updates
+    }
+  }, [path.length, phase, matrix.sequence.length]);
+
+  // --- STRICT TRACING LOGIC ---
+  const getSVGCoords = (e: React.PointerEvent) => {
+    if (!svgRef.current) return null;
+    const svg = svgRef.current;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM()!.inverse());
+  };
+
+  const startTracing = (e: React.PointerEvent) => {
+    if (phase !== 'WARDING') return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    const coords = getSVGCoords(e);
+    if (!coords) return;
+
+    setCurrentPointer({ x: coords.x, y: coords.y });
+
+    setPath(() => {
+      const firstNodeId = matrix.sequence[0];
+      const firstNode = matrix.nodes.find(n => n.id === firstNodeId)!;
+      const dx = coords.x - firstNode.x;
+      const dy = coords.y - firstNode.y;
+
+      // Force the player to start exactly on the first node (generous 20px hit radius)
+      if (Math.sqrt(dx * dx + dy * dy) < 20) {
+        return [firstNodeId];
+      }
+      // If they click anywhere else, the trace resets
+      return [];
+    });
+  };
+
+  const moveTracing = (e: React.PointerEvent) => {
+    if (phase !== 'WARDING' || !currentPointer) return;
+    const coords = getSVGCoords(e);
+    if (coords) {
+      setCurrentPointer({ x: coords.x, y: coords.y });
+      // Only verify hits if they have actually started a valid trace
+      if (path.length > 0) {
+        checkNodeHit({ x: coords.x, y: coords.y });
+      }
+    }
+  };
+
+  const stopTracing = (e: React.PointerEvent) => {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setCurrentPointer(null);
+
+    setPath(prevPath => {
+      // THE UNBROKEN LINE RULE: If they release the pointer before finishing, shatter the matrix!
+      if (prevPath.length > 0 && prevPath.length < matrix.sequence.length) {
+        return []; 
+      }
+      return prevPath;
+    });
+  };
+
+  const checkNodeHit = (coords: {x: number, y: number}) => {
+    setPath(prevPath => {
+      const nextExpectedNodeId = matrix.sequence[prevPath.length];
+      if (nextExpectedNodeId === undefined) return prevPath;
+
+      const targetNode = matrix.nodes.find(n => n.id === nextExpectedNodeId)!;
+      const dx = coords.x - targetNode.x;
+      const dy = coords.y - targetNode.y;
+
+      // Snap to node if they drag near it
+      if (Math.sqrt(dx * dx + dy * dy) < 15) { 
+        return [...prevPath, targetNode.id];
+      }
+      return prevPath;
+    });
+  };
+
+  const getPolylinePoints = () => {
+    return path.map((nodeId) => {
+      const node = matrix.nodes.find(n => n.id === nodeId)!;
+      return `${node.x},${node.y}`;
+    }).join(' ');
+  };
+
+  // --- EXECUTION ---
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (nameInput.trim().toUpperCase() === target.name.toUpperCase()) {
@@ -148,23 +268,10 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
     }
   };
 
-  const handleKeypadPress = (symbol: string) => {
-    const newSequence = [...wardSequence, symbol];
-    setWardSequence(newSequence);
-    
-    if (newSequence.length === requiredSequence.length) {
-      if (newSequence.every((val, index) => val === requiredSequence[index])) {
-        executeFinalSeal(true); 
-      } else {
-        setWardSequence([]); 
-        dispatch({ type: 'MODIFY_HUMANITY', payload: -2 });
-      }
-    }
-  };
-
   const executeFinalSeal = (isClean: boolean) => {
     setIsCleanSeal(isClean);
     setPhase('COMPLETE'); 
+    setCurrentPointer(null);
     
     (Object.entries(sealCost) as [string, number][]).forEach(([item, amount]) => {
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } });
@@ -208,26 +315,60 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
         )}
 
         {phase === 'WARDING' && (
-          <div>
-            <p style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>WARNING: SECTOR INSTABILITY DETECTED.</p>
-            <p style={{ fontSize: '0.85rem' }}>TIME TO CASCADE: <span style={{ fontSize: '1.2rem', color: timeLeft <= 3 ? theme.accentRed : theme.textBright }}>{timeLeft}s</span></p>
-            <p style={{ fontSize: '0.85rem', marginTop: '10px' }}>INPUT CRYPTOGRAPHIC WARDING SEQUENCE: [ ☿ ] [ ♄ ] [ ♆ ]</p>
-            
-            <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-              {keypad.map(sym => (
-                <button 
-                  key={sym} 
-                  onClick={() => handleKeypadPress(sym)}
-                  style={{ flex: 1, padding: '15px', fontSize: '1.5rem', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer' }}
-                >
-                  {sym}
-                </button>
-              ))}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>! CONNECTION VOLATILE</span>
+              <span style={{ color: timeLeft <= 5 ? theme.accentRed : theme.textBright }}>00:{timeLeft.toString().padStart(2, '0')}</span>
             </div>
             
-            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: theme.bgDark, minHeight: '40px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              {wardSequence.map((sym, i) => <span key={i} style={{ fontSize: '1.5rem', color: theme.textBright }}>{sym}</span>)}
+            {/* Dynamic Pattern Designation readout */}
+            <p style={{ fontSize: '0.85rem', alignSelf: 'flex-start', marginBottom: '20px', color: theme.textMuted }}>
+              REQUESTING ALIGNMENT: <span style={{color: theme.textTerminal}}>[{matrix.id}]</span>
+            </p>
+            
+            <div style={{ position: 'relative', width: '300px', height: '300px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
+              
+              <img 
+                src={`/seals/${target.id}.png`} 
+                alt="Target Seal" 
+                style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '180px', height: '180px', opacity: 0.3, filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' }} 
+              />
+
+              <svg 
+                ref={svgRef}
+                viewBox="0 0 100 100" 
+                style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }}
+                onPointerDown={startTracing}
+                onPointerMove={moveTracing}
+                onPointerUp={stopTracing}
+                onPointerCancel={stopTracing}
+                onPointerLeave={stopTracing}
+              >
+                {/* Background Guide Line */}
+                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.5" />
+
+                {/* Traced Line */}
+                <polyline points={getPolylinePoints()} fill="none" stroke={theme.textBright} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+
+                {/* Active Tracking Line */}
+                {currentPointer && path.length > 0 && path.length < matrix.sequence.length && (
+                  <line x1={matrix.nodes.find(n => n.id === path[path.length - 1])!.x} y1={matrix.nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={theme.textTerminal} strokeWidth="1" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
+                )}
+
+                {/* Matrix Nodes */}
+                {matrix.nodes.map((node) => {
+                  const isCompleted = path.includes(node.id);
+                  const isNext = node.id === matrix.sequence[path.length] || (path.length === 0 && node.id === matrix.sequence[0]);
+                  return (
+                    <g key={node.id} style={{ pointerEvents: 'none' }}>
+                      <circle cx={node.x} cy={node.y} r={isNext ? "3.5" : "2"} fill={isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? theme.textBright : theme.textTerminal} strokeWidth="0.5" />
+                      {isNext && <circle cx={node.x} cy={node.y} r="5" fill="none" stroke={theme.textBright} strokeWidth="0.5" style={{ animation: 'blink 1s infinite' }} />}
+                    </g>
+                  );
+                })}
+              </svg>
             </div>
+            <p style={{ fontSize: '0.75rem', color: theme.textMuted, marginTop: '15px' }}>_CLICK AND DRAG TO LOCK NODES.</p>
           </div>
         )}
 
@@ -236,34 +377,21 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
             <img 
               src={`/seals/${target.id}.png`} 
               alt="Goetian Seal" 
-              style={{ 
-                width: '200px', 
-                height: '200px', 
-                marginBottom: '20px',
-                filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
-              }} 
+              style={{ width: '200px', height: '200px', marginBottom: '20px', filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' }} 
             />
             
             <h2 style={{ color: theme.textBright, letterSpacing: '6px', minHeight: '35px', margin: '0' }}>
               {typedName}
             </h2>
 
-            {/* --- UPDATED: Uses showSealed state & adds pulse animation --- */}
             {showSealed && (
               <>
-                <div style={{ 
-                  color: theme.accentRed, 
-                  fontWeight: 'bold', 
-                  fontSize: '1.5rem', 
-                  letterSpacing: '8px', 
-                  marginTop: '10px', 
-                  animation: 'slowPulse 2.5s ease-in-out infinite' // <-- NEW: Pulsing animation
-                }}>
+                <div style={{ color: theme.accentRed, fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '8px', marginTop: '10px', animation: 'slowPulse 2.5s ease-in-out infinite' }}>
                   [SEALED]
                 </div>
                 
                 {!isCleanSeal && (
-                  <p style={{ color: theme.textMuted, fontSize: '0.8rem', marginTop: '15px' }}>_WARDING FAILURE: SECTOR ENTROPY COMPROMISED.</p>
+                  <p style={{ color: theme.textMuted, fontSize: '0.8rem', marginTop: '15px' }}>_CONTAINMENT FAILURE: SECTOR ENTROPY COMPROMISED.</p>
                 )}
 
                 <button 
