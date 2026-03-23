@@ -14,7 +14,6 @@ interface NarrativeChoice {
   actions: GameAction[];
 }
 
-// --- THE NEW NEO-NOIR TERMINAL THEME ---
 const theme = {
   bgDark: '#020202',          
   bgPanel: '#080a08',         
@@ -22,7 +21,8 @@ const theme = {
   textTerminal: '#4a7c59',    
   textBright: '#62f080',      
   textMuted: '#2a5233',       
-  accentRed: '#a82c2c',       
+  accentRed: '#a82c2c',
+  accentGreen: '#4a7c59',     
   fontMono: '"Courier New", Courier, monospace', 
 };
 
@@ -88,11 +88,208 @@ const StartScreen = ({ onStart }: { onStart: (name: string, portrait: string, ag
   );
 };
 
+// --- MOVED OUTSIDE: THE SEALING MINI-GAME MODAL COMPONENT ---
+interface SealingTerminalProps {
+  target: any;
+  sealCost: Record<string, number>;
+  onClose: () => void;
+  dispatch: React.Dispatch<GameAction>;
+  sealGoetia: (id: string) => void;
+  addToast: (msg: string, type: 'INTEL'|'ITEM'|'ALERT'|'SEAL') => void;
+}
+
+const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addToast }: SealingTerminalProps) => {
+  const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE'>('AUTH');
+  const [nameInput, setNameInput] = useState('');
+  const [timeLeft, setTimeLeft] = useState(8);
+  const [wardSequence, setWardSequence] = useState<string[]>([]);
+  
+  const [typedName, setTypedName] = useState(''); 
+  const [showSealed, setShowSealed] = useState(false); // <-- NEW: Controls the pause
+  const [isCleanSeal, setIsCleanSeal] = useState(true);
+  
+  const requiredSequence = ['☿', '♄', '♆']; 
+  const keypad = ['☿', '♃', '♄', '♅', '♆']; 
+
+  useEffect(() => {
+    if (phase === 'WARDING' && timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (phase === 'WARDING' && timeLeft <= 0) {
+      executeFinalSeal(false); 
+    }
+  }, [phase, timeLeft]);
+
+  // --- UPDATED TYPEWRITER EFFECT ---
+  useEffect(() => {
+    if (phase === 'COMPLETE') {
+      const fullName = target.name.toUpperCase();
+      let i = 0;
+      const interval = setInterval(() => {
+        setTypedName(fullName.substring(0, i + 1));
+        i++;
+        if (i >= fullName.length) {
+          clearInterval(interval);
+          // NEW: Wait 1.2 seconds after typing finishes before showing the SEALED stamp
+          setTimeout(() => setShowSealed(true), 1200); 
+        }
+      }, 300); // SLOWED DOWN: 300ms per letter
+      return () => clearInterval(interval);
+    }
+  }, [phase, target.name]);
+
+  const handleAuthSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (nameInput.trim().toUpperCase() === target.name.toUpperCase()) {
+      setPhase('WARDING');
+    } else {
+      addToast("Signature mismatch. Connection unstable.", "ALERT");
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -2 }); 
+    }
+  };
+
+  const handleKeypadPress = (symbol: string) => {
+    const newSequence = [...wardSequence, symbol];
+    setWardSequence(newSequence);
+    
+    if (newSequence.length === requiredSequence.length) {
+      if (newSequence.every((val, index) => val === requiredSequence[index])) {
+        executeFinalSeal(true); 
+      } else {
+        setWardSequence([]); 
+        dispatch({ type: 'MODIFY_HUMANITY', payload: -2 });
+      }
+    }
+  };
+
+  const executeFinalSeal = (isClean: boolean) => {
+    setIsCleanSeal(isClean);
+    setPhase('COMPLETE'); 
+    
+    (Object.entries(sealCost) as [string, number][]).forEach(([item, amount]) => {
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } });
+    });
+    sealGoetia(target.id);
+
+    if (isClean) {
+      addToast(`SEALING SUCCESSFUL. Target ${target.name} bound to the brass vessel.`, 'SEAL');
+    } else {
+      addToast(`MESSY SEALING. Backlash caused Sector Entropy spike.`, 'ALERT');
+      dispatch({ type: 'ADVANCE_TIME', payload: 15 }); 
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+      <div style={{ width: '500px', padding: '30px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textTerminal}`, boxShadow: `0 0 30px rgba(74, 124, 89, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal }}>
+        
+        {phase !== 'COMPLETE' && (
+          <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.textTerminal}`, paddingBottom: '5px', color: theme.textBright }}>&gt; ROOT_ACCESS // VESSEL_SEALING_PROTOCOL</h3>
+        )}
+        
+        {phase === 'AUTH' && (
+          <form onSubmit={handleAuthSubmit}>
+            <p style={{ fontSize: '0.85rem', marginBottom: '10px' }}>TARGET LOCKED. INPUT TRUE NAME SIGNATURE TO AUTHORIZE CATALYST BURN:</p>
+            <input 
+              autoFocus
+              type="text" 
+              value={nameInput} 
+              onChange={e => setNameInput(e.target.value)}
+              placeholder="e.g. MURMUR"
+              style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }}
+            />
+            <button type="submit" style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: theme.textTerminal, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}>
+              &gt; EXECUTE
+            </button>
+            <button type="button" onClick={onClose} style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: 'transparent', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono }}>
+              &gt; ABORT
+            </button>
+          </form>
+        )}
+
+        {phase === 'WARDING' && (
+          <div>
+            <p style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>WARNING: SECTOR INSTABILITY DETECTED.</p>
+            <p style={{ fontSize: '0.85rem' }}>TIME TO CASCADE: <span style={{ fontSize: '1.2rem', color: timeLeft <= 3 ? theme.accentRed : theme.textBright }}>{timeLeft}s</span></p>
+            <p style={{ fontSize: '0.85rem', marginTop: '10px' }}>INPUT CRYPTOGRAPHIC WARDING SEQUENCE: [ ☿ ] [ ♄ ] [ ♆ ]</p>
+            
+            <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+              {keypad.map(sym => (
+                <button 
+                  key={sym} 
+                  onClick={() => handleKeypadPress(sym)}
+                  style={{ flex: 1, padding: '15px', fontSize: '1.5rem', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer' }}
+                >
+                  {sym}
+                </button>
+              ))}
+            </div>
+            
+            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: theme.bgDark, minHeight: '40px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              {wardSequence.map((sym, i) => <span key={i} style={{ fontSize: '1.5rem', color: theme.textBright }}>{sym}</span>)}
+            </div>
+          </div>
+        )}
+
+        {phase === 'COMPLETE' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            <img 
+              src={`/seals/${target.id}.png`} 
+              alt="Goetian Seal" 
+              style={{ 
+                width: '200px', 
+                height: '200px', 
+                marginBottom: '20px',
+                filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
+              }} 
+            />
+            
+            <h2 style={{ color: theme.textBright, letterSpacing: '6px', minHeight: '35px', margin: '0' }}>
+              {typedName}
+            </h2>
+
+            {/* --- UPDATED: Uses showSealed state & adds pulse animation --- */}
+            {showSealed && (
+              <>
+                <div style={{ 
+                  color: theme.accentRed, 
+                  fontWeight: 'bold', 
+                  fontSize: '1.5rem', 
+                  letterSpacing: '8px', 
+                  marginTop: '10px', 
+                  animation: 'slowPulse 2.5s ease-in-out infinite' // <-- NEW: Pulsing animation
+                }}>
+                  [SEALED]
+                </div>
+                
+                {!isCleanSeal && (
+                  <p style={{ color: theme.textMuted, fontSize: '0.8rem', marginTop: '15px' }}>_WARDING FAILURE: SECTOR ENTROPY COMPROMISED.</p>
+                )}
+
+                <button 
+                  onClick={onClose} 
+                  style={{ marginTop: '30px', padding: '10px 20px', width: '100%', backgroundColor: theme.bgDark, color: theme.textTerminal, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer', fontFamily: theme.fontMono, transition: 'background-color 0.2s' }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#111'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = theme.bgDark}
+                >
+                  &gt; ACKNOWLEDGE_CONTAINMENT
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const { state, dispatch, draftContract, advanceTime, resetGame, identifyGoetia, sealGoetia, startInvestigation } = useEngine();
   const [currentTab, setCurrentTab] = useState<'MAP' | 'CODEX' | 'KAGE_NO_SHO' | 'JOURNAL' | 'INVENTORY'>('MAP');
   const [selectedGoetiaId, setSelectedGoetiaId] = useState<string | null>(null);
   const [activeSealTarget, setActiveSealTarget] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  
   const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
 
   const injectNarrative = (text: string) => {
@@ -115,121 +312,15 @@ export default function App() {
     return <StartScreen onStart={startInvestigation} />;
   }
 
-  // --- THE SEALING MINI-GAME MODAL COMPONENT ---
-  const SealingTerminal = ({ target, sealCost, onClose }: { target: any, sealCost: Record<string, number>, onClose: () => void }) => {
-    const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE'>('AUTH');
-    const [nameInput, setNameInput] = useState('');
-    const [timeLeft, setTimeLeft] = useState(8);
-    const [wardSequence, setWardSequence] = useState<string[]>([]);
-    
-    const requiredSequence = ['☿', '♄', '♆']; 
-    const keypad = ['☿', '♃', '♄', '♅', '♆']; 
-
-    useEffect(() => {
-      if (phase === 'WARDING' && timeLeft > 0) {
-        const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
-        return () => clearTimeout(timer);
-      } else if (phase === 'WARDING' && timeLeft <= 0) {
-        executeFinalSeal(false); 
-      }
-    }, [phase, timeLeft]);
-
-    const handleAuthSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (nameInput.trim().toUpperCase() === target.name.toUpperCase()) {
-        setPhase('WARDING');
-      } else {
-        addToast("Signature mismatch. Connection unstable.", "ALERT");
-        dispatch({ type: 'MODIFY_HUMANITY', payload: -2 }); 
-      }
-    };
-
-    const handleKeypadPress = (symbol: string) => {
-      const newSequence = [...wardSequence, symbol];
-      setWardSequence(newSequence);
-      
-      if (newSequence.length === requiredSequence.length) {
-        if (newSequence.every((val, index) => val === requiredSequence[index])) {
-          executeFinalSeal(true); 
-        } else {
-          setWardSequence([]); 
-          dispatch({ type: 'MODIFY_HUMANITY', payload: -2 });
-        }
-      }
-    };
-
-    const executeFinalSeal = (isClean: boolean) => {
-      setPhase('COMPLETE');
-      (Object.entries(sealCost) as [string, number][]).forEach(([item, amount]) => {
-        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } });
-      });
-      sealGoetia(target.id);
-      onClose();
-
-      if (isClean) {
-        addToast(`SEALING SUCCESSFUL. Target ${target.name} bound to the brass vessel.`, 'SEAL');
-      } else {
-        addToast(`MESSY SEALING. Backlash caused Sector Entropy spike.`, 'ALERT');
-        dispatch({ type: 'ADVANCE_TIME', payload: 15 }); 
-      }
-    };
-
-    return (
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-        <div style={{ width: '500px', padding: '30px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textTerminal}`, boxShadow: `0 0 30px rgba(74, 124, 89, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal }}>
-          <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.textTerminal}`, paddingBottom: '5px', color: theme.textBright }}>&gt; ROOT_ACCESS // VESSEL_SEALING_PROTOCOL</h3>
-          
-          {phase === 'AUTH' && (
-            <form onSubmit={handleAuthSubmit}>
-              <p style={{ fontSize: '0.85rem', marginBottom: '10px' }}>TARGET LOCKED. INPUT TRUE NAME SIGNATURE TO AUTHORIZE CATALYST BURN:</p>
-              <input 
-                autoFocus
-                type="text" 
-                value={nameInput} 
-                onChange={e => setNameInput(e.target.value)}
-                placeholder="e.g. MURMUR"
-                style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }}
-              />
-              <button type="submit" style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: theme.textTerminal, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}>
-                &gt; EXECUTE
-              </button>
-              <button type="button" onClick={onClose} style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: 'transparent', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono }}>
-                &gt; ABORT
-              </button>
-            </form>
-          )}
-
-          {phase === 'WARDING' && (
-            <div>
-              <p style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>WARNING: SECTOR INSTABILITY DETECTED.</p>
-              <p style={{ fontSize: '0.85rem' }}>TIME TO CASCADE: <span style={{ fontSize: '1.2rem', color: timeLeft <= 3 ? theme.accentRed : theme.textBright }}>{timeLeft}s</span></p>
-              <p style={{ fontSize: '0.85rem', marginTop: '10px' }}>INPUT CRYPTOGRAPHIC WARDING SEQUENCE: [ ☿ ] [ ♄ ] [ ♆ ]</p>
-              
-              <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                {keypad.map(sym => (
-                  <button 
-                    key={sym} 
-                    onClick={() => handleKeypadPress(sym)}
-                    style={{ flex: 1, padding: '15px', fontSize: '1.5rem', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer' }}
-                  >
-                    {sym}
-                  </button>
-                ))}
-              </div>
-              
-              <div style={{ marginTop: '15px', padding: '10px', backgroundColor: theme.bgDark, minHeight: '40px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                {wardSequence.map((sym, i) => <span key={i} style={{ fontSize: '1.5rem', color: theme.textBright }}>{sym}</span>)}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono }}>
-      <style>{`@keyframes blink { 50% { opacity: 0; } }`}</style>
+      <style>{`
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes slowPulse { 
+          0%, 100% { opacity: 0.6; transform: scale(0.98); } 
+          50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 15px ${theme.accentRed}; } 
+        }
+      `}</style>
       
       {/* --- TOP BAR --- */}
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 20px', backgroundColor: theme.bgPanel, borderBottom: `1px solid ${theme.borderTerminal}`, fontSize: '0.9rem', letterSpacing: '1px' }}>
@@ -347,10 +438,22 @@ export default function App() {
                             backgroundColor: selectedGoetiaId === goetia.id ? theme.bgDark : 'transparent',
                             color: hasAllIntel && !isIdentified ? theme.accentRed : theme.textBright,
                             border: `1px solid ${selectedGoetiaId === goetia.id ? theme.textBright : theme.borderTerminal}`,
-                            textAlign: 'left', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold'
+                            textAlign: 'left', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold',
+                            display: 'flex', alignItems: 'center', gap: '15px' 
                           }}
                         >
-                          &gt; {indexLabel}
+                          {isSealed && (
+                            <img 
+                              src={`/seals/${goetia.id}.png`} 
+                              alt="Goetian Seal" 
+                              style={{ 
+                                width: '28px', 
+                                height: '28px',
+                                filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' 
+                              }} 
+                            />
+                          )}
+                          <span>&gt; {indexLabel}</span>
                         </button>
                       );
                     })}
@@ -424,13 +527,33 @@ export default function App() {
                 <>
                   <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; LOCAL_STORAGE</h2>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginTop: '20px' }}>
+                    
+                    <div 
+                      onClick={() => setSelectedItemId('brass_vessel')}
+                      style={{ 
+                        border: `1px solid ${selectedItemId === 'brass_vessel' ? theme.textBright : theme.borderTerminal}`, 
+                        padding: '15px', textAlign: 'center', backgroundColor: theme.bgDark, cursor: 'pointer' 
+                      }}
+                    >
+                      <div style={{ fontSize: '2rem', marginBottom: '10px' }}>⚱️</div>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 'bold', wordBreak: 'break-word', color: theme.textBright }}>BRASS_VESSEL</div>
+                      <div style={{ marginTop: '5px', color: theme.textMuted, fontWeight: 'bold' }}>x ∞</div>
+                    </div>
+
                     {(Object.entries(state.inventory) as [string, number][])
                       .filter(([key]) => key !== 'obols')
                       .map(([key, amount]) => (
-                        <div key={key} style={{ border: `1px solid ${theme.borderTerminal}`, padding: '15px', textAlign: 'center', backgroundColor: theme.bgDark }}>
+                        <div 
+                          key={key} 
+                          onClick={() => setSelectedItemId(key)}
+                          style={{ 
+                            border: `1px solid ${selectedItemId === key ? theme.textBright : theme.borderTerminal}`, 
+                            padding: '15px', textAlign: 'center', backgroundColor: theme.bgDark, cursor: 'pointer' 
+                          }}
+                        >
                           <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📦</div>
-                          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', wordBreak: 'break-word' }}>{formatNode(key)}</div>
-                          <div style={{ marginTop: '5px', color: theme.textBright, fontWeight: 'bold' }}>x {amount}</div>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', wordBreak: 'break-word', color: theme.textBright }}>{formatNode(key)}</div>
+                          <div style={{ marginTop: '5px', color: theme.textMuted, fontWeight: 'bold' }}>x {amount}</div>
                         </div>
                     ))}
                   </div>
@@ -439,12 +562,25 @@ export default function App() {
 
               {currentTab === 'JOURNAL' && (
                 <>
-                  <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; FIELD_LOG</h2>
-                  {state.activeLeads.length === 0 ? <p style={{color: theme.textMuted}}>_NO ACTIVE LEADS.</p> : (
-                    <ul style={{ listStyleType: 'none', paddingLeft: '0', lineHeight: '1.8' }}>
-                      {state.activeLeads.map(lead => (
-                        <li key={lead.id} style={{ marginBottom: '15px', color: lead.resolved ? theme.textMuted : theme.textTerminal, textDecoration: lead.resolved ? 'line-through' : 'none' }}>
-                          <strong style={{color: theme.textBright}}>[+]</strong> {lead.text.toUpperCase()}
+                  <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; CASE_FILES</h2>
+                  
+                  <h3 style={{ fontSize: '0.9rem', color: theme.textTerminal, marginTop: '20px' }}>[ ACTIVE_LEADS ]</h3>
+                  {state.activeLeads.filter(l => !l.resolved).length === 0 ? <p style={{color: theme.textMuted, fontSize: '0.85rem'}}>_NO ACTIVE LEADS.</p> : (
+                    <ul style={{ listStyleType: 'none', paddingLeft: '0', lineHeight: '1.8', fontSize: '0.9rem' }}>
+                      {state.activeLeads.filter(l => !l.resolved).map(lead => (
+                        <li key={lead.id} style={{ marginBottom: '10px', color: theme.textBright }}>
+                          <strong style={{color: theme.accentGreen}}>[!]</strong> {injectNarrative(lead.text).toUpperCase()}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <h3 style={{ fontSize: '0.9rem', color: theme.textMuted, marginTop: '30px' }}>[ ARCHIVED_LEADS ]</h3>
+                  {state.activeLeads.filter(l => l.resolved).length === 0 ? <p style={{color: theme.textMuted, fontSize: '0.85rem'}}>_NO ARCHIVED DATA.</p> : (
+                    <ul style={{ listStyleType: 'none', paddingLeft: '0', lineHeight: '1.8', fontSize: '0.85rem' }}>
+                      {state.activeLeads.filter(l => l.resolved).map(lead => (
+                        <li key={lead.id} style={{ marginBottom: '10px', color: theme.textMuted, textDecoration: 'line-through' }}>
+                          <strong>[X]</strong> {injectNarrative(lead.text).toUpperCase()}
                         </li>
                       ))}
                     </ul>
@@ -580,7 +716,17 @@ export default function App() {
                          )}
 
                          {isSealed && (
-                           <div style={{ marginTop: '30px', textAlign: 'center', padding: '20px', color: theme.textBright, border: `1px solid ${theme.textBright}`, fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: '4px' }}>
+                           <div style={{ marginTop: '30px', textAlign: 'center', padding: '20px', color: theme.textBright, border: `1px solid ${theme.textBright}`, fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: '4px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                             <img 
+                               src={`/seals/${target.id}.png`} 
+                               alt="Goetian Seal" 
+                               style={{ 
+                                 width: '120px', 
+                                 height: '120px', 
+                                 marginBottom: '20px',
+                                 filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
+                               }} 
+                             />
                              [ TARGET_SEALED ]
                            </div>
                          )}
@@ -616,14 +762,77 @@ export default function App() {
               {currentTab === 'INVENTORY' && (
                 <>
                   <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; ITEM_ANALYSIS</h2>
-                  <p style={{ color: theme.textMuted }}>_SELECT AN ITEM TO VIEW METADATA.</p>
+                  
+                  {!selectedItemId ? (
+                    <p style={{ color: theme.textMuted }}>_SELECT AN ITEM TO VIEW METADATA.</p>
+                  ) : selectedItemId === 'brass_vessel' ? (
+                    <div style={{ marginTop: '20px' }}>
+                      <h3 style={{ color: theme.textBright, fontSize: '1.2rem', marginBottom: '10px' }}>&gt; SOLOMONIC BRASS VESSEL</h3>
+                      <p style={{ color: theme.textTerminal, lineHeight: '1.6' }}>An extradimensional containment unit inscribed with cryptographic wards. Used to securely isolate Goetian signatures from the local sector.</p>
+                      
+                      <div style={{ marginTop: '30px', padding: '20px', backgroundColor: theme.bgDark, border: `1px solid ${theme.borderTerminal}`, textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.9rem', color: theme.textMuted, marginBottom: '10px' }}>CONTAINMENT CAPACITY STATUS</div>
+                        <div style={{ fontSize: '2.5rem', color: theme.textBright, fontWeight: 'bold' }}>
+                          {state.sealedGoetia.length} <span style={{ fontSize: '1.5rem', color: theme.textMuted }}>/ 72</span>
+                        </div>
+                        {state.sealedGoetia.length > 0 && (
+                          <div style={{ marginTop: '15px', fontSize: '0.8rem', color: theme.textTerminal }}>
+                            LATEST ENTRY: {allGoetia.find(g => g.id === state.sealedGoetia[state.sealedGoetia.length - 1])?.name.toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '20px' }}>
+                       <h3 style={{ color: theme.textBright, fontSize: '1.2rem', marginBottom: '10px', wordBreak: 'break-word' }}>&gt; {formatNode(selectedItemId)}</h3>
+                       <p style={{ color: theme.textTerminal, lineHeight: '1.6' }}>Standard issue operative material or acquired local asset. Utilized in esoteric crafting, summoning, and environmental interaction.</p>
+                       <div style={{ marginTop: '20px', padding: '15px', border: `1px dashed ${theme.borderTerminal}` }}>
+                         <span style={{ color: theme.textMuted }}>CURRENT STOCK:</span> <strong style={{ color: theme.textBright, marginLeft: '10px' }}>{state.inventory[selectedItemId]}</strong>
+                       </div>
+                    </div>
+                  )}
                 </>
               )}
 
               {currentTab === 'JOURNAL' && (
                 <>
-                  <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; LOG_DETAILS</h2>
-                  <p style={{ color: theme.textMuted }}>_AWAITING LOG SELECTION.</p>
+                  <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; COMPILED_INTEL_DATABASE</h2>
+                  <p style={{ color: theme.textMuted, marginBottom: '20px', fontSize: '0.9rem' }}>_REVIEW ACQUIRED FORENSIC AND ESOTERIC DATA FRAGMENTS.</p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '0.9rem', color: theme.textTerminal, marginBottom: '15px' }}>[ DATA_FRAGMENTS ]</h3>
+                      {state.intelLog.length === 0 ? (
+                        <p style={{ color: theme.textMuted, fontSize: '0.85rem' }}>_NO INTEL ACQUIRED.</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {state.intelLog.map((intel, idx) => (
+                            <div key={idx} style={{ padding: '8px 12px', borderLeft: `2px solid ${theme.accentGreen}`, backgroundColor: theme.bgDark, color: theme.textBright, fontSize: '0.85rem' }}>
+                              &gt; {formatNode(intel)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 style={{ fontSize: '0.9rem', color: theme.textTerminal, marginBottom: '15px' }}>[ EVENT_REGISTRY ]</h3>
+                      {Object.keys(state.flags).length === 0 ? (
+                        <p style={{ color: theme.textMuted, fontSize: '0.85rem' }}>_NO SIGNIFICANT EVENTS RECORDED.</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {Object.entries(state.flags).map(([flag, value]) => (
+                            <div key={flag} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: theme.bgDark, border: `1px solid ${theme.borderTerminal}`, fontSize: '0.85rem' }}>
+                              <span style={{ color: theme.textMuted }}>{formatNode(flag)}</span>
+                              <span style={{ color: value ? theme.accentGreen : theme.accentRed, fontWeight: 'bold' }}>
+                                [{value ? 'TRUE' : 'FALSE'}]
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -633,12 +842,21 @@ export default function App() {
 
       </div>
       
-      {/* Conditionally Render the Sealing Modal */}
+      {/* Conditionally Render the Sealing Modal Overlay */}
       {activeSealTarget && (() => {
         const target = allGoetia.find(g => g.id === activeSealTarget);
         if (!target) return null;
         const sealCost = target.sealCost || {};
-        return <SealingTerminal target={target} sealCost={sealCost} onClose={() => setActiveSealTarget(null)} />;
+        return (
+          <SealingTerminal 
+            target={target} 
+            sealCost={sealCost} 
+            onClose={() => setActiveSealTarget(null)} 
+            dispatch={dispatch}
+            sealGoetia={sealGoetia}
+            addToast={addToast}
+          />
+        );
       })()}
 
       {/* --- TOAST RENDERER --- */}
