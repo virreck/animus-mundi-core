@@ -112,28 +112,65 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
   );
 };
 
-// --- CRYPTOGRAPHIC MATRIX LIBRARY ---
-const MAX_TIME = 15;
-
-const SEAL_PATTERNS = [
-  {
-    id: "HEPTAGRAM_PROTOCOL",
-    nodes: [ { id: 0, x: 50, y: 5 }, { id: 1, x: 85, y: 22 }, { id: 2, x: 95, y: 60 }, { id: 3, x: 70, y: 92 }, { id: 4, x: 30, y: 92 }, { id: 5, x: 5, y: 60 }, { id: 6, x: 15, y: 22 } ],
-    sequence: [0, 3, 6, 2, 5, 1, 4, 0]
-  },
-  {
-    id: "PENTAGRAM_PROTOCOL",
-    nodes: [ { id: 0, x: 50, y: 5 }, { id: 1, x: 95, y: 38 }, { id: 2, x: 78, y: 92 }, { id: 3, x: 22, y: 92 }, { id: 4, x: 5, y: 38 } ],
-    sequence: [0, 2, 4, 1, 3, 0]
-  },
-  {
-    id: "HEXAGRAM_PROTOCOL", // Unicursal Hexagram
-    nodes: [ { id: 0, x: 50, y: 5 }, { id: 1, x: 90, y: 25 }, { id: 2, x: 90, y: 75 }, { id: 3, x: 50, y: 95 }, { id: 4, x: 10, y: 75 }, { id: 5, x: 10, y: 25 } ],
-    sequence: [0, 2, 4, 1, 5, 3, 0]
+// --- PROCEDURAL SEAL ENGINE ---
+// Generates infinite valid Euler paths using Coprime Star Polygons
+function generateSealMatrix() {
+  const geometries = [
+    { n: 5, s: 2, name: "PENTAGRAM" },
+    { n: 7, s: 2, name: "HEPTAGRAM_OBTUSE" },
+    { n: 7, s: 3, name: "HEPTAGRAM_ACUTE" },
+    { n: 8, s: 3, name: "OCTAGRAM" },
+    { n: 9, s: 2, name: "ENNEAGRAM_OBTUSE" },
+    { n: 9, s: 4, name: "ENNEAGRAM_ACUTE" }
+  ];
+  
+  const config = geometries[Math.floor(Math.random() * geometries.length)];
+  const isBound = Math.random() > 0.5; 
+  
+  const rotationOffset = Math.random() * Math.PI * 2; 
+  
+  const nodes = [];
+  const centerX = 50;
+  const centerY = 50;
+  const radius = 42; 
+  
+  for (let i = 0; i < config.n; i++) {
+    const angle = rotationOffset + (i * 2 * Math.PI) / config.n;
+    nodes.push({
+      id: i,
+      x: centerX + radius * Math.sin(angle),
+      y: centerY - radius * Math.cos(angle)
+    });
   }
-];
-
-
+  
+  const sequence = [];
+  let current = 0;
+  
+  for (let i = 0; i < config.n; i++) {
+    sequence.push(current);
+    current = (current + config.s) % config.n;
+  }
+  sequence.push(0); 
+  
+  if (isBound) {
+    for (let i = 0; i < config.n; i++) {
+      current = (current + 1) % config.n;
+      sequence.push(current);
+    }
+  }
+  
+  const edgeCount = sequence.length - 1;
+  const timeLimit = Math.ceil(edgeCount * 1.2); 
+  
+  const prefix = isBound ? "BOUND_" : "LESSER_";
+  
+  return {
+    id: `${prefix}${config.name}_PROTOCOL`,
+    timeLimit,
+    nodes,
+    sequence
+  };
+}
 
 // --- THE SEALING MINI-GAME MODAL COMPONENT ---
 interface SealingTerminalProps {
@@ -146,14 +183,15 @@ interface SealingTerminalProps {
 }
 
 const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addToast }: SealingTerminalProps) => {
-  // Select a random sealing matrix pattern on mount
-  const [matrix] = useState(() => SEAL_PATTERNS[Math.floor(Math.random() * SEAL_PATTERNS.length)]);
+  // --- NEW: Generate a completely unique seal on mount ---
+  const [matrix] = useState(() => generateSealMatrix());
 
   const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE'>('AUTH');
   const [nameInput, setNameInput] = useState('');
   
-  // Tracing State
-  const [timeLeft, setTimeLeft] = useState(MAX_TIME);
+  // Tracing State dynamically adopts the generated time limit
+  const [timeLeft, setTimeLeft] = useState(matrix.timeLimit); 
+  
   const [path, setPath] = useState<number[]>([]);
   const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
