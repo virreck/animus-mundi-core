@@ -26,12 +26,3 @@ Animus Mundi Core
 🗺 Roadmap
 ----------
 
-The project is currently transitioning from a standalone prototype to a fully indexed system. Upcoming priorities include:
-
--   **Logic Fog**: Implementing a visibility layer so the Grimoire only reveals Goetic entries as relevant intel is gathered.
-
--   **Utility Alignment**: Updating the `activationCost` and `gameUtility` logic for Yokai to integrate directly with the investigation loop.
-
--   **System Meters**: Re-implementing the **Sector Entropy (Chaos)** and **Humanity** meters to track the consequences of player actions.
-
--   **UI Polish**: Refining the parchment aesthetic and adding custom iconography for different entity classes.

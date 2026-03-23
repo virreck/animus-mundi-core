@@ -1,4 +1,5 @@
 // src/content/yokai/types.ts
+
 export type YokaiClass = 'Sensor' | 'Stealth' | 'Utility' | 'Enforcer' | 'Shikigami';
 
 export interface ActivationCost {
@@ -8,7 +9,6 @@ export interface ActivationCost {
   requiredItemId?: string; 
 }
 
-// NEW: The complex draft cost
 export interface ContractCost {
   obols?: number;
   humanity?: number;
@@ -23,7 +23,7 @@ export interface YokaiContract {
   utilityClass: YokaiClass; 
   gameUtility: string; 
   costDescription: string; 
-  
-  draftCost: ContractCost;       // <-- Now a structured object
+  unlockFlag?: string;
+  draftCost: ContractCost;       
   activationCost: ActivationCost; 
 }

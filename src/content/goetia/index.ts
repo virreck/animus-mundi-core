@@ -1,13 +1,16 @@
 import type { GoetiaLieutenant } from './types';
 
 export const allGoetia: GoetiaLieutenant[] = [
-  {
-    "id": "01_bael",
-    "manifestId": 1,
-    "name": "Bael",
-    "rank": "King",
-    "allegiance": "War",
-    "requiredIntel": []
+{
+    id: "01_bael",
+    manifestId: 1,
+    name: "Bael",
+    rank: "King",
+    allegiance: "Conquest",
+    title: "The First Principal Spirit",
+    description: "A ruling King of the East. He manifests with three heads: a toad, a man, and a cat. He grants the power of invisibility and speaks with a hoarse voice.",
+    requiredIntel: ["hoarse_voice", "amphibian_tracks", "sudden_invisibility"],
+    sealCost: { "sacred_sand": 1, "cold_iron_filings": 2 }
   },
   {
     "id": "02_agares",
@@ -15,7 +18,8 @@ export const allGoetia: GoetiaLieutenant[] = [
     "name": "Agares",
     "rank": "Duke",
     "allegiance": "Famine",
-    "requiredIntel": []
+    "requiredIntel": ["ozone_scent", "temp_drop"],
+    sealCost: {"lamp_oil": 1}
   },
   {
     "id": "03_vassago",

@@ -16,13 +16,13 @@ interface NarrativeChoice {
 
 // --- THE NEW NEO-NOIR TERMINAL THEME ---
 const theme = {
-  bgDark: '#020202',          // Absolute black for the void/background
-  bgPanel: '#080a08',         // Deep muted green-black for terminal panels
-  borderTerminal: '#1f3d26',  // Muted green for borders/dividers
-  textTerminal: '#4a7c59',    // Standard console green
-  textBright: '#62f080',      // High-contrast green for headers/active items
-  textMuted: '#2a5233',       // Low-contrast green for disabled/background info
-  accentRed: '#a82c2c',       // Critical/Chaos errors
+  bgDark: '#020202',          
+  bgPanel: '#080a08',         
+  borderTerminal: '#1f3d26',  
+  textTerminal: '#4a7c59',    
+  textBright: '#62f080',      
+  textMuted: '#2a5233',       
+  accentRed: '#a82c2c',       
   fontMono: '"Courier New", Courier, monospace', 
 };
 
@@ -95,7 +95,6 @@ export default function App() {
   const [activeSealTarget, setActiveSealTarget] = useState<string | null>(null);
   const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
 
-  // Dynamic Text Injection
   const injectNarrative = (text: string) => {
     if (!text) return "";
     return text
@@ -116,8 +115,8 @@ export default function App() {
     return <StartScreen onStart={startInvestigation} />;
   }
 
-  // --- THE SEALING MINI-GAME COMPONENT ---
-  const SealingTerminal = ({ target, sealCost }: { target: any, sealCost: Record<string, number> }) => {
+  // --- THE SEALING MINI-GAME MODAL COMPONENT ---
+  const SealingTerminal = ({ target, sealCost, onClose }: { target: any, sealCost: Record<string, number>, onClose: () => void }) => {
     const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE'>('AUTH');
     const [nameInput, setNameInput] = useState('');
     const [timeLeft, setTimeLeft] = useState(8);
@@ -165,63 +164,65 @@ export default function App() {
         dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } });
       });
       sealGoetia(target.id);
-      setActiveSealTarget(null);
+      onClose();
 
       if (isClean) {
-        addToast(`BANISHMENT SUCCESSFUL. Target ${target.name} sealed.`, 'SEAL');
+        addToast(`SEALING SUCCESSFUL. Target ${target.name} bound to the brass vessel.`, 'SEAL');
       } else {
-        addToast(`MESSY BANISHMENT. Backlash caused Sector Entropy spike.`, 'ALERT');
+        addToast(`MESSY SEALING. Backlash caused Sector Entropy spike.`, 'ALERT');
         dispatch({ type: 'ADVANCE_TIME', payload: 15 }); 
       }
     };
 
     return (
-      <div style={{ marginTop: '20px', padding: '20px', backgroundColor: theme.bgDark, border: `1px solid ${theme.textTerminal}`, fontFamily: theme.fontMono, color: theme.textTerminal }}>
-        <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.textTerminal}`, paddingBottom: '5px', color: theme.textBright }}>&gt; ROOT_ACCESS // BANISHMENT_PROTOCOL</h3>
-        
-        {phase === 'AUTH' && (
-          <form onSubmit={handleAuthSubmit}>
-            <p style={{ fontSize: '0.85rem', marginBottom: '10px' }}>TARGET LOCKED. INPUT TRUE NAME SIGNATURE TO AUTHORIZE CATALYST BURN:</p>
-            <input 
-              autoFocus
-              type="text" 
-              value={nameInput} 
-              onChange={e => setNameInput(e.target.value)}
-              placeholder="e.g. MURMUR"
-              style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }}
-            />
-            <button type="submit" style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: theme.textTerminal, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}>
-              &gt; EXECUTE
-            </button>
-            <button type="button" onClick={() => setActiveSealTarget(null)} style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: 'transparent', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono }}>
-              &gt; ABORT
-            </button>
-          </form>
-        )}
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+        <div style={{ width: '500px', padding: '30px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textTerminal}`, boxShadow: `0 0 30px rgba(74, 124, 89, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal }}>
+          <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.textTerminal}`, paddingBottom: '5px', color: theme.textBright }}>&gt; ROOT_ACCESS // VESSEL_SEALING_PROTOCOL</h3>
+          
+          {phase === 'AUTH' && (
+            <form onSubmit={handleAuthSubmit}>
+              <p style={{ fontSize: '0.85rem', marginBottom: '10px' }}>TARGET LOCKED. INPUT TRUE NAME SIGNATURE TO AUTHORIZE CATALYST BURN:</p>
+              <input 
+                autoFocus
+                type="text" 
+                value={nameInput} 
+                onChange={e => setNameInput(e.target.value)}
+                placeholder="e.g. MURMUR"
+                style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }}
+              />
+              <button type="submit" style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: theme.textTerminal, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}>
+                &gt; EXECUTE
+              </button>
+              <button type="button" onClick={onClose} style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: 'transparent', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono }}>
+                &gt; ABORT
+              </button>
+            </form>
+          )}
 
-        {phase === 'WARDING' && (
-          <div>
-            <p style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>WARNING: SECTOR INSTABILITY DETECTED.</p>
-            <p style={{ fontSize: '0.85rem' }}>TIME TO CASCADE: <span style={{ fontSize: '1.2rem', color: timeLeft <= 3 ? theme.accentRed : theme.textBright }}>{timeLeft}s</span></p>
-            <p style={{ fontSize: '0.85rem', marginTop: '10px' }}>INPUT CRYPTOGRAPHIC WARDING SEQUENCE: [ ☿ ] [ ♄ ] [ ♆ ]</p>
-            
-            <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-              {keypad.map(sym => (
-                <button 
-                  key={sym} 
-                  onClick={() => handleKeypadPress(sym)}
-                  style={{ flex: 1, padding: '15px', fontSize: '1.5rem', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer' }}
-                >
-                  {sym}
-                </button>
-              ))}
+          {phase === 'WARDING' && (
+            <div>
+              <p style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>WARNING: SECTOR INSTABILITY DETECTED.</p>
+              <p style={{ fontSize: '0.85rem' }}>TIME TO CASCADE: <span style={{ fontSize: '1.2rem', color: timeLeft <= 3 ? theme.accentRed : theme.textBright }}>{timeLeft}s</span></p>
+              <p style={{ fontSize: '0.85rem', marginTop: '10px' }}>INPUT CRYPTOGRAPHIC WARDING SEQUENCE: [ ☿ ] [ ♄ ] [ ♆ ]</p>
+              
+              <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                {keypad.map(sym => (
+                  <button 
+                    key={sym} 
+                    onClick={() => handleKeypadPress(sym)}
+                    style={{ flex: 1, padding: '15px', fontSize: '1.5rem', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer' }}
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
+              
+              <div style={{ marginTop: '15px', padding: '10px', backgroundColor: theme.bgDark, minHeight: '40px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                {wardSequence.map((sym, i) => <span key={i} style={{ fontSize: '1.5rem', color: theme.textBright }}>{sym}</span>)}
+              </div>
             </div>
-            
-            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: theme.bgDark, minHeight: '40px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              {wardSequence.map((sym, i) => <span key={i} style={{ fontSize: '1.5rem', color: theme.textBright }}>{sym}</span>)}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };
@@ -568,17 +569,13 @@ export default function App() {
                                ))}
                              </ul>
                              
-                             {!activeSealTarget ? (
-                               <button 
-                                 onClick={() => setActiveSealTarget(target.id)}
-                                 disabled={!canAffordSeal}
-                                 style={{ padding: '10px', width: '100%', marginTop: '15px', backgroundColor: canAffordSeal ? '#3a0c0c' : '#111', color: canAffordSeal ? 'white' : theme.textMuted, border: 'none', cursor: canAffordSeal ? 'pointer' : 'not-allowed', fontFamily: theme.fontMono }}
-                               >
-                                 {canAffordSeal ? "> INITIATE_RITUAL_PROTOCOL" : "> INSUFFICIENT_MATERIALS"}
-                               </button>
-                             ) : (
-                               activeSealTarget === target.id && <SealingTerminal target={target} sealCost={sealCost} />
-                             )}
+                             <button 
+                               onClick={() => setActiveSealTarget(target.id)}
+                               disabled={!canAffordSeal}
+                               style={{ padding: '10px', width: '100%', marginTop: '15px', backgroundColor: canAffordSeal ? '#3a0c0c' : '#111', color: canAffordSeal ? 'white' : theme.textMuted, border: 'none', cursor: canAffordSeal ? 'pointer' : 'not-allowed', fontFamily: theme.fontMono }}
+                             >
+                               {canAffordSeal ? "> INITIATE_SEALING_PROTOCOL" : "> INSUFFICIENT_MATERIALS"}
+                             </button>
                            </div>
                          )}
 
@@ -636,6 +633,14 @@ export default function App() {
 
       </div>
       
+      {/* Conditionally Render the Sealing Modal */}
+      {activeSealTarget && (() => {
+        const target = allGoetia.find(g => g.id === activeSealTarget);
+        if (!target) return null;
+        const sealCost = target.sealCost || {};
+        return <SealingTerminal target={target} sealCost={sealCost} onClose={() => setActiveSealTarget(null)} />;
+      })()}
+
       {/* --- TOAST RENDERER --- */}
       <div style={{ position: 'fixed', bottom: '30px', right: '30px', display: 'flex', flexDirection: 'column', gap: '10px', zIndex: 1000, pointerEvents: 'none' }}>
         {toasts.map(toast => (
