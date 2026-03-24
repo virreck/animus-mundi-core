@@ -6,6 +6,7 @@ import { allGoetia } from './content/goetia';
 import { allYokai } from './content/yokai';
 import type { GameAction } from './engine/reducer';
 import type { GameState } from './engine/state';
+import { safehouse } from './content/narrative/safehouse';
 
 interface NarrativeChoice {
   id: string;
@@ -460,13 +461,18 @@ export default function App() {
   };
   const formatNode = (nodeId: string) => nodeId.replace(/_/g, ' ').toUpperCase();
 
-  // DYNAMIC NARRATIVE ROUTER
+// --- DYNAMIC NARRATIVE ROUTER ---
   const getCurrentNodeData = () => {
     if (state.currentNode === 'caterham_churchyard') return caterhamChurchyard;
+    if (state.currentNode === 'safehouse') return safehouse; // <-- NEW
+    
+    // Fallback
     return {
       title: MAP_NODES.find(n => n.id === state.currentNode)?.label || "UNKNOWN SECTOR",
       text: "You have entered a new sector. The Thaumaturgic OS is currently compiling localized esoteric data. Stand by for further environmental analysis...",
-      choices: [{ id: 'scout', label: 'SCOUT THE PERIMETER (+2 GLOBAL ENTROPY)', actions: [{ type: 'ADVANCE_TIME', payload: 2 }] as GameAction[] }]
+      choices: [
+        { id: 'scout', label: 'SCOUT THE PERIMETER (+2 GLOBAL ENTROPY)', actions: [{ type: 'ADVANCE_TIME', payload: 2 }] as GameAction[] }
+      ]
     };
   };
 
