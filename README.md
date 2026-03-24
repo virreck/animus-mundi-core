@@ -27,7 +27,7 @@ Thaumaturgic OS is a browser-based, interactive fiction and resource management 
 
 ### Directory Structure Blueprint
 
-\`\`\`text
+```
 src/
 ├── engine/
 │   ├── state.ts        # Interface definitions and initialGameState
@@ -44,7 +44,7 @@ src/
 │       └── useEngine.ts # Exposes engine dispatchers and the Auto-Save Daemon
 ├── App.tsx             # Master UI Wrapper, Tab Router, and SVG logic
 └── main.tsx            # React DOM entry point
-\`\`\`
+```
 
 ## 🔄 The Core Gameplay Loop
 
