@@ -1,28 +1,73 @@
-Animus Mundi Core
-=================
+# ☿ THAUMATURGIC_OS v3.1
 
-**Animus Mundi Core** is a TypeScript-based investigation engine designed for a narrative-driven RPG centered on spiritual-industrial displacement. Players take on the role of an investigator navigating a world where the boundary between reality and the esoteric is thinning.
+**A Tactical Esoteric Operating System & State-Driven Narrative RPG.**
 
-🛠 Core Systems
----------------
+Thaumaturgic OS is a browser-based, interactive fiction and resource management game. Players take on the role of an independent occult operative navigating a localized esoteric breach in Caterham, UK. The game blends branching narrative investigation with survival mechanics, real-time threat tracking, and procedural geometry mini-games.
 
--   **The Open Tome UI**: A specialized React interface simulating an investigator's field journal, featuring a dual-page layout for simultaneous navigation and data analysis.
+## ⚙️ Core Mechanics
 
--   **Ars Goetia Index**: A data-driven manifest of 72 Goetic entities, each requiring specific "intel tags" gathered from the environment to be identified and banished.
+* **State-Driven Narrative Engine:** A robust React `useReducer` architecture that tracks flags, inventory, and intel. Narrative nodes use a "Reverse Waterfall" logic to dynamically overwrite room descriptions based on player actions, preventing choice-spamming and ensuring logical progression.
+* **Dual-Threat Tracking System:**
+    * **Global Entropy:** The doomsday clock. Advancing time or resting increases this meter. If it hits 100%, the session terminates.
+    * **Sector Heat:** Localized volatility. Aggressive actions (brute-forcing wards, messy sealing) spike local heat. If a sector reaches 100%, the Malleus Inquisition locks it down, rendering the node inaccessible.
+* **Esoteric Geo-Tracker (Map):** A tactical SVG overlay mapping real-world Caterham locations (St. Lawrence Churchyard, Abandoned Asylum). Players travel between nodes, incurring time and entropy costs.
+* **Procedural Sealing Protocol:** A high-tension mini-game for capturing Goetian targets. Uses Coprime Star Polygon algorithms to procedurally generate unbroken Euler paths (Pentagrams, Heptagrams, Bound Enneagrams). Players must trace the exact geometric containment matrix before the sector destabilizes.
+* **The Safehouse Hub:** A sanctuary node featuring core gameplay loops:
+    * **The Hearth:** Restore Humanity at the cost of Global Entropy.
+    * **Altar of Synthesis:** Craft high-tier Sealing Catalysts from raw inventory materials.
+    * **Remote Warding:** Spend Obols to triage and lower Sector Heat in compromised locations.
+* **Auto-Save Daemon:** Local browser persistence (`localStorage`) captures the `GameState` after every action, allowing operatives to seamlessly resume sessions.
 
--   **Yōroku (Yokai Contracts)**: A library of 52 unique Yokai entities that can be bound via Obols to provide utility in the field, ranging from sensory enhancement to stealth and enforcement.
+## 🏗️ Architecture & Tech Stack
 
--   **Narrative Engine**: A state-based branching dialogue system that tracks player choices, inventory changes, and world state.
+* **Frontend:** React 18+
+* **Language:** TypeScript (Strict typing for `GameState` and `GameAction` unions)
+* **Styling:** Inline React styles utilizing a centralized `theme` object for a cohesive Neo-Noir Terminal aesthetic (Deep Greens, Terminal Blacks, Accent Reds).
+* **State Management:** React `useReducer` for global state dispatching, coupled with a custom `useEngine` hook to expose localized functions.
 
-🚀 Technical Stack
-------------------
+### Directory Structure Blueprint
 
--   **Framework**: React (Vite).
+\`\`\`text
+src/
+├── engine/
+│   ├── state.ts        # Interface definitions and initialGameState
+│   └── reducer.ts      # The master switch statement handling all GameActions
+├── content/
+│   ├── narrative/      # The dynamic scene files
+│   │   ├── caterham_churchyard.ts
+│   │   ├── caterham_asylum.ts
+│   │   └── safehouse.ts
+│   ├── goetia.ts       # Codex data and seal requirements
+│   └── yokai.ts        # Kage_No_Sho contract data
+├── ui/
+│   └── hooks/
+│       └── useEngine.ts # Exposes engine dispatchers and the Auto-Save Daemon
+├── App.tsx             # Master UI Wrapper, Tab Router, and SVG logic
+└── main.tsx            # React DOM entry point
+\`\`\`
 
--   **Language**: TypeScript for strict type safety across game data.
+## 🔄 The Core Gameplay Loop
 
--   **State Management**: A custom Reducer-based engine for handling complex game logic and delta-based state updates.
+1.  **Deploy:** Use the Geo-Tracker to travel to an Active Sector (e.g., St. Lawrence Churchyard).
+2.  **Investigate:** Spend Humanity and risk Sector Heat to gather Intel, Items, and map Leads.
+3.  **Cross-Reference:** Check the Goetian Codex. If you have gathered the required Intel, Identify the target to reveal their required Sealing Catalysts.
+4.  **Retreat & Synthesize:** Return to the Safehouse to rest, lower heat, and craft the necessary items.
+5.  **Execute:** Deploy to the target's location and initiate the Sealing Protocol mini-game to bind them to the Brass Vessel.
 
-🗺 Roadmap
-----------
+## 🚀 Installation & Initialization
 
+1. Clone the repository.
+2. Ensure you have Node.js installed.
+3. Run the following terminal commands:
+   \`\`\`bash
+   npm install
+   npm run dev
+   \`\`\`
+4. Access the Thaumaturgic OS via your local host port.
+
+## 📁 Asset Requirements
+
+The OS expects the following directory structure in the `public/` folder for visual assets:
+* `/portraits/` - Square (256x256) `.png` files for the tactical UI profile pictures.
+* `/portraits/full_body/` - Full character illustrations (prefixed with `fb_`) for the deployment dossier modal.
+* `/seals/` - Transparent `.png` files named by Goetian ID (e.g., `murmur.png`) for the Codex and Tracing mini-game.
