@@ -1,37 +1,79 @@
-import type { NarrativeNode } from '../../engine/state';
+// src/content/narrative/caterham_churchyard.ts
+import type { GameState } from '../../engine/state';
+import type { GameAction } from '../../engine/reducer';
 
-export const caterhamChurchyard: NarrativeNode = {
-  id: "caterham_churchyard",
-  title: "St. Mary's Churchyard",
-  text: "The earth here feels 'hollow'. The ancient yew trees bordering the graves are totally devoid of life, their root systems calcified and white like bone. A faint scent of ozone lingers in the freezing air.",
+export const caterhamChurchyard = {
+  title: "ST. LAWRENCE CHURCHYARD",
+  
+  // --- DYNAMIC REACTIVE NARRATIVE ---
+  text: (state: GameState) => {
+    let narrative = "The historic grounds of St. Lawrence are choking in a preternatural, static-laced fog. Ancient yew trees loom in the peripheral vision like silent executioners. The Malleus Inquisition has cordoned off the eastern perimeter with hazard tape inscribed with Enochian wards, but something has violently torn through them from the inside out. The smell of petrichor and burnt copper is overwhelming.\n\n";
+
+    if (state.flags['churchyard_wards_inspected']) {
+      narrative += "You kneel by the shattered Malleus perimeter. The warding tape hasn't just been broken; the esoteric ink has been flash-boiled off the plastic. Whatever breached this line generates intense, localized thermal anomalies. It dragged something heavy into the mud toward the older, unmarked graves.\n\n";
+    }
+
+    if (state.flags['churchyard_crypt_opened']) {
+      narrative += "The heavy stone slab of the Macabre Crypt has been shoved aside, grinding deep grooves into the surrounding earth. A cold, damp abyss stares back at you from the open doorway. The thermal trail leads directly down into the dark.\n\n";
+    }
+
+    if (state.flags['churchyard_cleared']) {
+      return "The oppressive fog has lifted from St. Lawrence. The mundane world has reasserted itself, leaving only the distant hum of the Caterham Bypass and the chill of a normal autumn night. The anomaly here has been resolved, but the Malleus will return soon to clean up the mess. It's time to move.";
+    }
+
+    return narrative;
+  },
+  
   choices: [
+    // --- STEP 1: INSTRUCTION (Gathering Lore) ---
     {
-      id: "examine_roots",
-      label: "Examine the calcified root systems.",
-      condition: (state) => !state.intelLog.includes("calcified_roots"),
+      id: "inspect_wards",
+      label: "INSPECT THE SHATTERED MALLEUS WARDS",
+      condition: (state: GameState) => !state.flags['churchyard_wards_inspected'],
       actions: [
-        { type: "GATHER_INTEL", payload: "calcified_roots" },
-        { type: "ADVANCE_TIME", payload: 2 }
-      ]
+        { type: 'SET_FLAG', payload: { flagId: 'churchyard_wards_inspected', value: true } },
+        { type: 'ADVANCE_TIME', payload: 2 }
+      ] as GameAction[]
     },
+
+    // --- STEP 2: PROGRESSION & CONSEQUENCE (Applying the Lore) ---
     {
-      id: "sensor_sweep",
-      label: "Run an ambient temperature sweep.",
-      condition: (state) => !state.intelLog.includes("temp_drop"),
+      id: "follow_trail",
+      label: "TRACK THE THERMAL ANOMALY (+15 SECTOR HEAT)",
+      condition: (state: GameState) => 
+        state.flags['churchyard_wards_inspected'] && 
+        !state.flags['churchyard_crypt_opened'],
       actions: [
-        { type: "GATHER_INTEL", payload: "temp_drop" },
-        { type: "GATHER_INTEL", payload: "ozone_scent" }
-      ]
+        { type: 'SET_FLAG', payload: { flagId: 'churchyard_crypt_opened', value: true } },
+        { type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: 'caterham_churchyard', amount: 15 } },
+        { type: 'ADVANCE_TIME', payload: 5 }
+      ] as GameAction[]
     },
+
+    // --- STEP 3: THE PAYOFF (Intel, Loot, and Leads) ---
     {
-      id: "use_katashiro",
-      label: "Deploy Katashiro into the crypt. (Requires Katashiro)",
-      condition: (state) => state.activeContracts.includes("katashiro_decoy"),
+      id: "enter_crypt",
+      label: "DESCEND INTO THE MACABRE CRYPT (-5 HUMANITY)",
+      condition: (state: GameState) => 
+        state.flags['churchyard_crypt_opened'] && 
+        !state.flags['churchyard_cleared'],
       actions: [
-        { type: "EXECUTE_YOKAI", payload: "katashiro_decoy" },
-        { type: "MODIFY_INVENTORY", payload: { itemId: "cold_iron_filings", amount: 1 } },
-        { type: "ADD_LEAD", payload: { id: "crypt_iron", text: "The decoy recovered cold iron from the crypt.", resolved: false } }
-      ]
+        { type: 'MODIFY_HUMANITY', payload: -5 },
+        { type: 'SET_FLAG', payload: { flagId: 'churchyard_cleared', value: true } },
+        
+        // The Loot
+        { type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 12 } },
+        { type: 'MODIFY_INVENTORY', payload: { itemId: 'grave_dust', amount: 1 } },
+        
+        // The Codex Clue
+        { type: 'GATHER_INTEL', payload: 'thermal_scorching' },
+        
+        // The Next Map Destination!
+        { type: 'ADD_LEAD', payload: { 
+          id: 'asylum_trail', 
+          text: 'The crypt tunnel collapsed, but the residual thermal signatures point directly toward the ruins of the old St. Lawrence Asylum up the hill.' 
+        }}
+      ] as GameAction[]
     }
   ]
 };

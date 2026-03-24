@@ -614,7 +614,7 @@ export default function App() {
                         &gt; {injectNarrative(activeNodeData.title)}
                       </h2>
                       <p style={{ lineHeight: '1.8', fontSize: '1.05rem', marginTop: '20px' }}>
-                        {injectNarrative(activeNodeData.text)}
+                        {injectNarrative(typeof activeNodeData.text === 'function' ? activeNodeData.text(state) : activeNodeData.text)}
                       </p>
                     </>
                   )}
