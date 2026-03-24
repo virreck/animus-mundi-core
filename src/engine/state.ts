@@ -1,86 +1,63 @@
 // src/engine/state.ts
 
-export type IntelTag = string;
-export type YokaiId = string;
 export type NodeId = string;
-export type ItemId = string;
 export type GoetiaId = string;
-export type FactionId = string; // <-- NEW
+export type YokaiId = string;
+export type FactionId = string;
 
 export interface Lead {
   id: string;
   text: string;
-  resolved?: boolean; 
-}
-
-export interface ActionEffect {
-  type: string;
-  payload?: any;
-}
-
-export interface Choice {
-  id: string;
-  label: string;
-  condition?: (state: GameState) => boolean;
-  actions: any[]; 
-}
-
-export interface NarrativeNode {
-  id: string;
-  title: string;
-  text: string;
-  choices: Choice[];
+  resolved: boolean;
 }
 
 export interface GameState {
-  humanity: number;       
-  ink: number;            
-  inventory: Record<ItemId, number>;
-
-  gameStage: 'START_SCREEN' | 'ACTIVE';
-  playerName: string;                   
-  playerPortrait: string;               
-  agencyName: string;                  
+  gameStage: 'START_SCREEN' | 'ACTIVE' | 'GAME_OVER';
+  playerName: string;
+  playerPortrait: string;
+  agencyName: string;
   
-  // --- NEW: Faction Standing ---
-  factions: Record<FactionId, number>;
-
-  activeContracts: YokaiId[];
-  intelLog: IntelTag[];
+  currentNode: NodeId;
+  humanity: number;
+  
+  // --- THE THREAT TRACKERS ---
+  globalEntropy: number;
+  sectorEntropy: Record<string, number>; 
+  
+  inventory: Record<string, number>;
+  intelLog: string[];
+  flags: Record<string, boolean>;
   activeLeads: Lead[];
+  
+  factions: Record<FactionId, number>;
+  
   identifiedGoetia: GoetiaId[];
   sealedGoetia: GoetiaId[];
-
-  currentNode: NodeId;
-  globalChaos: number;
-  flags: Record<string, boolean>; // For narrative memory
+  
+  activeContracts: YokaiId[];
+  ink: number;
 }
 
 export const initialGameState: GameState = {
   gameStage: 'START_SCREEN',
-  playerName: 'Unknown Operative',
-  playerPortrait: 'sigil_1',
-  agencyName: 'Independent',
-  humanity: 100,
-  ink: 3,
-  inventory: {
-    "obols": 50, 
-    "lamp_oil": 1
-  },
+  playerName: '',
+  playerPortrait: '',
+  agencyName: '',
   
-  // Base standing: 50 is neutral. 0 is Kill-on-Sight. 100 is Exalted.
-  factions: {
-    "malleus": 50,
-    "underworld": 50
-  },
-
-  activeContracts: [],
+  currentNode: 'caterham_churchyard',
+  humanity: 100,
+  
+  // --- DEFAULT THREAT STATES ---
+  globalEntropy: 0,
+  sectorEntropy: {}, 
+  
+  inventory: {},
   intelLog: [],
+  flags: {},
   activeLeads: [],
+  factions: { malleus: 50, independent: 50 },
   identifiedGoetia: [],
   sealedGoetia: [],
-  
-  currentNode: "london_hub",
-  globalChaos: 10,
-  flags: {}
+  activeContracts: [],
+  ink: 0
 };
