@@ -27,7 +27,7 @@ Thaumaturgic OS is a browser-based, interactive fiction and resource management 
 
 ### Directory Structure Blueprint
 
-```
+```text
 src/
 ├── engine/
 │   ├── state.ts        # Interface definitions and initialGameState
@@ -59,10 +59,10 @@ src/
 1. Clone the repository.
 2. Ensure you have Node.js installed.
 3. Run the following terminal commands:
-   \`\`\`bash
+   ```bash
    npm install
    npm run dev
-   \`\`\`
+   ```
 4. Access the Thaumaturgic OS via your local host port.
 
 ## 📁 Asset Requirements
