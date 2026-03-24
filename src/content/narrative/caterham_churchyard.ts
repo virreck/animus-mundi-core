@@ -5,23 +5,26 @@ import type { GameAction } from '../../engine/reducer';
 export const caterhamChurchyard = {
   title: "ST. LAWRENCE CHURCHYARD",
   
-  // --- DYNAMIC REACTIVE NARRATIVE ---
+  // --- DYNAMIC REACTIVE NARRATIVE (SCENE REPLACEMENT) ---
   text: (state: GameState) => {
-    let narrative = "The historic grounds of St. Lawrence are choking in a preternatural, static-laced fog. Ancient yew trees loom in the peripheral vision like silent executioners. The Malleus Inquisition has cordoned off the eastern perimeter with hazard tape inscribed with Enochian wards, but something has violently torn through them from the inside out. The smell of petrichor and burnt copper is overwhelming.\n\n";
-
-    if (state.flags['churchyard_wards_inspected']) {
-      narrative += "You kneel by the shattered Malleus perimeter. The warding tape hasn't just been broken; the esoteric ink has been flash-boiled off the plastic. Whatever breached this line generates intense, localized thermal anomalies. It dragged something heavy into the mud toward the older, unmarked graves.\n\n";
-    }
-
-    if (state.flags['churchyard_crypt_opened']) {
-      narrative += "The heavy stone slab of the Macabre Crypt has been shoved aside, grinding deep grooves into the surrounding earth. A cold, damp abyss stares back at you from the open doorway. The thermal trail leads directly down into the dark.\n\n";
-    }
-
+    
+    // 3. Final State: The node is cleared.
     if (state.flags['churchyard_cleared']) {
       return "The oppressive fog has lifted from St. Lawrence. The mundane world has reasserted itself, leaving only the distant hum of the Caterham Bypass and the chill of a normal autumn night. The anomaly here has been resolved, but the Malleus will return soon to clean up the mess. It's time to move.";
     }
 
-    return narrative;
+    // 2. Middle State: The crypt is open.
+    if (state.flags['churchyard_crypt_opened']) {
+      return "The heavy stone slab of the Macabre Crypt has been shoved aside, grinding deep grooves into the surrounding earth. A cold, damp abyss stares back at you from the open doorway. The thermal trail leads directly down into the dark.";
+    }
+
+    // 1. Initial Action: The wards are inspected.
+    if (state.flags['churchyard_wards_inspected']) {
+      return "You kneel by the shattered Malleus perimeter. The warding tape hasn't just been broken; the esoteric ink has been flash-boiled off the plastic. Whatever breached this line generates intense, localized thermal anomalies. It dragged something heavy into the mud toward the older, unmarked graves.";
+    }
+
+    // 0. Default State: Arriving for the first time.
+    return "The historic grounds of St. Lawrence are choking in a preternatural, static-laced fog. Ancient yew trees loom in the peripheral vision like silent executioners. The Malleus Inquisition has cordoned off the eastern perimeter with hazard tape inscribed with Enochian wards, but something has violently torn through them from the inside out. The smell of petrichor and burnt copper is overwhelming.";
   },
   
   choices: [
