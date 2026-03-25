@@ -6,7 +6,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     manifestId: 1,
     name: "Bael",
     rank: "King",
-    allegiance: "Conquest",
+    allegiance: "CONQUEST",
     title: "The First Principal Spirit",
     description: "A ruling King of the East. He manifests with three heads: a toad, a man, and a cat. He grants the power of invisibility and speaks with a hoarse voice.",
     requiredIntel: ["hoarse_voice", "amphibian_tracks", "sudden_invisibility"],
@@ -17,7 +17,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 2,
     "name": "Agares",
     "rank": "Duke",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": ["ozone_scent", "temp_drop"],
     sealCost: {"lamp_oil": 1}
   },
@@ -26,7 +26,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 3,
     "name": "Vassago",
     "rank": "Prince",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -34,7 +34,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 4,
     "name": "Samigina",
     "rank": "Marquis",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -42,7 +42,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 5,
     "name": "Marbas",
     "rank": "President",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -50,7 +50,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 6,
     "name": "Valefor",
     "rank": "Duke",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -58,7 +58,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 7,
     "name": "Amon",
     "rank": "Marquis",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -66,7 +66,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 8,
     "name": "Barbatos",
     "rank": "Duke",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -74,7 +74,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 9,
     "name": "Paimon",
     "rank": "King",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -82,7 +82,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 10,
     "name": "Buer",
     "rank": "President",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -90,7 +90,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 11,
     "name": "Gusion",
     "rank": "Duke",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -98,7 +98,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 12,
     "name": "Sitri",
     "rank": "Prince",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -106,7 +106,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 13,
     "name": "Beleth",
     "rank": "King",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -114,7 +114,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 14,
     "name": "Leraje",
     "rank": "Marquis",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -122,15 +122,17 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 15,
     "name": "Eligos",
     "rank": "Duke",
-    "allegiance": "Death",
-    "requiredIntel": []
+    "allegiance": "DEATH",
+    description: 'A spectral knight holding a lance and a serpent. Eligos sows paranoia and martial obsession, subtly escalating minor disputes into bloodbaths. Often accompanied by the scent of ozone and freshly spilled blood.',
+    requiredIntel: ['martial_paranoia', 'spontaneous_hemorrhage'],
+    sealCost: { 'brass_wire': 2, 'obols': 10 }
   },
   {
     "id": "16_zepar",
     "manifestId": 16,
     "name": "Zepar",
     "rank": "Duke",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -138,7 +140,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 17,
     "name": "Botis",
     "rank": "President",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -146,7 +148,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 18,
     "name": "Bathin",
     "rank": "Duke",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -154,7 +156,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 19,
     "name": "Sallos",
     "rank": "Duke",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -162,7 +164,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 20,
     "name": "Purson",
     "rank": "King",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -170,7 +172,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 21,
     "name": "Marax",
     "rank": "Earl",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -178,7 +180,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 22,
     "name": "Ipos",
     "rank": "Earl",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -186,7 +188,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 23,
     "name": "Aim",
     "rank": "Duke",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -194,7 +196,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 24,
     "name": "Naberius",
     "rank": "Marquis",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -202,7 +204,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 25,
     "name": "Glasya-Labolas",
     "rank": "President",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -210,7 +212,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 26,
     "name": "Bune",
     "rank": "Duke",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -218,7 +220,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 27,
     "name": "Ronove",
     "rank": "Marquis",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -226,7 +228,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 28,
     "name": "Berith",
     "rank": "Duke",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -234,7 +236,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 29,
     "name": "Astaroth",
     "rank": "Duke",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -242,7 +244,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 30,
     "name": "Forneus",
     "rank": "Marquis",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -250,7 +252,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 31,
     "name": "Foras",
     "rank": "President",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -258,7 +260,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 32,
     "name": "Asmoday",
     "rank": "King",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -266,7 +268,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 33,
     "name": "Gaap",
     "rank": "Prince",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -274,7 +276,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 34,
     "name": "Furfur",
     "rank": "Earl",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -282,7 +284,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 35,
     "name": "Marchosias",
     "rank": "Marquis",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -290,7 +292,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 36,
     "name": "Stolas",
     "rank": "Prince",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -298,7 +300,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 37,
     "name": "Phenex",
     "rank": "Marquis",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -306,7 +308,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 38,
     "name": "Halphas",
     "rank": "Earl",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -314,7 +316,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 39,
     "name": "Malphas",
     "rank": "President",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -322,7 +324,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 40,
     "name": "Raum",
     "rank": "Earl",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -330,7 +332,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 41,
     "name": "Focalor",
     "rank": "Duke",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -338,7 +340,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 42,
     "name": "Vepar",
     "rank": "Duke",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -346,7 +348,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 43,
     "name": "Sabnock",
     "rank": "Marquis",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -354,7 +356,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 44,
     "name": "Shax",
     "rank": "Marquis",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -362,7 +364,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 45,
     "name": "Vine",
     "rank": "King",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -370,7 +372,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 46,
     "name": "Bifrons",
     "rank": "Earl",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -378,7 +380,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 47,
     "name": "Uvall",
     "rank": "Duke",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -386,7 +388,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 48,
     "name": "Haagenti",
     "rank": "President",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -394,7 +396,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 49,
     "name": "Crocell",
     "rank": "Duke",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -402,7 +404,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 50,
     "name": "Furcas",
     "rank": "Knight",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -410,7 +412,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 51,
     "name": "Balam",
     "rank": "King",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -418,7 +420,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 52,
     "name": "Alloces",
     "rank": "Duke",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -426,7 +428,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 53,
     "name": "Camio",
     "rank": "President",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -434,15 +436,17 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 54,
     "name": "Murmur",
     "rank": "Duke",
-    "allegiance": "Famine",
-    "requiredIntel": []
+    "allegiance": "FAMINE",
+    description: 'Manifests as a soldier riding a vulture. Murmur twists the residual energies of the deceased, creating localized necrotic fields and forcing the dead to answer questions. His presence often triggers sudden, massive drops in ambient temperature.',
+    requiredIntel: ['necrotic_stasis', 'thermal_scorching', 'amphibian_biology'],
+    sealCost: { 'cold_iron_filings': 1, 'obols': 5 }
   },
   {
     "id": "55_orobas",
     "manifestId": 55,
     "name": "Orobas",
     "rank": "Prince",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -450,7 +454,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 56,
     "name": "Gremory",
     "rank": "Duke",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -458,7 +462,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 57,
     "name": "Ose",
     "rank": "President",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -466,7 +470,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 58,
     "name": "Amy",
     "rank": "President",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -474,7 +478,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 59,
     "name": "Oriax",
     "rank": "Marquis",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -482,7 +486,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 60,
     "name": "Vapula",
     "rank": "Duke",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -490,7 +494,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 61,
     "name": "Zagan",
     "rank": "King",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -498,7 +502,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 62,
     "name": "Volac",
     "rank": "President",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -506,7 +510,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 63,
     "name": "Andras",
     "rank": "Marquis",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -514,7 +518,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 64,
     "name": "Haures",
     "rank": "Duke",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -522,7 +526,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 65,
     "name": "Andrealphus",
     "rank": "Marquis",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -530,7 +534,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 66,
     "name": "Cimejes",
     "rank": "Marquis",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -538,7 +542,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 67,
     "name": "Amdusias",
     "rank": "Duke",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -546,7 +550,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 68,
     "name": "Belial",
     "rank": "King",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   },
   {
@@ -554,7 +558,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 69,
     "name": "Decarabia",
     "rank": "Marquis",
-    "allegiance": "War",
+    "allegiance": "WAR",
     "requiredIntel": []
   },
   {
@@ -562,7 +566,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 70,
     "name": "Seere",
     "rank": "Prince",
-    "allegiance": "Famine",
+    "allegiance": "FAMINE",
     "requiredIntel": []
   },
   {
@@ -570,7 +574,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 71,
     "name": "Dantalion",
     "rank": "Duke",
-    "allegiance": "Death",
+    "allegiance": "DEATH",
     "requiredIntel": []
   },
   {
@@ -578,7 +582,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     "manifestId": 72,
     "name": "Andromalius",
     "rank": "Earl",
-    "allegiance": "Conquest",
+    "allegiance": "CONQUEST",
     "requiredIntel": []
   }
 ];

@@ -16,6 +16,7 @@ export type GameAction =
   | { type: 'SET_FLAG'; payload: { flagId: string; value: boolean } }
   | { type: 'RESOLVE_LEAD'; payload: string }
   | { type: 'ADVANCE_TIME'; payload: number } 
+  | { type: 'MODIFY_GLOBAL_ENTROPY'; payload: number }
   | { type: 'MODIFY_SECTOR_ENTROPY'; payload: { nodeId: string; amount: number } } 
   | { type: 'LOAD_GAME'; payload: GameState }
   | { type: 'RESET_GAME' };
@@ -55,12 +56,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const currentFaction = state.factions[action.payload.factionId] || 50;
       return { ...state, factions: { ...state.factions, [action.payload.factionId]: Math.max(0, Math.min(100, currentFaction + action.payload.amount)) } };
     
-    // --- THREAT AND HEALTH MODIFIERS ---
+// --- THREAT AND HEALTH MODIFIERS ---
     case 'MODIFY_HUMANITY':
       return { ...state, humanity: Math.max(0, Math.min(100, state.humanity + action.payload)) };
-    case 'ADVANCE_TIME':
+      
+    case 'MODIFY_GLOBAL_ENTROPY':
+      // The Doomsday Clock: Only ticks up on massive failures
       return { ...state, globalEntropy: Math.min(100, state.globalEntropy + action.payload) };
+
+    case 'ADVANCE_TIME': {
+      // Time passes. The world gets worse. 
+      // This loops through every sector you have visited/tracked and raises its heat.
+      const updatedSectorEntropy = { ...state.sectorEntropy };
+      Object.keys(updatedSectorEntropy).forEach(nodeId => {
+        updatedSectorEntropy[nodeId] = Math.min(100, updatedSectorEntropy[nodeId] + action.payload);
+      });
+      return { ...state, sectorEntropy: updatedSectorEntropy };
+    }
+
     case 'MODIFY_SECTOR_ENTROPY': {
+      // Direct spikes to a specific sector (e.g., from breaking a ward)
       const { nodeId, amount } = action.payload;
       const currentSectorEntropy = state.sectorEntropy[nodeId] || 0;
       return {

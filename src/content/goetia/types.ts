@@ -1,6 +1,6 @@
 // src/content/goetia/types.ts
 export type GoeticRank = 'King' | 'Duke' | 'Prince' | 'Marquis' | 'President' | 'Earl' | 'Knight';
-export type HorsemanAllegiance = 'Conquest' | 'War' | 'Famine' | 'Death';
+export type HorsemanAllegiance = 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH';
 
 export interface GoetiaLieutenant {
   id: string;
