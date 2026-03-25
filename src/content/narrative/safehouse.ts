@@ -12,6 +12,21 @@ export const safehouse = {
   },
   
   choices: [
+
+    // --- DEV DEBUG: INSTANTLY GRANT ENDGAME REQUIREMENTS ---
+    {
+      id: "debug_endgame",
+      label: "[DEV_TOOLS]: GRANT MURMUR INTEL & CATALYSTS",
+      condition: (state: GameState) => !state.intelLog.includes('necrotic_stasis'),
+      actions: [
+        { type: 'GATHER_INTEL', payload: 'necrotic_stasis' },
+        { type: 'GATHER_INTEL', payload: 'thermal_scorching' },
+        { type: 'GATHER_INTEL', payload: 'amphibian_biology' },
+        { type: 'MODIFY_INVENTORY', payload: { itemId: 'cold_iron_filings', amount: 1 } },
+        { type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 5 } }
+      ] as GameAction[]
+    },
+
     // --- LOOP 1: THE HEARTH (Rest) ---
     // Trades Global Entropy for Humanity.
     {
