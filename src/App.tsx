@@ -556,9 +556,16 @@ export default function App() {
 
   const injectNarrative = (text: string) => text ? text.replace(/\{playerName\}/g, state.playerName).replace(/\{agencyName\}/g, state.agencyName) : "";
   const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' | 'SEAL' = 'ALERT') => {
-    const id = Date.now();
+    // Math.random() ensures unique IDs even when 5 actions fire in 1 millisecond
+    const id = Date.now() + Math.random(); 
     setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+    
+    // Increased read time to 5.5 seconds
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5500);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
   };
   const formatNode = (nodeId: string) => nodeId.replace(/_/g, ' ').toUpperCase();
 
@@ -581,7 +588,11 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono }}>
-      <style>{`@keyframes blink { 50% { opacity: 0; } } @keyframes slowPulse { 0%, 100% { opacity: 0.6; transform: scale(0.98); } 50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 15px ${theme.accentRed}; } }`}</style>
+      <style>{`
+        @keyframes blink { 50% { opacity: 0; } } 
+        @keyframes slowPulse { 0%, 100% { opacity: 0.6; transform: scale(0.98); } 50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 15px ${theme.accentRed}; } }
+        @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+      `}</style>
       
       {/* ================================================================== */}
       {/* 6.1 TOP BAR */}
@@ -964,10 +975,37 @@ export default function App() {
         <BanishmentTerminal horseman={activeBanishmentTarget} state={state} dispatch={dispatch} onClose={() => setActiveBanishmentTarget(null)} addToast={addToast} />
       )}
 
+      {/* --- TOAST NOTIFICATIONS OVERLAY --- */}
       <div style={{ position: 'fixed', bottom: '30px', right: '30px', display: 'flex', flexDirection: 'column', gap: '10px', zIndex: 1000, pointerEvents: 'none' }}>
         {toasts.map(toast => (
-          <div key={toast.id} style={{ backgroundColor: theme.bgPanel, color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, borderLeft: `4px solid ${toast.type === 'INTEL' ? theme.textTerminal : toast.type === 'ITEM' ? '#b8860b' : toast.type === 'SEAL' ? theme.textBright : theme.accentRed}`, padding: '15px 20px', fontFamily: theme.fontMono, fontSize: '0.9rem', boxShadow: '0 4px 10px rgba(0,0,0,0.8)', maxWidth: '300px' }}>
-            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', color: theme.textMuted, fontSize: '0.7rem', letterSpacing: '1px' }}>&gt; {toast.type === 'INTEL' ? 'SYS_UPDATE: INTEL' : toast.type === 'ITEM' ? 'SYS_UPDATE: STORAGE' : toast.type === 'SEAL' ? 'PROTOCOL_SUCCESS' : 'CRITICAL_ALERT'}</span>
+          <div 
+            key={toast.id} 
+            style={{ 
+              pointerEvents: 'auto', // Allows clicking the dismiss button
+              animation: 'slideInRight 0.3s ease-out forwards', 
+              position: 'relative',
+              backgroundColor: theme.bgPanel, 
+              color: theme.textBright, 
+              border: `1px solid ${theme.borderTerminal}`, 
+              borderLeft: `4px solid ${toast.type === 'INTEL' ? theme.textTerminal : toast.type === 'ITEM' ? '#b8860b' : toast.type === 'SEAL' ? theme.textBright : theme.accentRed}`, 
+              padding: '15px 30px 15px 20px', // Added right padding for the X button
+              fontFamily: theme.fontMono, 
+              fontSize: '0.9rem', 
+              boxShadow: '0 4px 10px rgba(0,0,0,0.8)', 
+              maxWidth: '350px' 
+            }}
+          >
+            {/* MANUAL DISMISS BUTTON */}
+            <button 
+              onClick={() => removeToast(toast.id)} 
+              style={{ position: 'absolute', top: '5px', right: '5px', background: 'none', border: 'none', color: theme.textMuted, cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.8rem' }}
+            >
+              [X]
+            </button>
+
+            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', color: theme.textMuted, fontSize: '0.7rem', letterSpacing: '1px' }}>
+              &gt; {toast.type === 'INTEL' ? 'SYS_UPDATE: INTEL' : toast.type === 'ITEM' ? 'SYS_UPDATE: STORAGE' : toast.type === 'SEAL' ? 'PROTOCOL_SUCCESS' : 'CRITICAL_ALERT'}
+            </span>
             {toast.message}
           </div>
         ))}
