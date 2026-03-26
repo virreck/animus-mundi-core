@@ -1,73 +1,91 @@
-# ☿ THAUMATURGIC_OS v3.1
+Animus Mundi: Seals of the 4
+============================
 
-**A Tactical Esoteric Operating System & State-Driven Narrative RPG.**
+**A Neo-Noir Thaumaturgic OS Simulator.**
 
-Thaumaturgic OS is a browser-based, interactive fiction and resource management game. Players take on the role of an independent occult operative navigating a localized esoteric breach in Caterham, UK. The game blends branching narrative investigation with survival mechanics, real-time threat tracking, and procedural geometry mini-games.
+**Developed with: React, TypeScript, Vite**
 
-## ⚙️ Core Mechanics
+* * * * *
 
-* **State-Driven Narrative Engine:** A robust React `useReducer` architecture that tracks flags, inventory, and intel. Narrative nodes use a "Reverse Waterfall" logic to dynamically overwrite room descriptions based on player actions, preventing choice-spamming and ensuring logical progression.
-* **Dual-Threat Tracking System:**
-    * **Global Entropy:** The doomsday clock. Advancing time or resting increases this meter. If it hits 100%, the session terminates.
-    * **Sector Heat:** Localized volatility. Aggressive actions (brute-forcing wards, messy sealing) spike local heat. If a sector reaches 100%, the Malleus Inquisition locks it down, rendering the node inaccessible.
-* **Esoteric Geo-Tracker (Map):** A tactical SVG overlay mapping real-world Caterham locations (St. Lawrence Churchyard, Abandoned Asylum). Players travel between nodes, incurring time and entropy costs.
-* **Procedural Sealing Protocol:** A high-tension mini-game for capturing Goetian targets. Uses Coprime Star Polygon algorithms to procedurally generate unbroken Euler paths (Pentagrams, Heptagrams, Bound Enneagrams). Players must trace the exact geometric containment matrix before the sector destabilizes.
-* **The Safehouse Hub:** A sanctuary node featuring core gameplay loops:
-    * **The Hearth:** Restore Humanity at the cost of Global Entropy.
-    * **Altar of Synthesis:** Craft high-tier Sealing Catalysts from raw inventory materials.
-    * **Remote Warding:** Spend Obols to triage and lower Sector Heat in compromised locations.
-* **Auto-Save Daemon:** Local browser persistence (`localStorage`) captures the `GameState` after every action, allowing operatives to seamlessly resume sessions.
+<div align="center"> <img src="/public/title_art.png" alt="Animus Mundi Title Screen" width="600px"/> <p><em>The localized manifestation of Conquest over real-world geography. (Visual Reference: image_6.png)</em></p> </div>
 
-## 🏗️ Architecture & Tech Stack
+1\. Overview
+---------------------
 
-* **Frontend:** React 18+
-* **Language:** TypeScript (Strict typing for `GameState` and `GameAction` unions)
-* **Styling:** Inline React styles utilizing a centralized `theme` object for a cohesive Neo-Noir Terminal aesthetic (Deep Greens, Terminal Blacks, Accent Reds).
-* **State Management:** React `useReducer` for global state dispatching, coupled with a custom `useEngine` hook to expose localized functions.
+**Animus Mundi: Seals of the 4** is a single-pane tactical simulation. The player assumes the role of a *Thaumaturge Operative*, interacting entirely through a "Thaumaturgic OS"---a piece of esoteric hardware designed to map, track, and ultimately bind conceptual threats to Gaia's stability.
 
-### Directory Structure Blueprint
+The ultimate objective is to prevent a conceptual apocalypse by systematically isolating and banishing the Four Horsemen: **CONQUEST**, **WAR**, **FAMINE**, and **DEATH**.
 
-```text
-src/
-├── engine/
-│   ├── state.ts        # Interface definitions and initialGameState
-│   └── reducer.ts      # The master switch statement handling all GameActions
-├── content/
-│   ├── narrative/      # The dynamic scene files
-│   │   ├── caterham_churchyard.ts
-│   │   ├── caterham_asylum.ts
-│   │   └── safehouse.ts
-│   ├── goetia.ts       # Codex data and seal requirements
-│   └── yokai.ts        # Kage_No_Sho contract data
-├── ui/
-│   └── hooks/
-│       └── useEngine.ts # Exposes engine dispatchers and the Auto-Save Daemon
-├── App.tsx             # Master UI Wrapper, Tab Router, and SVG logic
-└── main.tsx            # React DOM entry point
-```
+2\. Narrative Framework & Immutable World Laws
+----------------------------------------------
 
-## 🔄 The Core Gameplay Loop
+This platform is not a standard branching narrative; it is a **State-Driven Environmental Investigation**. All content (narrative nodes, items, codex entries) must strictly adhere to the established "lore math" and state-laws to maintain mechanical tension.
 
-1.  **Deploy:** Use the Geo-Tracker to travel to an Active Sector (e.g., St. Lawrence Churchyard).
-2.  **Investigate:** Spend Humanity and risk Sector Heat to gather Intel, Items, and map Leads.
-3.  **Cross-Reference:** Check the Goetian Codex. If you have gathered the required Intel, Identify the target to reveal their required Sealing Catalysts.
-4.  **Retreat & Synthesize:** Return to the Safehouse to rest, lower heat, and craft the necessary items.
-5.  **Execute:** Deploy to the target's location and initiate the Sealing Protocol mini-game to bind them to the Brass Vessel.
+2.1. The Premise: The 72 Anchors
+--------------------------------
 
-## 🚀 Installation & Initialization
+The Four Horsemen cannot manifest directly. They require "conceptual anchors" to interact with and subjugate the mundane world. These anchors are the 72 Goetian lieutenants of the Ars Goetia.
 
-1. Clone the repository.
-2. Ensure you have Node.js installed.
-3. Run the following terminal commands:
-   ```bash
-   npm install
-   npm run dev
-   ```
-4. Access the Thaumaturgic OS via your local host port.
+-   **The Math:** There are 72 Goetia total. They are divided into four legions of 18, each serving one specific Horseman.
 
-## 📁 Asset Requirements
+-   **The Goal:** The core game loop involves hunting these 18 lieutenants. Sealing a Goetia lieutenant permanently severs one of that Horseman's anchors. The engine explicitly tracks `sealedGoetia` by `allegiance` (e.g., 'WAR') to calculate the success probability of the final Banishment Protocol.
 
-The OS expects the following directory structure in the `public/` folder for visual assets:
-* `/portraits/` - Square (256x256) `.png` files for the tactical UI profile pictures.
-* `/portraits/full_body/` - Full character illustrations (prefixed with `fb_`) for the deployment dossier modal.
-* `/seals/` - Transparent `.png` files named by Goetian ID (e.g., `murmur.png`) for the Codex and Tracing mini-game.
+2.2. The Investigation Concept: Signs over Prints
+-------------------------------------------------
+
+Operatives do not hunt the Goetia directly; they hunt the *anomalies* caused by their presence.
+
+-   The Goetia leave "Signs."
+
+-   Narrative text must prioritize atmosphere and the highly detailed, immersive description of these anomalies (e.g., localized logical fog creating biological decay, spontaneous outbreaks of martial paranoia, crops rotting overnight).
+
+-   The **GOETIAN_CODEX** acts as the analysis engine, cross-referencing these specific signs to authorize identification and sealing.
+
+3\. Gameplay Mechanics Overview (The Engine)
+--------------------------------------------
+
+The OS engine is built on a strict state machine that governs the dynamic flow of investigation, threat analysis, and resource management.
+
+3.1. The Investigation Loop: Static and Reactive Pacing
+-------------------------------------------------------
+
+-   **One-Way Door Investigation:** Environmental investigation options must not be repeatable. When a player interacts with an object (e.g., "TRACK THE ANOMALY"), the narrative must permanent update, and the option must vanish.
+
+-   **Instruction vs. Progression:** Not every action should yield a massive mechanical effect. The engine prioritizes narrative pacing. Some actions are purely instructional (lore gathering), serving to unlock progressions actions (spiking heat, yielding intel, or adding leads to the map).
+
+3.2. Threat Matrices (The Operational Risk)
+-------------------------------------------
+
+The player must manage multiple threat systems that react to their investigation speed.
+
+-   **Humanity:** The operative's primary resource. Restored by resting at the **SAFEHOUSE**, which advances time.
+
+-   **Global Entropy:** The ultimate fail-state. This meter only increases when the player **CATASTROPHICALLY FAILS** a high-level ritual (a standard Goetian seal or a Horseman banishment). A purely execution-based punishment.
+
+-   **Local Sector Heat:** The main lockdown clock. Spikes when breaking wards, digging for clues, or traveling. While the operative is resting or traveling, the Goetian lieutenants in the field continue their work, causing Local Heat to spike across all other field nodes on the map. Safehouse triage actions allow resources to be burned to lower the local heat.
+
+3.3. Kage-no-Sho: Yokai & Shikigami Utility
+-------------------------------------------
+
+While the Goetia are threats that must be sealed, the operative can bind lesser Japanese spirits (Yokai) to act as Shikigami---active OS sub-routines and tactical tools. These spirits are vital for manipulating the OS's core rules and managing the threat meters.
+
+-   **Acquisition (The Pact):** Yokai are bound via the **KAGE_NO_SHO** terminal (Book of Shadows). Binding requires a Pact, costing resources like Obols or even a temporary reduction in maximum Humanity (Tether Alignment).
+
+-   **Utility Classification:** Shikigami are classified by their functional utility within the OS:
+
+    -   **Infiltration (Heat Management):** Spirits that generate false esoteric noise, reducing the `Local Sector Heat` generated by investigation actions, or actively lowering current Heat while in the Safehouse.
+
+    -   **Esoteric Support (Minigame Assistance):** Spirits that interact directly with the tracing interface, potentially extending the 15-second standard timer or simplifying complex Euler shapes.
+
+    -   **Operative Care (Humanity Management):** Spirits bound to stabilize the Tether, allowing for slower rest cycles (Humanity recovery) that generate less time-advancement penalty.
+
+    -   **Scouting (Lead Management):** Spirits that can be dispatched to reveal connected map nodes without advancing time or traveling, or identifying hidden Signs within a sector.
+
+3.4. Endgame: The Grand Rite (Banishment Terminal)
+--------------------------------------------------
+
+The final confrontation against a Horseman is high-risk and mechanically heavy.
+
+-   **Calculated Odds:** The success probability of the Rite is procedures and immutable: **`5% (Base) + (sealedGoetiaCount * 5%)`**, capped at 95%. This math validates all other mechanical loops (hunting lieutenants is the sole way to improve odds).
+
+-   **Endurance Tracing:** The Grand Rite is not a single trace. It requires a shared 60-second timer to clear **three** procedurally generated matrices back-to-back. If the timer hits zero or the player suffers a ritual fracture, the attempt is over.
