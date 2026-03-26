@@ -9,83 +9,83 @@ Animus Mundi: Seals of the 4
 
 <div align="center"> <img src="/public/title_art.png" alt="Animus Mundi Title Screen" width="600px"/> <p></p> </div>
 
-1\. Overview
+1\. Executive Summary
 ---------------------
 
-**Animus Mundi: Seals of the 4** is a single-pane tactical simulation. The player assumes the role of a *Thaumaturge Operative*, interacting entirely through a "Thaumaturgic OS"---a piece of esoteric hardware designed to map, track, and ultimately bind conceptual threats to Gaia's stability.
+**Animus Mundi: Seals of the 4** is a single-pane tactical simulation. The player assumes the role of a *Remote Thaumaturge Operative*, interacting with a physical, supernatural world entirely through a specialized interface: the "Thaumaturgic OS."
+
+This OS terminal is not the *source* of the apocalypse; it is the specialized hardware designed to map, track, and ultimately execute the complex geometry required to bind real-world conceptual threats. The player character (the Operative) uses this terminal to coordinate investigations, manage resource logistics, and authorize physical rituals.
 
 The ultimate objective is to prevent a conceptual apocalypse by systematically isolating and banishing the Four Horsemen: **CONQUEST**, **WAR**, **FAMINE**, and **DEATH**.
 
 2\. Narrative Framework & Immutable World Laws
 ----------------------------------------------
 
-This platform is not a standard branching narrative; it is a **State-Driven Environmental Investigation**. All content (narrative nodes, items, codex entries) must strictly adhere to the established "lore math" and state-laws to maintain mechanical tension.
+This platform is a **State-Driven Environmental Investigation**. All tactical and narrative content (nodes, items, codex entries) must strictly adhere to the established "lore math" and physical laws of the supernatural world.
 
 2.1. The Premise: The 72 Anchors
 --------------------------------
 
-The Four Horsemen cannot manifest directly. They require "conceptual anchors" to interact with and subjugate the mundane world. These anchors are the 72 Goetian lieutenants of the Ars Goetia.
+The Four Horsemen are real, physically manifested entities that cannot manifest directly in the mundane world. They require "conceptual anchors" to subjugate reality. These anchors are the 72 Goetian lieutenants of the Ars Goetia.
 
 -   **The Math:** There are 72 Goetia total. They are divided into four legions of 18, each serving one specific Horseman.
 
--   **The Goal:** The core game loop involves hunting these 18 lieutenants. Sealing a Goetia lieutenant permanently severs one of that Horseman's anchors. The engine explicitly tracks `sealedGoetia` by `allegiance` (e.g., 'WAR') to calculate the success probability of the final Banishment Protocol.
+-   **The Strategy:** The player's tactical focus is to sever these anchors. Sealing a Goetia lieutenant permanently destroys one of that Horseman's connection points to reality. The engine explicitly tracks `sealedGoetia` by `allegiance` (e.g., 'WAR') to calculate the success probability of the final high-risk Banishment Protocol.
 
 2.2. The Investigation Concept: Signs over Prints
 -------------------------------------------------
 
-Operatives do not hunt the Goetia directly; they hunt the *anomalies* caused by their presence.
+The Goetia do not exist in standard physical space; operatives identify their influence via the *anomalies* caused by their presence.
 
 -   The Goetia leave "Signs."
 
--   Narrative text must prioritize atmosphere and the highly detailed, immersive description of these anomalies (e.g., localized logical fog creating biological decay, spontaneous outbreaks of martial paranoia, crops rotting overnight).
+-   Narrative text must prioritize immersive, highly detailed description of these real-world anomalies (e.g., localized drops in ambient temperature, spontaneous outbreaks of martial paranoia, crops rotting overnight).
 
--   The **GOETIAN_CODEX** acts as the analysis engine, cross-referencing these specific signs to authorize identification and sealing.
+-   The **GOETIAN_CODEX** analyzes these incoming data streams to authorize true-name identification and ultimate sealing rituals.
 
-3\. Gameplay Mechanics Overview (The Engine)
---------------------------------------------
+3\. Gameplay Mechanics Overview (Remote Field Ops)
+--------------------------------------------------
 
-The OS engine is built on a strict state machine that governs the dynamic flow of investigation, threat analysis, and resource management.
+The application simulates the friction and data-management challenges of managing complex supernatural fieldwork from a distance.
 
 3.1. The Investigation Loop: Static and Reactive Pacing
 -------------------------------------------------------
 
--   **One-Way Door Investigation:** Environmental investigation options must not be repeatable. When a player interacts with an object (e.g., "TRACK THE ANOMALY"), the narrative must permanent update, and the option must vanish.
+-   **One-Way Door Investigation:** Field choices are irreversible physical actions. When an operative chooses to "Inspect the shattered wards," they are physically moving to that spot in the real world. The narrative permanently updates to show this consequence, and the option vanishes. Options must evolve or expire, never "grind."
 
--   **Instruction vs. Progression:** Not every action should yield a massive mechanical effect. The engine prioritizes narrative pacing. Some actions are purely instructional (lore gathering), serving to unlock progressions actions (spiking heat, yielding intel, or adding leads to the map).
+-   **Instruction vs. Progression:** To balance pacing, not every action triggers a major mechanical shift. Some actions are purely instructional (data gathering), serving as pre-requisites to unlock progression actions (spiking heat, yielding intel, or adding new deployment leads to the map).
 
-3.2. Threat Matrices (The Operational Risk)
--------------------------------------------
+3.2. Operational Threat Matrices
+--------------------------------
 
-The player must manage multiple threat systems that react to their investigation speed.
+The OS represents complex, interrelated physical and spiritual risks as tactical data streams.
 
--   **Humanity:** The operative's primary resource. Restored by resting at the **SAFEHOUSE**, which advances time.
+-   **Humanity (Tether Stability):** The physical and mental alignment of the remote operative. A real-world resource that represents real risk to the character, even if they aren't physically present at the hotspot. It is restored by resting at the **SAFEHOUSE**, which advances time.
 
--   **Global Entropy:** The ultimate fail-state. This meter only increases when the player **CATASTROPHICALLY FAILS** a high-level ritual (a standard Goetian seal or a Horseman banishment). A purely execution-based punishment.
+-   **Local Sector Heat:** The OS's representation of Malleus Inquisition awareness and reality-volatility within a single node. While the operative is resting or traveling, the Goetian lieutenants in the field continue their work, causing Local Heat to spike across all other field nodes on the map.
 
--   **Local Sector Heat:** The main lockdown clock. Spikes when breaking wards, digging for clues, or traveling. While the operative is resting or traveling, the Goetian lieutenants in the field continue their work, causing Local Heat to spike across all other field nodes on the map. Safehouse triage actions allow resources to be burned to lower the local heat.
+-   **Global Entropy:** The primary Game Over fail-state. Only increases when the player **CATASTROPHICALLY FAILS** a high-level ritual (a standard Goetian seal or a Horseman banishment). A purely execution-based punishment representing real metaphysical collapse.
 
-3.3. Kage-no-Sho: Yokai & Shikigami Utility
--------------------------------------------
+3.3. Kage-no-Sho: Yokai & Shikigami Intermediaries
+--------------------------------------------------
 
-While the Goetia are threats that must be sealed, the operative can bind lesser Japanese spirits (Yokai) to act as Shikigami---active OS sub-routines and tactical tools. These spirits are vital for manipulating the OS's core rules and managing the threat meters.
+Yokai are lesser Japanese spirits that the Operative can bind to act as Shikigami. They are not data points; they are real entities tethered to the **command console**, acting as spiritual lenses or direct physical intermediaries.
 
--   **Acquisition (The Pact):** Yokai are bound via the **KAGE_NO_SHO** terminal (Book of Shadows). Binding requires a Pact, costing resources like Obols or even a temporary reduction in maximum Humanity (Tether Alignment).
+-   **Acquisition (The Pact):** Yokai are bound via the **KAGE_NO_SHO** terminal (Book of Shadows). Binding requires a formal Pact, costing items like Obols or even a temporary reduction in maximum Humanity (Tether Stability).
 
--   **Utility Classification:** Shikigami are classified by their functional utility within the OS:
+-   **Utility Classification:** Shikigami provide tactical utility within the OS by manipulating operational rules on behalf of the remote operative:
 
-    -   **Infiltration (Heat Management):** Spirits that generate false esoteric noise, reducing the `Local Sector Heat` generated by investigation actions, or actively lowering current Heat while in the Safehouse.
+    -   **Suppression (Heat Management):** Spirits that physically quiet a sector or mask the Operative's specialized magical signature.
 
-    -   **Esoteric Support (Minigame Assistance):** Spirits that interact directly with the tracing interface, potentially extending the 15-second standard timer or simplifying complex Euler shapes.
+    -   **Ritual Support (Minigame Assistance):** Spirits tethered to the interface to actively stabilize the physical tracing geometry during complex sealing or banishment rituals.
 
-    -   **Operative Care (Humanity Management):** Spirits bound to stabilize the Tether, allowing for slower rest cycles (Humanity recovery) that generate less time-advancement penalty.
-
-    -   **Scouting (Lead Management):** Spirits that can be dispatched to reveal connected map nodes without advancing time or traveling, or identifying hidden Signs within a sector.
+    -   **Operative Care (Rest Optimization):** Spirits bound to stabilize the remote tether, allowing for rest cycles (Humanity recovery) that generate less time-advancement penalty.
 
 3.4. Endgame: The Grand Rite (Banishment Terminal)
 --------------------------------------------------
 
-The final confrontation against a Horseman is high-risk and mechanically heavy.
+The final confrontation against a Horseman (omega-level event) uses the hostile Banishment Terminal.
 
--   **Calculated Odds:** The success probability of the Rite is procedures and immutable: **`5% (Base) + (sealedGoetiaCount * 5%)`**, capped at 95%. This math validates all other mechanical loops (hunting lieutenants is the sole way to improve odds).
+-   **Calculated Odds:** The success probability of the Grand Rite is procedure and immutable: **`5% (Base) + (sealedGoetiaCount * 5%)`**, capped at 95%. This math validates all prior mechanical loops (hunting lieutenants is the sole way to improve odds).
 
--   **Endurance Tracing:** The Grand Rite is not a single trace. It requires a shared 60-second timer to clear **three** procedurally generated matrices back-to-back. If the timer hits zero or the player suffers a ritual fracture, the attempt is over.
+-   **Endurance Tracing:** This Rite requires a shared 60-second timer to clear **three** procedurally generated matrices back-to-back. If the timer hits zero or the player suffers a ritual fracture, the attempt fails catastrophically.
