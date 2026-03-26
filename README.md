@@ -7,7 +7,7 @@ Animus Mundi: Seals of the 4
 
 * * * * *
 
-<div align="center"> <img src="/public/title_art.png" alt="Animus Mundi Title Screen" width="600px"/> <p><em>The localized manifestation of Conquest over real-world geography. (Visual Reference: image_6.png)</em></p> </div>
+<div align="center"> <img src="/public/title_art.png" alt="Animus Mundi Title Screen" width="600px"/> <p></p> </div>
 
 1\. Overview
 ---------------------
