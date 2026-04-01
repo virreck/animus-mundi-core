@@ -7,6 +7,7 @@ import { allGoetia } from './content/goetia';
 import { allYokai } from './content/yokai';
 import type { GameAction } from './engine/reducer';
 import type { GameState } from './engine/state';
+import NarrativeForge from './tools/NarrativeForge'; // <-- IMPORTED FORGE
 
 // ============================================================================ //
 // 1. TYPES & CONSTANTS
@@ -85,8 +86,73 @@ function generateSealMatrix() {
 }
 
 // ============================================================================ //
-// 3. UI COMPONENTS: START SCREEN (WITH FULL-BODY MODAL)
+// 3. UI COMPONENTS: BOOT SEQUENCE & START SCREEN
 // ============================================================================ //
+
+const BootSequence = ({ onComplete }: { onComplete: () => void }) => {
+  const [visibleLines, setVisibleLines] = useState<number>(0);
+
+  const bootText = [
+    "> INITIALIZING THAUMATURGIC_OS v3.1 [MOBILE FIELD INSTANCE]...",
+    "> BIOMETRIC SYNC... [CONFIRMED]",
+    "> ENGAGING COGNITIVE SHIELDING... [ACTIVE]",
+    "",
+    "WARNING: CONCEPTUAL RUPTURE DETECTED IN LOCAL GEOGRAPHY.",
+    "The anchors are snapping. The Four are bleeding through.",
+    "",
+    "CONQUEST. WAR. FAMINE. DEATH.",
+    "",
+    "They cannot manifest without physical conduits. They are utilizing the 72 lieutenants of the Ars Goetia to bridge the gap into mundane reality.",
+    "",
+    "The Nocturnal Syndicates are being decimated in the streets. Worse, the Malleus Inquisition is using the chaos as cover for a holy purge.", 
+    "The Inquisition hounds are sweeping the sectors. If they track your casting signature, they will burn you before the demons do.",
+    "",
+    "You are boots on the ground. Rely on this OS to filter the esoteric hazards into survivable data. Your directive is absolute:",
+    "1. Physically navigate the compromised sectors.",
+    "2. Identify the Goetian conduits and bind them into the Brass Vessel.",
+    "3. Execute the Grand Banishment Rite to sever the Riders from our plane.",
+    "",
+    "Watch your Heat. Do not let the Tether snap.",
+    "",
+    "[ PRESS ANY KEY TO INITIALIZE OPERATIVE DOSSIER ]"
+  ];
+
+  useEffect(() => {
+    if (visibleLines < bootText.length) {
+      const delay = bootText[visibleLines] === "" ? 800 : 400;
+      const timer = setTimeout(() => setVisibleLines(prev => prev + 1), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [visibleLines, bootText]);
+
+  useEffect(() => {
+    const handleProceed = () => {
+      if (visibleLines >= bootText.length) onComplete();
+      else setVisibleLines(bootText.length);
+    };
+
+    window.addEventListener('keydown', handleProceed);
+    window.addEventListener('click', handleProceed);
+    
+    return () => {
+      window.removeEventListener('keydown', handleProceed);
+      window.removeEventListener('click', handleProceed);
+    };
+  }, [visibleLines, bootText.length, onComplete]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono, padding: '40px' }}>
+      <div style={{ width: '800px', maxWidth: '100%', textShadow: `0 0 5px ${theme.borderTerminal}` }}>
+        {bootText.slice(0, visibleLines).map((line, index) => (
+          <p key={index} style={{ margin: '0 0 10px 0', lineHeight: '1.6', fontSize: '1.1rem', color: line.includes('WARNING') || line.includes('CONQUEST') || line.includes('snap') ? theme.accentRed : theme.textBright, animation: index === bootText.length - 1 ? 'blink 2s infinite' : 'none', fontWeight: line.includes('absolute') || line.includes('[ PRESS') ? 'bold' : 'normal' }}>
+            {line}
+          </p>
+        ))}
+        {visibleLines < bootText.length && <span style={{ color: theme.textBright, animation: 'blink 1s infinite', fontSize: '1.2rem' }}>_</span>}
+      </div>
+    </div>
+  );
+};
 
 const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: string, agency: string) => void, onLoad: () => void }) => {
   const [name, setName] = useState('');
@@ -107,7 +173,7 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
 
   const handleInitiateClick = () => {
     if (!name.trim()) setName('UNKNOWN_OPERATIVE');
-    if (!agency.trim()) setAgency('INDEPENDENT');
+    if (!agency.trim()) setAgency('UNAFFILIATED');
     setShowConfirm(true);
   };
 
@@ -125,7 +191,7 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
               <h3 style={{ color: theme.accentRed, borderBottom: `1px solid ${theme.accentRed}`, paddingBottom: '10px', letterSpacing: '2px', animation: 'blink 2s infinite' }}>&gt; CONFIRM DEPLOYMENT</h3>
               <div style={{ marginTop: '20px', lineHeight: '2' }}>
                 <div><span style={{ color: theme.textMuted }}>DESIGNATION:</span> <span style={{ color: theme.textBright, fontWeight: 'bold' }}>{name.toUpperCase()}</span></div>
-                <div><span style={{ color: theme.textMuted }}>AGENCY:</span> <span style={{ color: theme.textBright, fontWeight: 'bold' }}>{agency.toUpperCase()}</span></div>
+                <div><span style={{ color: theme.textMuted }}>SYNDICATE:</span> <span style={{ color: theme.textBright, fontWeight: 'bold' }}>{agency.toUpperCase()}</span></div>
                 <div><span style={{ color: theme.textMuted }}>STARTING HUMANITY:</span> <span style={{ color: theme.textBright }}>100%</span></div>
                 <div><span style={{ color: theme.textMuted }}>TETHER ALIGNMENT:</span> <span style={{ color: theme.textBright }}>STABLE</span></div>
               </div>
@@ -154,8 +220,8 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
           <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; INPUT OPERATIVE DESIGNATION:</label>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Vergil" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }} />
 
-          <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; INPUT AFFILIATED AGENCY:</label>
-          <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. Independent Consultations" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }} />
+          <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; INPUT AFFILIATED SYNDICATE:</label>
+          <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. The Nocturnal Syndicates" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }} />
 
           <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; SELECT OPERATIVE DOSSIER:</label>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '30px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -186,13 +252,18 @@ interface SealingTerminalProps {
   dispatch: React.Dispatch<GameAction>;
   sealGoetia: (id: string) => void;
   addToast: (msg: string, type: 'INTEL'|'ITEM'|'ALERT'|'SEAL') => void;
+  tetheredYokai: string[];
 }
 
-const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addToast }: SealingTerminalProps) => {
+const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addToast, tetheredYokai }: SealingTerminalProps) => {
   const [matrix] = useState(() => generateSealMatrix());
   const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE'>('AUTH');
   const [nameInput, setNameInput] = useState('');
-  const [timeLeft, setTimeLeft] = useState(matrix.timeLimit); 
+  
+  // YOKAI UTILITY: RITUAL SUPPORT
+  const hasTimeBuff = tetheredYokai.includes('yokai_kamaitachi');
+  const [timeLeft, setTimeLeft] = useState(matrix.timeLimit + (hasTimeBuff ? 5 : 0)); 
+  
   const [path, setPath] = useState<number[]>([]);
   const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -360,15 +431,20 @@ interface BanishmentTerminalProps {
   dispatch: React.Dispatch<GameAction>;
   onClose: () => void;
   addToast: (msg: string, type: 'INTEL'|'ITEM'|'ALERT'|'SEAL') => void;
+  tetheredYokai: string[];
 }
 
-const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast }: BanishmentTerminalProps) => {
+const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, tetheredYokai }: BanishmentTerminalProps) => {
   const [phase, setPhase] = useState<'WARNING' | 'LEDGER' | 'RITUAL' | 'RESOLUTION'>('WARNING');
   const [authText, setAuthText] = useState('');
   
   const [matrices] = useState(() => [generateSealMatrix(), generateSealMatrix(), generateSealMatrix()]);
   const [currentMatrixIdx, setCurrentMatrixIdx] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60); 
+  
+  // YOKAI UTILITY: GRAND RITE SUPPORT
+  const hasTimeBuff = tetheredYokai.includes('yokai_kamaitachi');
+  const [timeLeft, setTimeLeft] = useState(60 + (hasTimeBuff ? 15 : 0)); 
+  
   const [path, setPath] = useState<number[]>([]);
   const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -550,9 +626,13 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<'CURRENT_NODE' | 'MAP' | 'CODEX' | 'KAGE_NO_SHO' | 'JOURNAL' | 'INVENTORY'>('CURRENT_NODE');
   const [selectedGoetiaId, setSelectedGoetiaId] = useState<string | null>(null);
   const [activeSealTarget, setActiveSealTarget] = useState<string | null>(null);
-  const [activeBanishmentTarget, setActiveBanishmentTarget] = useState<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH' | null>(null); // <-- NEW BANISHMENT TRACKER
+  const [activeBanishmentTarget, setActiveBanishmentTarget] = useState<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH' | null>(null); 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
+  
+  // App-level UI states
+  const [bootComplete, setBootComplete] = useState(false);
+  const [showForge, setShowForge] = useState(false);
 
   const injectNarrative = (text: string) => text ? text.replace(/\{playerName\}/g, state.playerName).replace(/\{agencyName\}/g, state.agencyName) : "";
   const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' | 'SEAL' = 'ALERT') => {
@@ -584,7 +664,39 @@ export default function App() {
   const activeNodeData = getCurrentNodeData();
   const availableChoices = activeNodeData.choices as NarrativeChoice[];
 
-  if (state.gameStage === 'START_SCREEN') return <StartScreen onStart={startInvestigation} onLoad={loadGame} />;
+  // --- DEV TOGGLE INTERCEPT ---
+  if (showForge) {
+    return (
+      <div style={{ position: 'relative' }}>
+        <button 
+          onClick={() => setShowForge(false)} 
+          style={{ position: 'absolute', top: 10, right: 10, zIndex: 9999, padding: '10px', background: theme.accentRed, color: 'white', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
+        >
+          CLOSE NARRATIVE FORGE
+        </button>
+        <NarrativeForge />
+      </div>
+    );
+  }
+
+  // --- START SCREEN & BOOT ROUTING ---
+  if (state.gameStage === 'START_SCREEN') {
+    if (!bootComplete) {
+      return <BootSequence onComplete={() => setBootComplete(true)} />;
+    }
+    return (
+      <div style={{ position: 'relative' }}>
+        <StartScreen onStart={startInvestigation} onLoad={loadGame} />
+        {/* DEV LAUNCHER BUTTON */}
+        <button 
+          onClick={() => setShowForge(true)} 
+          style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'transparent', color: theme.textMuted, border: 'none', cursor: 'pointer', fontFamily: theme.fontMono }}
+        >
+          [DEV: LAUNCH FORGE]
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono }}>
@@ -599,7 +711,7 @@ export default function App() {
       {/* ================================================================== */}
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 20px', backgroundColor: theme.bgPanel, borderBottom: `1px solid ${theme.borderTerminal}`, fontSize: '0.9rem', letterSpacing: '1px' }}>
         <span>ACTIVE_NODE: <strong style={{color: theme.accentRed}}>{formatNode(state.currentNode)}</strong></span>
-        <span style={{ color: theme.textTerminal }}>AUTH_USER: <strong style={{ color: theme.textBright }}>{state.playerName.toUpperCase()}</strong> <span style={{ margin: '0 10px', color: theme.borderTerminal }}>//</span> AGENCY: <strong style={{ color: theme.textBright }}>{state.agencyName.toUpperCase()}</strong></span>
+        <span style={{ color: theme.textTerminal }}>AUTH_USER: <strong style={{ color: theme.textBright }}>{state.playerName.toUpperCase()}</strong> <span style={{ margin: '0 10px', color: theme.borderTerminal }}>//</span> SYNDICATE: <strong style={{ color: theme.textBright }}>{state.agencyName.toUpperCase()}</strong></span>
       </div>
 
       <div style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
@@ -968,11 +1080,11 @@ export default function App() {
       {activeSealTarget && (() => {
         const target = allGoetia.find(g => g.id === activeSealTarget);
         if (!target) return null;
-        return <SealingTerminal target={target} sealCost={target.sealCost || {}} onClose={() => setActiveSealTarget(null)} dispatch={dispatch} sealGoetia={sealGoetia} addToast={addToast} />;
+        return <SealingTerminal target={target} sealCost={target.sealCost || {}} onClose={() => setActiveSealTarget(null)} dispatch={dispatch} sealGoetia={sealGoetia} addToast={addToast} tetheredYokai={state.tetheredYokai} />;
       })()}
 
       {activeBanishmentTarget && (
-        <BanishmentTerminal horseman={activeBanishmentTarget} state={state} dispatch={dispatch} onClose={() => setActiveBanishmentTarget(null)} addToast={addToast} />
+        <BanishmentTerminal horseman={activeBanishmentTarget} state={state} dispatch={dispatch} onClose={() => setActiveBanishmentTarget(null)} addToast={addToast} tetheredYokai={state.tetheredYokai} />
       )}
 
       {/* --- TOAST NOTIFICATIONS OVERLAY --- */}

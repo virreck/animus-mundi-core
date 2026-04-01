@@ -10,21 +10,21 @@ export const caterhamChurchyard = {
     
     // 3. Final State: The node is cleared.
     if (state.flags['churchyard_cleared']) {
-      return "The oppressive fog has lifted from St. Lawrence. The mundane world has reasserted itself, leaving only the distant hum of the Caterham Bypass and the chill of a normal autumn night. The anomaly here has been resolved, but the Malleus will return soon to clean up the mess. It's time to move.";
+      return "The conceptual rupture has been stabilized. Your AR visor stops throwing thermal warnings, leaving only the distant hum of the Caterham Bypass and the chill of a normal autumn night. The physical anomaly here is sealed, but the Malleus Inquisition sweep teams will track the ritual feedback soon. It's time to move.";
     }
 
     // 2. Middle State: The crypt is open.
     if (state.flags['churchyard_crypt_opened']) {
-      return "The heavy stone slab of the Macabre Crypt has been shoved aside, grinding deep grooves into the surrounding earth. A cold, damp abyss stares back at you from the open doorway. The thermal trail leads directly down into the dark.";
+      return "You shove the heavy stone slab of the Macabre Crypt aside, grinding deep grooves into the mud. A cold, damp abyss stares back. Through the visor's Cognitive Shielding, the esoteric thermal trail bleeds blinding neon-orange directly down into the dark.";
     }
 
     // 1. Initial Action: The wards are inspected.
     if (state.flags['churchyard_wards_inspected']) {
-      return "You kneel by the shattered Malleus perimeter. The warding tape hasn't just been broken; the esoteric ink has been flash-boiled off the plastic. Whatever breached this line generates intense, localized thermal anomalies. It dragged something heavy into the mud toward the older, unmarked graves.";
+      return "You crouch by the shattered Malleus perimeter. The Inquisition didn't just abandon this checkpoint; they were dragged. The esoteric warding tape has been flash-boiled off the plastic. Whatever breached this line left a massive conceptual scar leading toward the older, unmarked graves.";
     }
 
     // 0. Default State: Arriving for the first time.
-    return "The historic grounds of St. Lawrence are choking in a preternatural, static-laced fog. Ancient yew trees loom in the peripheral vision like silent executioners. The Malleus Inquisition has cordoned off the eastern perimeter with hazard tape inscribed with Enochian wards, but something has violently torn through them from the inside out. The smell of petrichor and burnt copper is overwhelming.";
+    return "The historic grounds of St. Lawrence are pitch black, but your visor is screaming with metaphysical degradation. Ancient yew trees loom in your peripheral vision. The Malleus Inquisition cordoned off the eastern perimeter, but the checkpoint is destroyed. The smell of petrichor and burnt copper is overwhelming.";
   },
   
   choices: [

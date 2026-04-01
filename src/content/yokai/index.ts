@@ -1,4 +1,4 @@
-// src/content/yokai/index.ts
+/// src/content/yokai/index.ts
 import type { YokaiContract } from './types';
 
 export const allYokai: YokaiContract[] = [

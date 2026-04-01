@@ -3,12 +3,10 @@ import type { GameState } from '../../engine/state';
 import type { GameAction } from '../../engine/reducer';
 
 export const safehouse = {
-  get title() {
-    return "OPERATIVE SAFEHOUSE";
-  },
+  title: "OPERATIVE SAFEHOUSE",
   
-  get text() {
-    return "{playerName}, the logic fog cannot penetrate the heavy brass warding of your sanctuary. The hum of the Thaumaturgic OS servers provides a steady, grounding rhythm. This is a place to synthesize catalysts, analyze data, and realign your tether before deploying back into the chaos.";
+  text: (state: GameState) => {
+    return `Operative ${state.playerName.toUpperCase()}, the conceptual static finally drops. The heavy brass warding of this Nocturnal Syndicate safehouse blocks both Goetian influence and Malleus radio direction finders. You pull off the AR visor. This is a place to synthesize catalysts, analyze data, and realign your Tether before deploying back into the hot zone.`;
   },
   
   choices: [
@@ -28,10 +26,9 @@ export const safehouse = {
     },
 
     // --- LOOP 1: THE HEARTH (Rest) ---
-    // Trades Global Entropy for Humanity.
     {
       id: "safehouse_rest",
-      label: "RESTORE TETHER ALIGNMENT (+30 HUMANITY, +5% GLOBAL ENTROPY)",
+      label: "RESTORE TETHER ALIGNMENT (+30 HUMANITY, ADVANCES TIME)",
       condition: (state: GameState) => state.humanity < 100,
       actions: [
         { type: 'MODIFY_HUMANITY', payload: 30 },
@@ -40,8 +37,6 @@ export const safehouse = {
     },
 
     // --- LOOP 2: ALTAR OF SYNTHESIS (Crafting) ---
-    // Converts raw materials into Sealing Catalysts. 
-    // This choice ONLY appears if they have the exact right ingredients.
     {
       id: "craft_cold_iron",
       label: "SYNTHESIZE: COLD IRON FILINGS (-10 OBOLS, -1 RAW IRON)",
@@ -56,10 +51,9 @@ export const safehouse = {
     },
 
     // --- LOOP 3: INTEL DECRYPTION (Research) ---
-    // Allows the player to buy Intel safely with Obols and Time, rather than risking the field.
     {
       id: "decrypt_comms",
-      label: "DECRYPT M.I. COMMS (-15 OBOLS, +10% GLOBAL ENTROPY)",
+      label: "DECRYPT INQUISITION COMMS (-15 OBOLS, ADVANCES TIME)",
       condition: (state: GameState) => 
         (state.inventory['obols'] || 0) >= 15 && 
         !state.intelLog.includes('malleus_patrol_routes'),
@@ -71,7 +65,6 @@ export const safehouse = {
     },
 
     // --- LOOP 4: REMOTE WARDING (Sector Triage) ---
-    // Burns resources to lower the heat in a specific sector so the player can return to it.
     {
       id: "ward_churchyard",
       label: "REMOTE WARDING: ST. LAWRENCE CHURCHYARD (-20 OBOLS, -25% SECTOR HEAT)",

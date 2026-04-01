@@ -36,6 +36,8 @@ export interface GameState {
   
   activeContracts: YokaiId[];
   ink: number;
+
+  tetheredYokai: string[];
 }
 
 export const initialGameState: GameState = {
@@ -59,5 +61,6 @@ export const initialGameState: GameState = {
   identifiedGoetia: [],
   sealedGoetia: [],
   activeContracts: [],
+  tetheredYokai: [],
   ink: 0
 };

@@ -57,8 +57,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, factions: { ...state.factions, [action.payload.factionId]: Math.max(0, Math.min(100, currentFaction + action.payload.amount)) } };
     
 // --- THREAT AND HEALTH MODIFIERS ---
-    case 'MODIFY_HUMANITY':
-      return { ...state, humanity: Math.max(0, Math.min(100, state.humanity + action.payload)) };
+    case 'MODIFY_HUMANITY': {
+      let humanityChange = action.payload;
+
+      // YOKAI UTILITY: OPERATIVE CARE (e.g., Baku)
+      // If the operative is resting/gaining humanity, the Baku consumes nightmares to boost the heal by +15.
+      if (humanityChange > 0 && state.tetheredYokai.includes('yokai_baku')) {
+        humanityChange += 15;
+      }
+
+      return { 
+        ...state, 
+        humanity: Math.min(100, Math.max(0, state.humanity + humanityChange)) 
+      };
+    }
       
     case 'MODIFY_GLOBAL_ENTROPY':
       // The Doomsday Clock: Only ticks up on massive failures
@@ -75,15 +87,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case 'MODIFY_SECTOR_ENTROPY': {
-      // Direct spikes to a specific sector (e.g., from breaking a ward)
-      const { nodeId, amount } = action.payload;
-      const currentSectorEntropy = state.sectorEntropy[nodeId] || 0;
+      const nodeId = action.payload.nodeId || state.currentNode;
+      let heatSpike = action.payload.amount;
+
+      // YOKAI UTILITY: INFILTRATION (e.g., Kitsune)
+      // If heat is increasing, and the operative has the stealth Shikigami bound, reduce the spike by 25%.
+      if (heatSpike > 0 && state.tetheredYokai.includes('yokai_kitsune')) {
+        heatSpike = Math.max(1, Math.floor(heatSpike * 0.75)); 
+      }
+
+      const currentHeat = state.sectorEntropy[nodeId] || 0;
+      const newHeat = Math.min(100, Math.max(0, currentHeat + heatSpike));
+
       return {
         ...state,
-        sectorEntropy: {
-          ...state.sectorEntropy,
-          [nodeId]: Math.min(100, Math.max(0, currentSectorEntropy + amount))
-        }
+        sectorEntropy: { ...state.sectorEntropy, [nodeId]: newHeat }
       };
     }
 
