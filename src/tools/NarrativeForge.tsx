@@ -46,9 +46,15 @@ export default function NarrativeForge() {
 
   const activeNode = nodes.find(n => n.id === activeNodeId) || nodes[0];
 
-  // --- SCENE MANAGERS ---
+ // --- SCENE MANAGERS ---
   const updateActiveNode = (updates: Partial<EditorNode>) => {
     setNodes(nodes.map(n => n.id === activeNodeId ? { ...n, ...updates } : n));
+    
+    // BUG FIX: If you edit the Node ID, we must update the active tracking ID!
+    // Otherwise, the Forge loses track of the current scene and locks up.
+    if (updates.id !== undefined) {
+      setActiveNodeId(updates.id);
+    }
   };
 
   const createNewNode = (prefillId?: string) => {
