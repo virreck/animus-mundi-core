@@ -39,7 +39,7 @@ const theme = {
 
 export default function NarrativeForge() {
   const [nodes, setNodes] = useState<EditorNode[]>([
-    { id: 'new_sector', title: 'UNKNOWN SECTOR', baseText: 'The logic fog is thick here...', choices: [] }
+    { id: 'new_sector', title: 'UNKNOWN SECTOR', baseText: 'The fog is thick here...', choices: [] }
   ]);
   const [activeNodeId, setActiveNodeId] = useState('new_sector');
 
