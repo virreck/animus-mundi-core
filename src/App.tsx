@@ -722,12 +722,12 @@ export default function App() {
   // --- DEV TOGGLE INTERCEPT ---
   if (showForge) {
     return (
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, backgroundColor: theme.bgDark, overflowY: 'auto' }}>
         <button 
           onClick={() => setShowForge(false)} 
-          style={{ position: 'absolute', top: 10, right: 10, zIndex: 9999, padding: '10px', background: theme.accentRed, color: 'white', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
+          style={{ position: 'fixed', top: 20, right: 20, zIndex: 100000, padding: '10px 20px', background: theme.accentRed, color: 'white', fontWeight: 'bold', cursor: 'pointer', border: 'none', fontFamily: theme.fontMono, letterSpacing: '1px' }}
         >
-          CLOSE NARRATIVE FORGE
+          [X] CLOSE NARRATIVE FORGE
         </button>
         <NarrativeForge />
       </div>
@@ -761,12 +761,25 @@ export default function App() {
         @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
       `}</style>
       
-      {/* ================================================================== */}
+{/* ================================================================== */}
       {/* 6.1 TOP BAR */}
       {/* ================================================================== */}
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 20px', backgroundColor: theme.bgPanel, borderBottom: `1px solid ${theme.borderTerminal}`, fontSize: '0.9rem', letterSpacing: '1px' }}>
         <span>ACTIVE_NODE: <strong style={{color: theme.accentRed}}>{formatNode(state.currentNode)}</strong></span>
-        <span style={{ color: theme.textTerminal }}>AUTH_USER: <strong style={{ color: theme.textBright }}>{state.playerName.toUpperCase()}</strong> <span style={{ margin: '0 10px', color: theme.borderTerminal }}>//</span> SYNDICATE: <strong style={{ color: theme.textBright }}>{state.agencyName.toUpperCase()}</strong></span>
+        
+        <span style={{ color: theme.textTerminal }}>
+          {/* DEV LAUNCHER: MAIN CONSOLE */}
+          <button 
+            onClick={() => setShowForge(true)} 
+            style={{ background: 'transparent', color: theme.textMuted, border: `1px solid ${theme.textMuted}`, cursor: 'pointer', fontFamily: theme.fontMono, marginRight: '20px', padding: '2px 8px', fontSize: '0.8rem' }}
+          >
+            [DEV: FORGE]
+          </button>
+          
+          AUTH_USER: <strong style={{ color: theme.textBright }}>{state.playerName.toUpperCase()}</strong> 
+          <span style={{ margin: '0 10px', color: theme.borderTerminal }}>//</span> 
+          SYNDICATE: <strong style={{ color: theme.textBright }}>{state.agencyName.toUpperCase()}</strong>
+        </span>
       </div>
 
       <div style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
