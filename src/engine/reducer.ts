@@ -22,86 +22,205 @@ export type GameAction =
   | { type: 'RESET_GAME' };
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
+  // Helper to ensure backward compatibility with your state arrays
+  const activeYokai = state.tetheredYokai || state.activeContracts || [];
+  
+  // Zashiki-warashi permanently lowers your max humanity
+  const maxHumanity = activeYokai.includes('yokai_zashiki') ? 85 : 100;
+
   switch (action.type) {
     case 'START_INVESTIGATION':
       return { ...state, gameStage: 'ACTIVE', playerName: action.payload.name, playerPortrait: action.payload.portrait, agencyName: action.payload.agency };
-    case 'TRAVEL':
-      return { ...state, currentNode: action.payload, globalEntropy: Math.min(100, state.globalEntropy + 2) };
-    case 'GATHER_INTEL':
-      if (state.intelLog.includes(action.payload)) return state;
-      return { ...state, intelLog: [...state.intelLog, action.payload] };
-    case 'MODIFY_INVENTORY':
-      const currentAmt = state.inventory[action.payload.itemId] || 0;
-      return { ...state, inventory: { ...state.inventory, [action.payload.itemId]: Math.max(0, currentAmt + action.payload.amount) } };
-    case 'IDENTIFY_GOETIA':
-      if (state.identifiedGoetia.includes(action.payload)) return state;
-      return { ...state, identifiedGoetia: [...state.identifiedGoetia, action.payload] };
-    case 'SEAL_GOETIA':
-      if (state.sealedGoetia.includes(action.payload)) return state;
-      return { ...state, sealedGoetia: [...state.sealedGoetia, action.payload] };
-    case 'DRAFT_CONTRACT':
-      const { yokaiId, costs } = action.payload;
-      return {
-        ...state,
-        activeContracts: [...state.activeContracts, yokaiId],
-        humanity: state.humanity - (costs.humanity || 0),
-        ink: state.ink - (costs.ink || 0),
-        inventory: {
-          ...state.inventory,
-          ...(costs.obols ? { obols: (state.inventory.obols || 0) - costs.obols } : {}),
-          ...(costs.tributeItemId ? { [costs.tributeItemId]: (state.inventory[costs.tributeItemId] || 0) - 1 } : {})
-        }
-      };
-    case 'MODIFY_FACTION':
-      const currentFaction = state.factions[action.payload.factionId] || 50;
-      return { ...state, factions: { ...state.factions, [action.payload.factionId]: Math.max(0, Math.min(100, currentFaction + action.payload.amount)) } };
     
-// --- THREAT AND HEALTH MODIFIERS ---
-    case 'MODIFY_HUMANITY': {
-      let humanityChange = action.payload;
+    case 'TRAVEL': {
+      // YOKAI INTERCEPTOR: Tengu (Safe Travel)
+      const isTengu = activeYokai.includes('yokai_tengu');
+      const heatPenalty = isTengu ? 0 : 10; // Tengu nullifies travel heat
+      const obolCost = isTengu ? 5 : 0;     // Tengu demands 5 Obols per trip
 
-      // YOKAI UTILITY: OPERATIVE CARE (e.g., Baku)
-      // If the operative is resting/gaining humanity, the Baku consumes nightmares to boost the heal by +15.
-      if (humanityChange > 0 && state.tetheredYokai.includes('yokai_baku')) {
-        humanityChange += 15;
-      }
+      const nodeId = action.payload;
+      const currentSectorEntropy = state.sectorEntropy[nodeId] || 0;
 
       return { 
         ...state, 
-        humanity: Math.min(100, Math.max(0, state.humanity + humanityChange)) 
+        currentNode: nodeId, 
+        sectorEntropy: {
+          ...state.sectorEntropy,
+          [nodeId]: Math.min(100, currentSectorEntropy + heatPenalty)
+        },
+        inventory: {
+          ...state.inventory,
+          obols: Math.max(0, (state.inventory.obols || 0) - obolCost)
+        }
       };
     }
-      
-    case 'MODIFY_GLOBAL_ENTROPY':
-      // The Doomsday Clock: Only ticks up on massive failures
-      return { ...state, globalEntropy: Math.min(100, state.globalEntropy + action.payload) };
 
-    case 'ADVANCE_TIME': {
-      // Time passes. The world gets worse. 
-      // This loops through every sector you have visited/tracked and raises its heat.
-      const updatedSectorEntropy = { ...state.sectorEntropy };
-      Object.keys(updatedSectorEntropy).forEach(nodeId => {
-        updatedSectorEntropy[nodeId] = Math.min(100, updatedSectorEntropy[nodeId] + action.payload);
-      });
-      return { ...state, sectorEntropy: updatedSectorEntropy };
+    case 'GATHER_INTEL':
+      if (state.intelLog.includes(action.payload)) return state;
+      return { ...state, intelLog: [...state.intelLog, action.payload] };
+
+    case 'MODIFY_INVENTORY': {
+      const { itemId, amount } = action.payload;
+      let finalAmount = amount;
+
+      // YOKAI INTERCEPTOR: Zashiki-warashi (Obol Generation)
+      if (itemId === 'obols' && amount > 0 && activeYokai.includes('yokai_zashiki')) {
+        finalAmount += 3;
+      }
+      
+      const currentAmt = state.inventory[itemId] || 0;
+      return { 
+        ...state, 
+        inventory: { 
+          ...state.inventory, 
+          [itemId]: Math.max(0, currentAmt + finalAmount) 
+        } 
+      };
     }
 
-    case 'MODIFY_SECTOR_ENTROPY': {
-      const nodeId = action.payload.nodeId || state.currentNode;
-      let heatSpike = action.payload.amount;
+    case 'IDENTIFY_GOETIA':
+      if (state.identifiedGoetia.includes(action.payload)) return state;
+      return { ...state, identifiedGoetia: [...state.identifiedGoetia, action.payload] };
 
-      // YOKAI UTILITY: INFILTRATION (e.g., Kitsune)
-      // If heat is increasing, and the operative has the stealth Shikigami bound, reduce the spike by 25%.
-      if (heatSpike > 0 && state.tetheredYokai.includes('yokai_kitsune')) {
-        heatSpike = Math.max(1, Math.floor(heatSpike * 0.75)); 
-      }
+    case 'SEAL_GOETIA':
+      if (state.sealedGoetia.includes(action.payload)) return state;
+      return { ...state, sealedGoetia: [...state.sealedGoetia, action.payload] };
 
-      const currentHeat = state.sectorEntropy[nodeId] || 0;
-      const newHeat = Math.min(100, Math.max(0, currentHeat + heatSpike));
+    case 'DRAFT_CONTRACT': {
+      const { yokaiId, costs } = action.payload;
+      
+      // THE RULE OF TWO: If you have 2 Yokai, drop the oldest one to make room
+      const newTether = [...activeYokai, yokaiId];
+      if (newTether.length > 2) newTether.shift(); 
 
       return {
         ...state,
-        sectorEntropy: { ...state.sectorEntropy, [nodeId]: newHeat }
+        tetheredYokai: newTether,
+        activeContracts: newTether, // Syncing both arrays to prevent legacy crashes
+        humanity: state.humanity - (costs.humanity || 0),
+        ink: (state.ink || 0) - (costs.ink || 0),
+        inventory: {
+          ...state.inventory,
+          ...(costs.obols ? { obols: Math.max(0, (state.inventory.obols || 0) - costs.obols) } : {}),
+          ...(costs.tributeItemId ? { [costs.tributeItemId]: Math.max(0, (state.inventory[costs.tributeItemId] || 0) - 1) } : {})
+        }
+      };
+    }
+
+    case 'MODIFY_FACTION': {
+      const currentFaction = state.factions[action.payload.factionId] || 50;
+      return { ...state, factions: { ...state.factions, [action.payload.factionId]: Math.max(0, Math.min(100, currentFaction + action.payload.amount)) } };
+    }
+
+    // --- THREAT AND HEALTH MODIFIERS ---
+    case 'MODIFY_HUMANITY': {
+      let humanityChange = action.payload;
+      let extraHeat = 0;
+
+      // YOKAI INTERCEPTOR: Baku (Healing Boost)
+      if (humanityChange > 0 && activeYokai.includes('yokai_baku')) {
+        humanityChange = 100; // Baku fully restores humanity
+      }
+
+      // YOKAI INTERCEPTOR: Noppera-bō (Damage Reduction)
+      if (humanityChange < 0 && activeYokai.includes('yokai_noppera')) {
+        humanityChange = Math.ceil(humanityChange * 0.5); // Halves damage
+        extraHeat = 5; // The world rejects the faceless illusion
+      }
+
+      const newState = {
+        ...state,
+        humanity: Math.max(0, Math.min(maxHumanity, state.humanity + humanityChange))
+      };
+
+      if (extraHeat > 0) {
+        const currentHeat = newState.sectorEntropy[newState.currentNode] || 0;
+        newState.sectorEntropy = {
+          ...newState.sectorEntropy,
+          [newState.currentNode]: Math.min(100, currentHeat + extraHeat)
+        };
+      }
+
+      return newState;
+    }
+      
+    case 'MODIFY_GLOBAL_ENTROPY': {
+      let entropyChange = action.payload;
+      let obolDrain = 0;
+
+      if (entropyChange > 0) {
+        // YOKAI INTERCEPTOR: Kamaitachi (Doubles failure penalty)
+        if (activeYokai.includes('yokai_kamaitachi')) {
+          entropyChange *= 2;
+        }
+
+        // YOKAI INTERCEPTOR: Amabie (Ritual Failure Protection)
+        if (activeYokai.includes('yokai_amabie')) {
+          const currentObols = state.inventory.obols || 0;
+          if (currentObols >= 15) {
+            entropyChange = 0; // Nullify the spike!
+            obolDrain = 15;    // Take the toll
+          } else {
+            entropyChange = 100; // Cannot pay the toll? The Tether snaps. Game over.
+          }
+        }
+      }
+
+      return {
+        ...state,
+        globalEntropy: Math.min(100, Math.max(0, state.globalEntropy + entropyChange)),
+        inventory: {
+          ...state.inventory,
+          obols: Math.max(0, (state.inventory.obols || 0) - obolDrain)
+        }
+      };
+    }
+
+    case 'ADVANCE_TIME': {
+      let timeAmount = action.payload;
+      let obolDrain = 0;
+
+      // YOKAI INTERCEPTOR: Baku (Double time cost & 10 Obol drain when resting/passing time)
+      if (activeYokai.includes('yokai_baku')) {
+        timeAmount *= 2;
+        obolDrain = 10;
+      }
+
+      const updatedSectorEntropy = { ...state.sectorEntropy };
+      Object.keys(updatedSectorEntropy).forEach(nodeId => {
+        updatedSectorEntropy[nodeId] = Math.min(100, updatedSectorEntropy[nodeId] + timeAmount);
+      });
+
+      return { 
+        ...state, 
+        sectorEntropy: updatedSectorEntropy,
+        inventory: {
+          ...state.inventory,
+          obols: Math.max(0, (state.inventory.obols || 0) - obolDrain)
+        }
+      };
+    }
+
+    case 'MODIFY_SECTOR_ENTROPY': {
+      const { nodeId, amount } = action.payload;
+      const targetNode = nodeId || state.currentNode;
+      let heatSpike = amount;
+      let humanityDrain = 0;
+
+      // YOKAI INTERCEPTOR: Kitsune Mask (50% Heat Reduction)
+      if (heatSpike > 0 && activeYokai.includes('yokai_kitsune')) {
+        heatSpike = Math.max(1, Math.floor(heatSpike * 0.5));
+        humanityDrain = 2; // The Kitsune drains your sanity
+      }
+
+      const currentSectorEntropy = state.sectorEntropy[targetNode] || 0;
+      return {
+        ...state,
+        sectorEntropy: {
+          ...state.sectorEntropy,
+          [targetNode]: Math.min(100, Math.max(0, currentSectorEntropy + heatSpike))
+        },
+        humanity: Math.max(0, state.humanity - humanityDrain)
       };
     }
 
