@@ -16,6 +16,7 @@ interface EditorChoice {
   choiceId: string;
   label: string;
   condition: string;
+  responseText: string; // <-- NEW: In-scene narrative updates
   actions: EditorAction[];
 }
 
@@ -39,7 +40,7 @@ const theme = {
 
 export default function NarrativeForge() {
   const [nodes, setNodes] = useState<EditorNode[]>([
-    { id: 'new_sector', title: 'UNKNOWN SECTOR', baseText: 'The fog is thick here...', choices: [] }
+    { id: 'new_sector', title: 'UNKNOWN SECTOR', baseText: 'The logic fog is thick here...', choices: [] }
   ]);
   const [activeNodeId, setActiveNodeId] = useState('new_sector');
 
@@ -77,7 +78,7 @@ export default function NarrativeForge() {
 
   // --- CHOICE & ACTION MANAGERS ---
   const addChoice = () => {
-    const newChoice: EditorChoice = { id: Date.now().toString(), choiceId: 'new_choice', label: 'DO SOMETHING', condition: '', actions: [] };
+    const newChoice: EditorChoice = { id: Date.now().toString(), choiceId: 'new_choice', label: 'DO SOMETHING', condition: '', responseText: '', actions: [] };
     updateActiveNode({ choices: [...activeNode.choices, newChoice] });
   };
 
@@ -108,7 +109,7 @@ export default function NarrativeForge() {
     });
   };
 
-// --- THE MAGIC BRANCHING FUNCTION ---
+  // --- THE MAGIC BRANCHING FUNCTION ---
   const branchToNewScene = (choiceId: string) => {
     const newId = prompt('Enter the ID for the new connected Scene (e.g. holding_cells):');
     if (!newId) return;
@@ -121,7 +122,6 @@ export default function NarrativeForge() {
         choices: []
       };
       
-      // Update current node with the action, AND add the new node to the array
       setNodes(prevNodes => {
         const mapped = prevNodes.map(n => {
           if (n.id === activeNodeId) {
@@ -133,7 +133,7 @@ export default function NarrativeForge() {
                   ...c.actions, 
                   { 
                     id: Date.now().toString(), 
-                    type: 'SET_CURRENT_NODE' as ActionType, // <-- ADDED THE TYPE CAST HERE
+                    type: 'SET_CURRENT_NODE' as ActionType, 
                     payloadKey: '', 
                     payloadValue: newId 
                   }
@@ -159,11 +159,19 @@ export default function NarrativeForge() {
       const camelNodeId = node.id.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
       script += `export const ${camelNodeId} = {\n`;
       script += `  title: "${node.title}",\n`;
+      
+      // AUTO-GENERATING THE CONDITIONAL TEXT BLOCK
       script += `  text: (state: GameState) => {\n`;
-      script += `    return "${node.baseText.replace(/\n/g, '\\n')}";\n`;
+      const choicesWithText = [...node.choices].reverse().filter(c => c.responseText && c.responseText.trim() !== '');
+      choicesWithText.forEach(c => {
+        script += `    if (state.flags['${node.id}_${c.choiceId}_clicked']) {\n`;
+        script += `      return "${c.responseText.replace(/\n/g, '\\n').replace(/"/g, '\\"')}";\n`;
+        script += `    }\n`;
+      });
+      script += `    return "${node.baseText.replace(/\n/g, '\\n').replace(/"/g, '\\"')}";\n`;
       script += `  },\n`;
+      
       script += `  choices: [\n`;
-
       node.choices.forEach((c, idx) => {
         script += `    {\n`;
         script += `      id: "${c.choiceId}",\n`;
@@ -171,9 +179,16 @@ export default function NarrativeForge() {
         if (c.condition) {
           script += `      condition: (state: GameState) => ${c.condition},\n`;
         }
+        
         script += `      actions: [\n`;
         
-        c.actions.forEach((a, aIdx) => {
+        // AUTO-GENERATING THE REQUIRED FLAG FOR IN-SCENE TEXT
+        const compiledActions: string[] = [];
+        if (c.responseText && c.responseText.trim() !== '') {
+          compiledActions.push(`{ type: 'SET_FLAG', payload: { flagId: '${node.id}_${c.choiceId}_clicked', value: true } }`);
+        }
+
+        c.actions.forEach(a => {
           let payloadStr = '';
           if (a.type === 'SET_FLAG') payloadStr = `{ flagId: '${a.payloadKey}', value: ${a.payloadValue} }`;
           else if (a.type === 'MODIFY_INVENTORY') payloadStr = `{ itemId: '${a.payloadKey}', amount: ${a.payloadValue} }`;
@@ -181,9 +196,13 @@ export default function NarrativeForge() {
           else if (a.type === 'GATHER_INTEL') payloadStr = `'${a.payloadKey}'`;
           else if (a.type === 'MODIFY_SECTOR_ENTROPY') payloadStr = `{ nodeId: '${a.payloadKey || node.id}', amount: ${a.payloadValue} }`;
           else if (a.type === 'SET_CURRENT_NODE') payloadStr = `'${a.payloadValue}'`; 
-          else payloadStr = `${a.payloadValue}`; // ADVANCE_TIME, HUMANITY, etc.
+          else payloadStr = `${a.payloadValue}`; 
 
-          script += `        { type: '${a.type}', payload: ${payloadStr} }${aIdx < c.actions.length - 1 ? ',' : ''}\n`;
+          compiledActions.push(`{ type: '${a.type}', payload: ${payloadStr} }`);
+        });
+
+        compiledActions.forEach((ca, caIdx) => {
+          script += `        ${ca}${caIdx < compiledActions.length - 1 ? ',' : ''}\n`;
         });
 
         script += `      ] as GameAction[]\n`;
@@ -265,6 +284,11 @@ export default function NarrativeForge() {
 
               <label style={labelStyle}>CONDITION (Optional TS Logic - e.g., !state.flags['door_opened'])</label>
               <input style={inputStyle} value={choice.condition} onChange={e => updateChoice(choice.id, 'condition', e.target.value)} placeholder="Leave blank for always available" />
+              
+              <div style={{ marginTop: '10px' }}>
+                <label style={labelStyle}>POST-CHOICE NARRATIVE (Updates scene text without branching to a new node)</label>
+                <textarea style={{...inputStyle, height: '60px', resize: 'vertical', marginBottom: '0'}} value={choice.responseText} onChange={e => updateChoice(choice.id, 'responseText', e.target.value)} placeholder="Text to display after player clicks this choice..." />
+              </div>
 
               <div style={{ marginTop: '15px', padding: '10px', border: `1px dashed ${theme.borderTerminal}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
