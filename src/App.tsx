@@ -2,12 +2,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useEngine } from './ui/hooks/useEngine';
 import { caterhamChurchyard } from './content/narrative/caterham_churchyard';
-import { safehouse } from './content/narrative/safehouse'; // <-- IMPORTED
+import { safehouse } from './content/narrative/safehouse';
 import { allGoetia } from './content/goetia';
 import { allYokai } from './content/yokai';
 import type { GameAction } from './engine/reducer';
 import type { GameState } from './engine/state';
-import NarrativeForge from './tools/NarrativeForge'; // <-- IMPORTED FORGE
+import NarrativeForge from './tools/NarrativeForge';
 
 // ============================================================================ //
 // 1. TYPES & CONSTANTS
@@ -89,10 +89,11 @@ function generateSealMatrix() {
 // 3. UI COMPONENTS: BOOT SEQUENCE & START SCREEN
 // ============================================================================ //
 
-const BootSequence = ({ onComplete }: { onComplete: () => void }) => {
-  const [visibleLines, setVisibleLines] = useState<number>(0);
+const BootSequence = ({ onComplete, hasSave }: { onComplete: () => void, hasSave: boolean }) => {
+  const [currentLineIdx, setCurrentLineIdx] = useState(0);
+  const [currentCharIdx, setCurrentCharIdx] = useState(0);
 
-  const bootText = [
+  const bootTextFull = [
     "> INITIALIZING THAUMATURGIC_OS v3.1 [MOBILE FIELD INSTANCE]...",
     "> BIOMETRIC SYNC... [CONFIRMED]",
     "> ENGAGING COGNITIVE SHIELDING... [ACTIVE]",
@@ -117,18 +118,56 @@ const BootSequence = ({ onComplete }: { onComplete: () => void }) => {
     "[ PRESS ANY KEY TO INITIALIZE OPERATIVE DOSSIER ]"
   ];
 
+  const bootTextShort = [
+    "> INITIALIZING THAUMATURGIC_OS v3.1 [MOBILE FIELD INSTANCE]...",
+    "> BIOMETRIC SYNC... [CONFIRMED]",
+    "> ENGAGING COGNITIVE SHIELDING... [ACTIVE]",
+    "",
+    "> PREVIOUS TETHER DETECTED.",
+    "",
+    "[ PRESS ANY KEY TO RESUME SESSION ]"
+  ];
+
+  const currentBootText = hasSave ? bootTextShort : bootTextFull;
+
   useEffect(() => {
-    if (visibleLines < bootText.length) {
-      const delay = bootText[visibleLines] === "" ? 800 : 400;
-      const timer = setTimeout(() => setVisibleLines(prev => prev + 1), delay);
-      return () => clearTimeout(timer);
+    if (currentLineIdx < currentBootText.length) {
+      const currentLine = currentBootText[currentLineIdx];
+      
+      if (currentCharIdx < currentLine.length) {
+        const char = currentLine[currentCharIdx];
+        let delay = 25; // Base typing speed
+        
+        // Dramatic pauses
+        if (currentLine === "CONQUEST. WAR. FAMINE. DEATH.") {
+            delay = 60; // Type the horsemen slightly slower
+            if (char === '.') delay = 1000; // MASSIVE dramatic pause after each name
+        } else {
+            // General punctuation pauses
+            if (char === '.' || char === '!' || char === '?') delay = 300;
+            else if (char === ',') delay = 150;
+        }
+
+        const timer = setTimeout(() => {
+          setCurrentCharIdx(prev => prev + 1);
+        }, delay);
+        return () => clearTimeout(timer);
+      } else {
+        // Line complete, move to next
+        const lineDelay = currentLine === "" ? 400 : 200;
+        const timer = setTimeout(() => {
+          setCurrentLineIdx(prev => prev + 1);
+          setCurrentCharIdx(0);
+        }, lineDelay);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [visibleLines, bootText]);
+  }, [currentLineIdx, currentCharIdx, currentBootText]);
 
   useEffect(() => {
     const handleProceed = () => {
-      if (visibleLines >= bootText.length) onComplete();
-      else setVisibleLines(bootText.length);
+      if (currentLineIdx >= currentBootText.length) onComplete();
+      else setCurrentLineIdx(currentBootText.length); // Skip typing and show all
     };
 
     window.addEventListener('keydown', handleProceed);
@@ -138,17 +177,29 @@ const BootSequence = ({ onComplete }: { onComplete: () => void }) => {
       window.removeEventListener('keydown', handleProceed);
       window.removeEventListener('click', handleProceed);
     };
-  }, [visibleLines, bootText.length, onComplete]);
+  }, [currentLineIdx, currentBootText.length, onComplete]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono, padding: '40px' }}>
       <div style={{ width: '800px', maxWidth: '100%', textShadow: `0 0 5px ${theme.borderTerminal}` }}>
-        {bootText.slice(0, visibleLines).map((line, index) => (
-          <p key={index} style={{ margin: '0 0 10px 0', lineHeight: '1.6', fontSize: '1.1rem', color: line.includes('WARNING') || line.includes('CONQUEST') || line.includes('snap') ? theme.accentRed : theme.textBright, animation: index === bootText.length - 1 ? 'blink 2s infinite' : 'none', fontWeight: line.includes('absolute') || line.includes('[ PRESS') ? 'bold' : 'normal' }}>
+        
+        {/* Render fully completed lines */}
+        {currentBootText.slice(0, currentLineIdx).map((line, index) => (
+          <p key={index} style={{ margin: '0 0 10px 0', lineHeight: '1.6', fontSize: '1.1rem', color: line.includes('WARNING') || line.includes('CONQUEST') || line.includes('snap') ? theme.accentRed : theme.textBright, fontWeight: line.includes('absolute') || line.includes('[ PRESS') ? 'bold' : 'normal' }}>
             {line}
           </p>
         ))}
-        {visibleLines < bootText.length && <span style={{ color: theme.textBright, animation: 'blink 1s infinite', fontSize: '1.2rem' }}>_</span>}
+        
+        {/* Render the line currently being typed */}
+        {currentLineIdx < currentBootText.length && (
+          <p style={{ margin: '0 0 10px 0', lineHeight: '1.6', fontSize: '1.1rem', color: currentBootText[currentLineIdx].includes('WARNING') || currentBootText[currentLineIdx].includes('CONQUEST') || currentBootText[currentLineIdx].includes('snap') ? theme.accentRed : theme.textBright, fontWeight: currentBootText[currentLineIdx].includes('absolute') || currentBootText[currentLineIdx].includes('[ PRESS') ? 'bold' : 'normal' }}>
+            {currentBootText[currentLineIdx].slice(0, currentCharIdx)}
+            <span style={{ animation: 'blink 1s infinite' }}>_</span>
+          </p>
+        )}
+        
+        {/* Blinking cursor at the end when completely finished */}
+        {currentLineIdx >= currentBootText.length && <span style={{ color: theme.textBright, animation: 'blink 1s infinite', fontSize: '1.2rem', display: 'block', marginTop: '-10px' }}>_</span>}
       </div>
     </div>
   );
@@ -221,7 +272,7 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Vergil" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }} />
 
           <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; INPUT AFFILIATED SYNDICATE:</label>
-          <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. Nightwave" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }} />
+          <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. The Nocturnal Syndicates" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }} />
 
           <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; SELECT OPERATIVE DOSSIER:</label>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '30px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -633,6 +684,10 @@ export default function App() {
   // App-level UI states
   const [bootComplete, setBootComplete] = useState(false);
   const [showForge, setShowForge] = useState(false);
+  
+  // Check for save data at the top level
+  const savedData = localStorage.getItem('thaumaturgic_os_save_v1');
+  const hasSave = !!savedData;
 
   const injectNarrative = (text: string) => text ? text.replace(/\{playerName\}/g, state.playerName).replace(/\{agencyName\}/g, state.agencyName) : "";
   const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' | 'SEAL' = 'ALERT') => {
@@ -682,7 +737,7 @@ export default function App() {
   // --- START SCREEN & BOOT ROUTING ---
   if (state.gameStage === 'START_SCREEN') {
     if (!bootComplete) {
-      return <BootSequence onComplete={() => setBootComplete(true)} />;
+      return <BootSequence onComplete={() => setBootComplete(true)} hasSave={hasSave} />;
     }
     return (
       <div style={{ position: 'relative' }}>
