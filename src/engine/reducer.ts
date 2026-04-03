@@ -19,6 +19,7 @@ export type GameAction =
   | { type: 'MODIFY_GLOBAL_ENTROPY'; payload: number }
   | { type: 'MODIFY_SECTOR_ENTROPY'; payload: { nodeId: string; amount: number } } 
   | { type: 'LOAD_GAME'; payload: GameState }
+  | { type: 'SET_CURRENT_NODE'; payload: string}
   | { type: 'RESET_GAME' };
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -27,6 +28,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, gameStage: 'ACTIVE', playerName: action.payload.name, playerPortrait: action.payload.portrait, agencyName: action.payload.agency };
     case 'TRAVEL':
       return { ...state, currentNode: action.payload, globalEntropy: Math.min(100, state.globalEntropy + 2) };
+    case 'SET_CURRENT_NODE': {
+      return { ...state, currentNode: action.payload };
+    }
     case 'GATHER_INTEL':
       if (state.intelLog.includes(action.payload)) return state;
       return { ...state, intelLog: [...state.intelLog, action.payload] };
