@@ -56,6 +56,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case 'SET_CURRENT_NODE': {
+      return { ...state, currentNode: action.payload };
+    }
+
     case 'GATHER_INTEL':
       if (state.intelLog.includes(action.payload)) return state;
       return { ...state, intelLog: [...state.intelLog, action.payload] };
@@ -226,19 +230,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
 case 'ADD_LEAD': {
-      const currentLeads = state.activeLeads || []; // Safety net for old saves!
+      const currentLeads = state.activeLeads || []; // Safety net!
       if (currentLeads.find(l => l.id === action.payload.id)) return state;
       return { ...state, activeLeads: [...currentLeads, { ...action.payload, resolved: false }] };
     }
-    case 'RESOLVE_LEAD': {
-      const currentLeads = state.activeLeads || []; // Safety net for old saves!
-      return { 
-        ...state, 
-        activeLeads: currentLeads.map(lead => lead.id === action.payload ? { ...lead, resolved: true } : lead ) 
-      };
+    
+    case 'SET_FLAG': {
+      const currentFlags = state.flags || {}; // Safety net!
+      return { ...state, flags: { ...currentFlags, [action.payload.flagId]: action.payload.value } };
     }
-    case 'SET_FLAG':
-      return { ...state, flags: { ...state.flags, [action.payload.flagId]: action.payload.value } };    
+    
+    case 'RESOLVE_LEAD': {
+      const currentLeads = state.activeLeads || []; // Safety net!
+      return { ...state, activeLeads: currentLeads.map(lead => lead.id === action.payload ? { ...lead, resolved: true } : lead ) };
+    }
     // --- SYSTEM ACTIONS ---
     case 'LOAD_GAME':
       return action.payload;
