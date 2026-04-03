@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useEngine } from './ui/hooks/useEngine';
 import { caterhamChurchyard } from './content/narrative/caterham_churchyard';
+import { caterham_asylum_gates, asylum_records_room, asylum_basement_rupture } from './content/narrative/caterham_asylum';
 import { safehouse } from './content/narrative/safehouse';
 import { allGoetia } from './content/goetia';
 import { allYokai } from './content/yokai';
@@ -704,11 +705,17 @@ export default function App() {
   };
   const formatNode = (nodeId: string) => nodeId.replace(/_/g, ' ').toUpperCase();
 
-  // --- DYNAMIC NARRATIVE ROUTER ---
+// --- DYNAMIC NARRATIVE ROUTER ---
   const getCurrentNodeData = () => {
     if (state.currentNode === 'caterham_churchyard') return caterhamChurchyard;
     if (state.currentNode === 'safehouse') return safehouse; 
     
+    // --- ASYLUM LOOP ROUTING ---
+    if (state.currentNode === 'caterham_asylum') return caterham_asylum_gates; // Map entry point
+    if (state.currentNode === 'asylum_records_room') return asylum_records_room;
+    if (state.currentNode === 'asylum_basement_rupture') return asylum_basement_rupture;
+    
+    // Fallback for unfinished map nodes
     return {
       title: MAP_NODES.find(n => n.id === state.currentNode)?.label || "UNKNOWN SECTOR",
       text: "You have entered a new sector. The Thaumaturgic OS is currently compiling localized esoteric data. Stand by for further environmental analysis...",
@@ -978,15 +985,18 @@ export default function App() {
                     <>
                       <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; CASE_FILES</h2>
                       <h3 style={{ fontSize: '0.9rem', color: theme.textTerminal, marginTop: '20px' }}>[ ACTIVE_LEADS ]</h3>
-                      {state.activeLeads.filter(l => !l.resolved).length === 0 ? <p style={{color: theme.textMuted, fontSize: '0.85rem'}}>_NO ACTIVE LEADS.</p> : (
+                      
+                      {/* Added safety fallbacks (state.activeLeads || []) */}
+                      {(state.activeLeads || []).filter(l => !l.resolved).length === 0 ? <p style={{color: theme.textMuted, fontSize: '0.85rem'}}>_NO ACTIVE LEADS.</p> : (
                         <ul style={{ listStyleType: 'none', paddingLeft: '0', lineHeight: '1.8', fontSize: '0.9rem' }}>
-                          {state.activeLeads.filter(l => !l.resolved).map(lead => <li key={lead.id} style={{ marginBottom: '10px', color: theme.textBright }}><strong style={{color: theme.accentGreen}}>[!]</strong> {injectNarrative(lead.text).toUpperCase()}</li>)}
+                          {(state.activeLeads || []).filter(l => !l.resolved).map(lead => <li key={lead.id} style={{ marginBottom: '10px', color: theme.textBright }}><strong style={{color: theme.accentGreen}}>[!]</strong> {injectNarrative(lead.text).toUpperCase()}</li>)}
                         </ul>
                       )}
+                      
                       <h3 style={{ fontSize: '0.9rem', color: theme.textMuted, marginTop: '30px' }}>[ ARCHIVED_LEADS ]</h3>
-                      {state.activeLeads.filter(l => l.resolved).length === 0 ? <p style={{color: theme.textMuted, fontSize: '0.85rem'}}>_NO ARCHIVED DATA.</p> : (
+                      {(state.activeLeads || []).filter(l => l.resolved).length === 0 ? <p style={{color: theme.textMuted, fontSize: '0.85rem'}}>_NO ARCHIVED DATA.</p> : (
                         <ul style={{ listStyleType: 'none', paddingLeft: '0', lineHeight: '1.8', fontSize: '0.85rem' }}>
-                          {state.activeLeads.filter(l => l.resolved).map(lead => <li key={lead.id} style={{ marginBottom: '10px', color: theme.textMuted, textDecoration: 'line-through' }}><strong>[X]</strong> {injectNarrative(lead.text).toUpperCase()}</li>)}
+                          {(state.activeLeads || []).filter(l => l.resolved).map(lead => <li key={lead.id} style={{ marginBottom: '10px', color: theme.textMuted, textDecoration: 'line-through' }}><strong>[X]</strong> {injectNarrative(lead.text).toUpperCase()}</li>)}
                         </ul>
                       )}
                     </>

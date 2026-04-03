@@ -225,14 +225,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
-    case 'ADD_LEAD':
-      if (state.activeLeads.find(l => l.id === action.payload.id)) return state;
-      return { ...state, activeLeads: [...state.activeLeads, { ...action.payload, resolved: false }] };
+case 'ADD_LEAD': {
+      const currentLeads = state.activeLeads || []; // Safety net for old saves!
+      if (currentLeads.find(l => l.id === action.payload.id)) return state;
+      return { ...state, activeLeads: [...currentLeads, { ...action.payload, resolved: false }] };
+    }
+    case 'RESOLVE_LEAD': {
+      const currentLeads = state.activeLeads || []; // Safety net for old saves!
+      return { 
+        ...state, 
+        activeLeads: currentLeads.map(lead => lead.id === action.payload ? { ...lead, resolved: true } : lead ) 
+      };
+    }
     case 'SET_FLAG':
-      return { ...state, flags: { ...state.flags, [action.payload.flagId]: action.payload.value } };
-    case 'RESOLVE_LEAD':
-      return { ...state, activeLeads: state.activeLeads.map(lead => lead.id === action.payload ? { ...lead, resolved: true } : lead ) };
-    
+      return { ...state, flags: { ...state.flags, [action.payload.flagId]: action.payload.value } };    
     // --- SYSTEM ACTIONS ---
     case 'LOAD_GAME':
       return action.payload;

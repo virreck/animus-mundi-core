@@ -67,6 +67,15 @@ export const caterhamChurchyard = {
           text: 'The stolen corpses from the crypt were loaded onto trucks headed for the abandoned St. Lawrence Asylum.' 
         }}
       ] as GameAction[]
+    },
+    {
+      id: "retreat_safehouse",
+      label: "EXTRACT TO SAFEHOUSE (ADVANCES TIME)",
+      condition: (state: GameState) => state.flags['churchyard_cleared'],
+      actions: [
+        { type: 'ADVANCE_TIME', payload: 4 },
+        { type: 'SET_CURRENT_NODE', payload: 'safehouse' }
+      ] as GameAction[]
     }
   ]
 };
