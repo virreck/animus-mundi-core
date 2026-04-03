@@ -2,13 +2,6 @@
 
 export type YokaiClass = 'Sensor' | 'Stealth' | 'Utility' | 'Enforcer' | 'Shikigami';
 
-export interface ActivationCost {
-  obols?: number;
-  ink?: number;
-  humanity?: number;
-  requiredItemId?: string; 
-}
-
 export interface ContractCost {
   obols?: number;
   humanity?: number;
@@ -25,5 +18,5 @@ export interface YokaiContract {
   costDescription: string; 
   unlockFlag?: string;
   draftCost: ContractCost;       
-  activationCost: ActivationCost; 
+  activationCost?: Record<string, number>; // Now optional since our 8 tactical Yokai are passive
 }
