@@ -7,7 +7,7 @@
 ---
 
 <div align="center">
-  <img src="/title_art.jpg" alt="Animus Mundi: Seals of the 4" width="100%" style="max-width: 720px; border-radius: 4px;" />
+  <img src="public/title_art.jpg" alt="Animus Mundi: Seals of the 4" width="100%" style="max-width: 720px; border-radius: 4px;" />
 </div>
 
 ---
