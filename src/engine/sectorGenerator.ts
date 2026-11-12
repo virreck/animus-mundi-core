@@ -16,7 +16,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'AUDITORY',
     forensicReports: [
       'AUDIO TRIAGE: Directional mics isolated a rasping, gravelly cadence speaking over the static—like vocal cords dragged across crushed glass.',
-      'WITNESS INTERCEPT: Local constabulary reported a harsh, guttural command echoing from empty rooms before the riot broke out.'
+      'WITNESS INTERCEPT: Local constabulary reported a harsh, guttural command echoing from empty rooms before the riot broke out.',
+      'SPECTROGRAM LOG: Sub-harmonic rasp detected at 85Hz reciting inverted Solomonic Psalms from inside the sealed ventilation duct.'
     ]
   },
   {
@@ -25,7 +26,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'PHYSICAL',
     forensicReports: [
       'FORENSIC SWEEP: Wide, webbed impressions coat the damp masonry, trailing a viscous, cold-blooded slime that resists chemical reagents.',
-      'TRACE EVIDENCE: Heavy,three-toed amphibious stride patterns lead directly from the drainage culvert into the sanctum.'
+      'TRACE EVIDENCE: Heavy, three-toed amphibious stride patterns lead directly from the drainage culvert into the sanctum.',
+      'BIO-SAMPLE: Translucent batrachian spawn and marsh-alkaloid mucus coat the brass door handles.'
     ]
   },
   {
@@ -34,7 +36,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'COGNITIVE',
     forensicReports: [
       'CCTV TELEMETRY: Security feeds show violent physical displacement of furniture and dust, yet the perpetrator bends all visible light around its mass.',
-      'FIELD OBSERVATION: LiDAR pulses bounce off a dense, moving silhouette in the center of the corridor, but the naked eye sees only empty air.'
+      'FIELD OBSERVATION: LiDAR pulses bounce off a dense, moving silhouette in the center of the corridor, but the naked eye sees only empty air.',
+      'PHOTOMETRIC SCAN: Complete photon absorption pocket recorded in the corner alcove; flashlights bend 45 degrees off-axis.'
     ]
   },
   {
@@ -43,7 +46,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'PHYSICAL',
     forensicReports: [
       'SEISMIC LOG: Micro-tremors at 14Hz are shattering load-bearing concrete pillars in a 50-meter radius while surrounding streets remain dead still.',
-      'STRUCTURAL SCAN: Deep foundation cracks radiate outward from the room, accompanied by a rhythmic, subterranean grinding.'
+      'STRUCTURAL SCAN: Deep foundation cracks radiate outward from the room, accompanied by a rhythmic, subterranean grinding.',
+      'GEOPHONE READOUT: Tectonic hammering directly beneath the floorboards, synchronized to a slow heartbeat.'
     ]
   },
   {
@@ -52,7 +56,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'COGNITIVE',
     forensicReports: [
       'LINGUISTIC ANALYSIS: Delirious witnesses are speaking fluent pre-Babylonian Aramaic and inscribing phonetic Enochian syntax onto the walls.',
-      'INTERCEPTED LOGS: Printed manifests in the room have spontaneously rewritten themselves into archaic cuneiform dialects.'
+      'INTERCEPTED LOGS: Printed manifests in the room have spontaneously rewritten themselves into archaic cuneiform dialects.',
+      'CRYPTO-DECODE: Chalk markings on the lintel match the Celestial Alphabet of Agrippa and the Lesser Key.'
     ]
   },
   {
@@ -61,7 +66,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'AUDITORY',
     forensicReports: [
       'AUDIO TRIAGE: High-decibel, predatory bird shrieks saturate the upper frequencies, accompanied by shed black pinfeathers.',
-      'ENVIRONMENTAL SCAN: The rafters are littered with regurgitated bone pellets and the deafening clamor of unseen wings.'
+      'ENVIRONMENTAL SCAN: The rafters are littered with regurgitated bone pellets and the deafening clamor of unseen wings.',
+      'ACOUSTIC LOG: Corvid and strigiform calls overlap in a mathematical polyrhythm from inside the sealed chimney.'
     ]
   },
   {
@@ -70,7 +76,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'AUDITORY',
     forensicReports: [
       'EVP CAPTURE: White-noise filters uncovered layered, overlapping voices whispering private operative memories that were never spoken aloud.',
-      'ACOUSTIC SWEEP: A persistent, sibilant murmur bleeds through the stonework, reciting events from three days in the future.'
+      'ACOUSTIC SWEEP: A persistent, sibilant murmur bleeds through the stonework, reciting events from three days in the future.',
+      'TELEMETRY INTERCEPT: Fifty distinct voices whispering in unison over dead copper telephone lines.'
     ]
   },
   {
@@ -79,7 +86,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'COGNITIVE',
     forensicReports: [
       'ASTRONOMICAL ANOMALY: Looking up through the breached roof reveals a night sky locked to a winter constellation from 1347 AD.',
-      'GEOMETRIC SCAN: Burn marks on the floorboards map an exact 1:1 projection of the Pleiades star cluster.'
+      'GEOMETRIC SCAN: Burn marks on the floorboards map an exact 1:1 projection of the Pleiades star cluster.',
+      'COMPASS DRIFT: Local magnetic north is rotating toward a fixed celestial point 30 degrees below the horizon.'
     ]
   },
   {
@@ -88,7 +96,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'COGNITIVE',
     forensicReports: [
       'NEURO-TELEMETRY: First responders wandered in circles for four hours, unable to recognize their own names or weapons.',
-      'TETHER DIAGNOSTIC: Heavy conceptual static blankets the room, inducing immediate short-term memory loops and fugue states.'
+      'TETHER DIAGNOSTIC: Heavy conceptual static blankets the room, inducing immediate short-term memory loops and fugue states.',
+      'FIELD LOG: Operatives report losing 20 minutes of subjective time upon crossing the threshold.'
     ]
   },
   {
@@ -97,7 +106,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'THERMAL',
     forensicReports: [
       'PATHOLOGY REPORT: Organic matter in the room refuses to decay normally, locked in a freezing, gray rigor mortis devoid of bacteria.',
-      'THERMAL SCAN: Ambient temperature plunges to -18°C; cellular activity in nearby flora has halted in crystalline stasis.'
+      'THERMAL SCAN: Ambient temperature plunges to -18°C; cellular activity in nearby flora has halted in crystalline stasis.',
+      'CRYO-READOUT: Black hoarfrost coats the walls; exhaled breath freezes into gray, ash-like crystals.'
     ]
   },
   {
@@ -106,7 +116,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'PHYSICAL',
     forensicReports: [
       'CRIME SCENE LOG: Heavy stone sarcophagi and morgue drawers have been wrenched open; every cadaver has been systematically harvested.',
-      'FORENSIC SWEEP: Drag marks and formaldehyde trails lead from the emptied vaults toward the sector anchor.'
+      'FORENSIC SWEEP: Drag marks and formaldehyde trails lead from the emptied vaults toward the sector anchor.',
+      'INVENTORY AUDIT: Seventeen anatomical specimens vanished from locked cold-storage without a single broken seal.'
     ]
   },
   {
@@ -115,7 +126,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'PHYSICAL',
     forensicReports: [
       'BIO-HAZARD ALERT: Black, oily pustules and airborne fungal spores coat the ventilation shafts, rotting organic rations in seconds.',
-      'MEDICAL INTERCEPT: Swarms of bloated flies and sudden gangrenous lesions have incapacitated the local garrison.'
+      'MEDICAL INTERCEPT: Swarms of bloated flies and sudden gangrenous lesions have incapacitated the local garrison.',
+      'MYCOLOGY SCAN: Unidentified necrotic mold is digesting leather, wood, and cloth across the room.'
     ]
   },
   {
@@ -124,7 +136,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'PHYSICAL',
     forensicReports: [
       'METALLURGICAL SCAN: Brass shell casings and copper pipes have spontaneously transmuted into brittle, impure veins of lead and gold.',
-      'MATERIAL ANALYSIS: The molecular lattice of the vault door has been alchemically rearranged into soft, malleable tin.'
+      'MATERIAL ANALYSIS: The molecular lattice of the vault door has been alchemically rearranged into soft, malleable tin.',
+      'ASSAY LOG: Iron grates have turned into porous, weeping amalgamations of bismuth and quicksilver.'
     ]
   },
   {
@@ -133,7 +146,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'COGNITIVE',
     forensicReports: [
       'BALLISTICS REPORT: Civilians and officers tore at each other with bare hands; adrenaline and cortisol levels in blood samples are lethal.',
-      'PSYCH-EVAL: Survivors exhibit unblinking, hyper-aggressive berserker rage triggered by the sight of arterial red.'
+      'PSYCH-EVAL: Survivors exhibit unblinking, hyper-aggressive berserker rage triggered by the sight of arterial red.',
+      'CRIME SCENE LOG: Fingernail gouges and arterial spray cover the wainscoting from a spontaneous, unprovoked melee.'
     ]
   },
   {
@@ -142,7 +156,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'PHYSICAL',
     forensicReports: [
       'FORENSIC SWEEP: Tempered steel locks and Inquisition sidearms have oxidized into flaky red rust dust within minutes of exposure.',
-      'METALLURGICAL LOG: Every iron bar along the perimeter has corroded through as if submerged in acid for a century.'
+      'METALLURGICAL LOG: Every iron bar along the perimeter has corroded through as if submerged in acid for a century.',
+      'ORDNANCE REPORT: Gunpowder in sealed brass cartridges has turned into inert, damp gray paste.'
     ]
   },
   {
@@ -151,7 +166,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'COGNITIVE',
     forensicReports: [
       'LASER RANGEFINDER: Internal hallway measures 140 meters long from the inside, despite the building exterior measuring only 25 meters.',
-      'ARCHITECTURAL SCAN: Doorways loop back into themselves; compasses spin wildly amidst shimmeringmirage walls.'
+      'ARCHITECTURAL SCAN: Doorways loop back into themselves; compasses spin wildly amidst shimmering mirage walls.',
+      'TOPOGRAPHY ALERT: Stairwells descend three floors below the known bedrock table into an impossible courtyard.'
     ]
   },
   {
@@ -160,7 +176,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'AUDITORY',
     forensicReports: [
       'AUDIO TRIAGE: Deep, resonant wolf howls vibrate through the sub-bass spectrum, accompanied by massive claw gouges in the oak doors.',
-      'FORENSIC SWEEP: Coarse, singed lupine fur and lupine jaw marks were recovered from the mauled Malleus hound.'
+      'FORENSIC SWEEP: Coarse, singed lupine fur and predatory jaw marks were recovered from the mauled Malleus hound.',
+      'TRACKING LOG: Pacing quadruped paw-prints circle the room perimeter, each print the size of a dinner plate.'
     ]
   },
   {
@@ -169,7 +186,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'THERMAL',
     forensicReports: [
       'THERMAL SCAN: Vitrified brick and flash-melted glass indicate a localized temperature spike exceeding 1,200°C with zero smoke or fuel source.',
-      'FORENSIC SWEEP: Ashen handprints and sulfur-crusted char marks sear the ceiling directly above the conduit.'
+      'FORENSIC SWEEP: Ashen handprints and sulfur-crusted char marks sear the ceiling directly above the conduit.',
+      'CALORIMETRY LOG: Brass fixtures have melted into droplets while paper ledgers inches away remain unburnt.'
     ]
   },
   {
@@ -177,8 +195,9 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     label: 'Ophidian Scales / Venom',
     category: 'PHYSICAL',
     forensicReports: [
-      'TRACE EVIDENCE: Iridescent, palm-sizedreptilian scales and neurotoxic venom residue coat the threshold.',
-      'FORENSIC SWEEP: Sinuous, heavy coiling tracks have crushed the floorboards, smelling sharply of ozone and vipers.'
+      'TRACE EVIDENCE: Iridescent, palm-sized reptilian scales and neurotoxic venom residue coat the threshold.',
+      'FORENSIC SWEEP: Sinuous, heavy coiling tracks have crushed the floorboards, smelling sharply of ozone and vipers.',
+      'TOXICOLOGY LOG: Hemotoxic venom crystallized across the altar stone, matching no known terrestrial pit viper.'
     ]
   },
   {
@@ -187,7 +206,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'COGNITIVE',
     forensicReports: [
       'CHRONO-SYNC ALERT: Quartz wristwatches on dead guards are running backward; dust motes hang suspended in mid-air.',
-      'TELEMETRY LOG: Your OS clock desynchronized by 47 hours the moment the probe crossed the room threshold.'
+      'TELEMETRY LOG: Your OS clock desynchronized by 47 hours the moment the probe crossed the room threshold.',
+      'ISOTOPE SCAN: Half-life decay inside the room is oscillating between 10x acceleration and total temporal freeze.'
     ]
   },
   {
@@ -196,7 +216,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'COGNITIVE',
     forensicReports: [
       'AETHYRIC SCAN: Luminous silver threads of residual ectoplasm hang in the air, left by consciousnesses ripped from their bodies.',
-      'WITNESS INTERCEPT: Comatose subjects in the ward claim their minds are floating thirtyfeet above the building.'
+      'WITNESS INTERCEPT: Comatose subjects in the ward claim their minds are floating thirty feet above the building.',
+      'RESONANCE LOG: Mirrors in the room reflect the astral doubles of operatives three seconds before they enter.'
     ]
   },
   {
@@ -205,16 +226,18 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'THERMAL',
     forensicReports: [
       'ATMOS SENSOR: Lethal parts-per-million of hydrogen sulfide and volcanic brimstone choke the lower corridors.',
-      'CHEMICAL SWEEP: Yellow crystalline sulfur deposits have condensed across every cold surface.'
+      'CHEMICAL SWEEP: Yellow crystalline sulfur deposits have condensed across every cold surface.',
+      'GAS CHROMATOGRAPHY: Fumarole-grade sulfur dioxide is venting from solid, uncracked granite.'
     ]
   },
   {
     tag: 'water_corruption',
-    label: 'Brackish /Abyssal Brine',
+    label: 'Brackish / Abyssal Brine',
     category: 'PHYSICAL',
     forensicReports: [
       'HYDRO-ANALYSIS: Tap water and rain puddles have turned into thick, freezing abyssal seawater teeming with dead deep-sea microorganisms.',
-      'FORENSIC SWEEP: Barnacles and black kelp are growing rapidly out of the dry-wall plumbing.'
+      'FORENSIC SWEEP: Barnacles and black kelp are growing rapidly out of the dry-wall plumbing.',
+      'PRESSURE LOG: The air in the room carries the crushing, salty humidity of a pelagic trench.'
     ]
   },
   {
@@ -223,13 +246,17 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
     category: 'THERMAL',
     forensicReports: [
       'BAROMETRIC ALERT: Indoor air pressure dropped to hurricane levels; localized gale-force gusts shattered every window outward.',
-      'ATMOS SENSOR: Static electricity arcs across the room amidst a roaring, unnatural wind tunnel.'
+      'ATMOS SENSOR: Static electricity arcs across the room amidst a roaring, unnatural wind tunnel.',
+      'ANEMOMETER LOG: Cyclonic vortex spinning at 90 knots in the center of a windowless subterranean vault.'
     ]
   }
 ];
 
+export type RoomHazardType = 'NONE' | 'AETHYRIC_STATIC' | 'INQUISITION_WIRE' | 'MIASMA_FOG';
+
 export interface SubGridNode {
   id: string;
+  index: number; // 1 to 6 for easy CLI targeting (`probe 1`, `breach 2`, `move 1`)
   label: string;
   x: number;
   y: number;
@@ -237,6 +264,7 @@ export interface SubGridNode {
   wardLevel: number;
   status: 'LOCKED' | 'PROBED' | 'BREACHED' | 'EXTRACTED';
   nodeType: 'ENTRY' | 'ANOMALY' | 'SALVAGE' | 'SHRINE' | 'AMBUSH' | 'ANCHOR';
+  hazard: RoomHazardType;
   signTag?: string;
   forensicText?: string;
   salvageDrop?: { itemId: string; amount: number; obols: number };
@@ -247,7 +275,7 @@ export interface SectorContract {
   sectorId: string;
   sectorLabel: string;
   targetGoetiaId: string;
-  activeSubNodeId: string;
+  activeSubNodeId: string | null; // null at start (Perimeter Tether) until Room 1 is breached!
   selectedSubNodeId: string;
   subNodes: SubGridNode[];
   discoveredLogs: { id: string; nodeLabel: string; text: string }[];
@@ -267,7 +295,7 @@ export const ALTAR_RECIPES: AltarRecipe[] = [
   { outputId: 'copper_wire', label: 'Spool of Copper Wire', obolCost: 8, rawMaterialId: 'scrap_metal', rawAmount: 1, desc: 'Conductive Solomonic grounding wire for Dukes and Earls.' },
   { outputId: 'silver_shavings', label: 'Silver Shavings', obolCost: 12, rawMaterialId: 'scrap_metal', rawAmount: 1, desc: 'Lunar-aligned silver curls used to bind Princes and Marquises.' },
   { outputId: 'lead_weights', label: 'Stamped Lead Weights', obolCost: 10, rawMaterialId: 'scrap_metal', rawAmount: 1, desc: 'Heavy Saturnian anchors used to pin Earls and Knights.' },
-  { outputId: 'gold_leaf', label: 'Solomonic Gold Leaf', obolCost: 20, rawMaterialId: 'scrap_metal', rawAmount: 2, desc: 'Solar-grade箔 required to compel Goetic Kings.' },
+  { outputId: 'gold_leaf', label: 'Solomonic Gold Leaf', obolCost: 20, rawMaterialId: 'scrap_metal', rawAmount: 2, desc: 'Solar-grade leaf required to compel Goetic Kings.' },
   { outputId: 'grave_dust', label: 'Consecrated Grave Dust', obolCost: 10, rawMaterialId: 'cursed_earth', rawAmount: 1, desc: 'Ossuary soil saturated with necrotic resonance.' },
   { outputId: 'sacred_sand', label: 'Sacred Quartz Sand', obolCost: 10, rawMaterialId: 'cursed_earth', rawAmount: 1, desc: 'Purified silica for drawing unbroken containment circles.' },
   { outputId: 'bone_meal', label: 'Calcined Bone Meal', obolCost: 12, rawMaterialId: 'cursed_earth', rawAmount: 1, desc: 'Kiln-reduced ash used to bind Death-aligned spirits.' },
@@ -290,7 +318,7 @@ const ROOM_NAMES_BY_SECTOR: Record<string, string[]> = {
   woolwich_arsenal: ['FOUNDRY FLOOR', 'SHELL MAGAZINE', 'PROVING GROUNDS', 'BLAST FURNACE 02', 'GUNCOTTON STORE', 'ORDNANCE BREACH'],
   greenwich_observatory: ['MERIDIAN COURTYARD', 'TRANSIT ROOM', 'OCTAGON CHAMBER', 'TELESCOPE DOME', 'CHRONOMETER VAULT', 'ASTRAL ZENITH'],
   whitechapel_abattoir: ['CATTLE CHUTE', 'MEATHOOK GALLERY', 'RENDERING VATS', 'BONE GRINDER', 'SALTING CELLAR', 'CRIMSON CONDUIT'],
-  lambeth_sanctum: ['Lollard TOWER', 'CRYPT ARCHIVES', 'CLOISTER GARTH', 'BELLFOUNDERS PIT', 'APOTHECARY CELL', 'PROFANED NAVE'],
+  lambeth_sanctum: ['LOLLARD TOWER', 'CRYPT ARCHIVES', 'CLOISTER GARTH', 'BELLFOUNDERS PIT', 'APOTHECARY CELL', 'PROFANED NAVE'],
   battersea_forge: ['COAL WHARF', 'TURBINE HALL A', 'CONTROL GALLERY', 'BOILER HOUSE', 'SWITCHGEAR ROOM', 'ASHEN REACTOR'],
   st_pauls_whisper: ['DEAN STAIRWELL', 'WHISPERING GALLERY', 'GEOMETRIC DOME', 'CRYPT OF ST FAITH', 'BELL CRADLE', 'OMEGA THRONE']
 };
@@ -324,78 +352,94 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
     return def.forensicReports[Math.floor(Math.random() * def.forensicReports.length)];
   };
 
+  const hazards: RoomHazardType[] = ['AETHYRIC_STATIC', 'INQUISITION_WIRE', 'MIASMA_FOG'];
+  const randomHazard = () => hazards[Math.floor(Math.random() * hazards.length)];
+
+  // NOTE: Room 1 (n0) now starts LOCKED! Player must actively probe or breach Room 1 from the Perimeter Tether.
   const subNodes: SubGridNode[] = [
     {
       id: `${sectorId}_n0`,
-      label: labels[0],
+      index: 1,
+      label: `1: ${labels[0]}`,
       x: coords[0].x,
       y: coords[0].y,
       connections: [`${sectorId}_n1`, `${sectorId}_n2`],
       wardLevel: 1,
-      status: 'BREACHED',
+      status: 'LOCKED',
       nodeType: 'ANOMALY',
+      hazard: 'NONE',
       signTag: requiredTags[0],
       forensicText: getReport(requiredTags[0]),
       salvageDrop: { itemId: rawMaterials[0], amount: 2, obols: 12 }
     },
     {
       id: `${sectorId}_n1`,
-      label: labels[1],
+      index: 2,
+      label: `2: ${labels[1]}`,
       x: coords[1].x,
       y: coords[1].y,
       connections: [`${sectorId}_n0`, `${sectorId}_n3`, `${sectorId}_n4`],
       wardLevel: 1,
       status: 'LOCKED',
       nodeType: 'ANOMALY',
+      hazard: randomHazard(),
       signTag: requiredTags[1],
       forensicText: getReport(requiredTags[1]),
       salvageDrop: { itemId: rawMaterials[1], amount: 2, obols: 15 }
     },
     {
       id: `${sectorId}_n2`,
-      label: labels[2],
+      index: 3,
+      label: `3: ${labels[2]}`,
       x: coords[2].x,
       y: coords[2].y,
       connections: [`${sectorId}_n0`, `${sectorId}_n3`, `${sectorId}_n4`],
       wardLevel: 1,
       status: 'LOCKED',
       nodeType: 'SHRINE',
+      hazard: 'NONE',
       shrineYokaiId: randomYokai.id,
       salvageDrop: { itemId: 'alchemical_distillate', amount: 2, obols: 18 }
     },
     {
       id: `${sectorId}_n3`,
-      label: labels[3],
+      index: 4,
+      label: `4: ${labels[3]}`,
       x: coords[3].x,
       y: coords[3].y,
       connections: [`${sectorId}_n1`, `${sectorId}_n2`, `${sectorId}_n5`],
       wardLevel: 2,
       status: 'LOCKED',
       nodeType: 'AMBUSH',
+      hazard: 'INQUISITION_WIRE',
       salvageDrop: { itemId: rawMaterials[2], amount: 3, obols: 20 }
     },
     {
       id: `${sectorId}_n4`,
-      label: labels[4],
+      index: 5,
+      label: `5: ${labels[4]}`,
       x: coords[4].x,
       y: coords[4].y,
       connections: [`${sectorId}_n1`, `${sectorId}_n2`, `${sectorId}_n5`],
       wardLevel: 2,
       status: 'LOCKED',
       nodeType: 'ANOMALY',
+      hazard: randomHazard(),
       signTag: requiredTags[2],
       forensicText: getReport(requiredTags[2]),
       salvageDrop: { itemId: rawMaterials[0], amount: 2, obols: 15 }
     },
     {
       id: `${sectorId}_n5`,
-      label: `${labels[5]} [ANCHOR]`,
+      index: 6,
+      label: `6: ${labels[5]} [ANCHOR]`,
       x: coords[5].x,
       y: coords[5].y,
       connections: [`${sectorId}_n3`, `${sectorId}_n4`],
       wardLevel: 3,
       status: 'LOCKED',
       nodeType: 'ANCHOR',
+      hazard: 'AETHYRIC_STATIC',
       signTag: requiredTags[2],
       forensicText: `CONDUIT EPICENTER: The conceptual tear is wide open here. ${getReport(requiredTags[2])}`,
       salvageDrop: { itemId: 'cursed_earth', amount: 2, obols: 25 }
@@ -406,7 +450,7 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
     sectorId,
     sectorLabel,
     targetGoetiaId: target.id,
-    activeSubNodeId: subNodes[0].id,
+    activeSubNodeId: null, // Starts outside at Perimeter Tether; player must breach Room 1!
     selectedSubNodeId: subNodes[0].id,
     subNodes,
     discoveredLogs: []

@@ -23,6 +23,13 @@ interface TerminalEntry {
 }
 
 type ViewportMode = 'FIELD_OPS' | 'CODEX' | 'KAGE_NO_SHO' | 'SAFEHOUSE_ALTAR' | 'HORSEMEN' | 'DOSSIER';
+type FontScale = 'SM' | 'MD' | 'LG';
+
+const FONT_ZOOM_MAP: Record<FontScale, number> = {
+  SM: 1,
+  MD: 1.12,
+  LG: 1.24
+};
 
 const theme = {
   bgDark: '#050706',
@@ -49,30 +56,20 @@ export interface MacroSectorDef {
   unlockedByDefault?: boolean;
 }
 
-// 16 Campaign Sectors + Central Safehouse Hub across Surrey & Greater London
 const MACRO_SECTORS: MacroSectorDef[] = [
-  // HUB
-  { id: 'safehouse', label: 'SYNDICATE SAFEHOUSE', short: 'SAFEHOUSE', region: 'CATERHAM HUB', tier: 0, x: 0.50, y: 0.52, connections: ['caterham_churchyard', 'caterham_asylum', 'chaldon_quarry', 'croydon_relay'], unlockedByDefault: true },
-
-  // TIER 1: OUTER SURREY FRINGE (Unlocked at Start)
+  { id: 'safehouse', label: 'SAFEHOUSE / ALTAR HUB', short: 'SAFEHOUSE', region: 'CATERHAM HUB', tier: 0, x: 0.50, y: 0.52, connections: ['caterham_churchyard', 'caterham_asylum', 'chaldon_quarry', 'croydon_relay'], unlockedByDefault: true },
   { id: 'caterham_churchyard', label: 'ST. LAWRENCE CRYPT', short: 'CRYPT-01', region: 'SURREY HILLS', tier: 1, x: 0.34, y: 0.72, connections: ['safehouse', 'chaldon_quarry', 'waddon_marsh'], unlockedByDefault: true },
   { id: 'caterham_asylum', label: 'CATERHAM ASYLUM', short: 'ASYLUM-GW', region: 'SURREY HILLS', tier: 1, x: 0.66, y: 0.72, connections: ['safehouse', 'croydon_relay', 'malleus_precinct'], unlockedByDefault: true },
   { id: 'chaldon_quarry', label: 'CHALDON FIRE-QUARRIES', short: 'QUARRY-02', region: 'WEALD FRINGE', tier: 1, x: 0.18, y: 0.62, connections: ['safehouse', 'caterham_churchyard', 'waddon_marsh', 'thames_nexus'], unlockedByDefault: true },
-
-  // TIER 2: SOUTH LONDON TRANSIT RING (Unlocked by securing adjacent Tier 1 nodes)
   { id: 'croydon_relay', label: 'CROYDON TELECOM SPIRE', short: 'SPIRE-04', region: 'SOUTH LONDON', tier: 2, x: 0.72, y: 0.50, connections: ['safehouse', 'caterham_asylum', 'malleus_precinct', 'woolwich_arsenal'] },
   { id: 'waddon_marsh', label: 'WADDON GASWORKS MARSH', short: 'MARSH-05', region: 'SOUTH LONDON', tier: 2, x: 0.28, y: 0.44, connections: ['caterham_churchyard', 'chaldon_quarry', 'thames_nexus', 'brixton_morgue'] },
   { id: 'malleus_precinct', label: 'MALLEUS INQUISITION HQ', short: 'PRECINCT', region: 'SOUTH LONDON', tier: 2, x: 0.84, y: 0.60, connections: ['caterham_asylum', 'croydon_relay', 'woolwich_arsenal', 'greenwich_observatory'] },
   { id: 'brixton_morgue', label: 'BRIXTON OSSUARY MORGUE', short: 'MORGUE-07', region: 'INNER SOUTH', tier: 2, x: 0.42, y: 0.34, connections: ['waddon_marsh', 'lambeth_sanctum', 'blackfriars_vault'] },
-
-  // TIER 3: THAMES CORRIDOR & INNER SANCTUMS
   { id: 'thames_nexus', label: 'THAMES BARRAGE NEXUS', short: 'LEY-NEXUS', region: 'THAMES ESTUARY', tier: 3, x: 0.14, y: 0.36, connections: ['chaldon_quarry', 'waddon_marsh', 'battersea_forge', 'highgate_catacombs'] },
   { id: 'woolwich_arsenal', label: 'WOOLWICH ROYAL ARSENAL', short: 'ARSENAL', region: 'DOCKLANDS', tier: 3, x: 0.86, y: 0.36, connections: ['croydon_relay', 'malleus_precinct', 'greenwich_observatory', 'whitechapel_abattoir'] },
   { id: 'greenwich_observatory', label: 'MERIDIAN ASTROLABE', short: 'MERIDIAN', region: 'GREENWICH', tier: 3, x: 0.74, y: 0.24, connections: ['malleus_precinct', 'woolwich_arsenal', 'whitechapel_abattoir', 'st_pauls_whisper'] },
   { id: 'lambeth_sanctum', label: 'LAMBETH PALACE CRYPT', short: 'LAMBETH', region: 'WESTMINSTER', tier: 3, x: 0.54, y: 0.28, connections: ['brixton_morgue', 'battersea_forge', 'blackfriars_vault', 'st_pauls_whisper'] },
   { id: 'battersea_forge', label: 'BATTERSEA COIL FORGE', short: 'COIL-FORGE', region: 'NINE ELMS', tier: 3, x: 0.28, y: 0.22, connections: ['thames_nexus', 'lambeth_sanctum', 'highgate_catacombs'] },
-
-  // TIER 4: ABYSSAL METROPOLIS CORES
   { id: 'blackfriars_vault', label: 'BLACKFRIARS MITHRAEUM', short: 'MITHRAEUM', region: 'CITY OF LONDON', tier: 4, x: 0.46, y: 0.14, connections: ['brixton_morgue', 'lambeth_sanctum', 'st_pauls_whisper', 'highgate_catacombs'] },
   { id: 'whitechapel_abattoir', label: 'WHITECHAPEL ABATTOIR', short: 'ABATTOIR', region: 'EAST END', tier: 4, x: 0.84, y: 0.14, connections: ['woolwich_arsenal', 'greenwich_observatory', 'st_pauls_whisper'] },
   { id: 'highgate_catacombs', label: 'HIGHGATE NECROPOLIS', short: 'HIGHGATE', region: 'NORTHGATE', tier: 4, x: 0.16, y: 0.12, connections: ['thames_nexus', 'battersea_forge', 'blackfriars_vault'] },
@@ -87,44 +84,91 @@ const HORSEMAN_LORE: Record<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH', {
   omenDesc: string;
 }> = {
   CONQUEST: {
-    riderTitle: 'THE WHITE RIDER // CROWN OF SUBJUGATION',
-    sealName: 'FIRST SEAL',
+    riderTitle: 'THE WHITE RIDER // CROWN & BOW OF SUBJUGATION',
+    sealName: 'FIRST SEAL (REV 6:2)',
     color: '#00f3ff',
-    domain: 'Mind Fog, Tyranny, False Prophecy & Optical Subversion',
-    omenDesc: 'Manifests through Kings and Princes of the Ars Goetia to bend human will, rewrite memory, and blind entire precincts.'
+    domain: 'Solar Kings, Astral Princes, Mind Fog & False Sovereignty',
+    omenDesc: 'Channels the Solar Kings and Aerial Princes of the Lemegeton to overwrite human free will, blind surveillance grids, and crown false prophets.'
   },
   WAR: {
     riderTitle: 'THE RED RIDER // GREAT SWORD OF SLAUGHTER',
-    sealName: 'SECOND SEAL',
+    sealName: 'SECOND SEAL (REV 6:4)',
     color: '#ff2a55',
-    domain: 'Martial Paranoia, Ferrous Oxidation, Pyroclastic Ruin & Blood Frenzy',
-    omenDesc: 'Harnesses Dukes and Marquises of the Ars Goetia to incite civil riots, corrode mundane weapons, and bathe sectors in fire.'
+    domain: 'Martial Marquises, Ferrous Oxidation, Pyroclastic Ruin & Frenzy',
+    omenDesc: 'Harnesses the Martial Marquises and Earls of the Ars Goetia to corrode steel, ignite spontaneous firestorms, and drive precincts into blood frenzy.'
   },
   FAMINE: {
     riderTitle: 'THE BLACK RIDER // SCALES OF SCARCITY',
-    sealName: 'THIRD SEAL',
+    sealName: 'THIRD SEAL (REV 6:5)',
     color: '#ffb800',
-    domain: 'Pathogenic Blight, Alchemical Corruption, Usury & Withered Harvest',
-    omenDesc: 'Commands Presidents and Earls of the Ars Goetia to rot provisions, transmute wealth into dross, and spread gangrenous spores.'
+    domain: 'Mercurial Presidents, Pathogenic Blight, Transmutation & Usury',
+    omenDesc: 'Commands the Presidents of the Goetia to rot organic provisions, transmute bullion into leaden dross, and choke ventilation shafts with spores.'
   },
   DEATH: {
-    riderTitle: 'THE PALE RIDER // HADES & THE OSSUARY TETHER',
-    sealName: 'FOURTH SEAL',
+    riderTitle: 'THE PALE RIDER // SCYTHE OF THE OSSUARY TETHER',
+    sealName: 'FOURTH SEAL (REV 6:8)',
     color: '#62f080',
-    domain: 'Necrotic Stasis, Cadaver Exhumation, Spectral Trumpets & Soul Binding',
-    omenDesc: 'Anchors through Necromantic Marquises and Dukes to harvest morgues, freeze living tissue, and raise the dead.'
+    domain: 'Necromantic Dukes, Tissue Stasis, Exhumation & Spectral Trumpets',
+    omenDesc: 'Anchors through Necromantic Dukes and Knights of the Goetia to harvest morgues, lock living tissue in cryo-stasis, and bridge Hades into reality.'
   }
 };
 
+// Custom Vector Sigils for the 4 Horsemen
+const HorsemanSigilSvg = ({ horseman, color, size = 64 }: { horseman: 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH'; color: string; size?: number }) => (
+  <svg viewBox="0 0 100 100" style={{ width: size, height: size, flexShrink: 0, filter: `drop-shadow(0 0 6px ${color})` }}>
+    <circle cx="50" cy="50" r="46" fill="none" stroke={color} strokeWidth="1.5" strokeDasharray="4 2" />
+    <circle cx="50" cy="50" r="38" fill="none" stroke={color} strokeWidth="0.8" opacity="0.6" />
+    {horseman === 'CONQUEST' && (
+      <g stroke={color} strokeWidth="2.2" fill="none">
+        {/* Crown + Drawn Bow & Arrow */}
+        <polygon points="28,42 36,24 50,35 64,24 72,42" />
+        <path d="M 24,68 Q 50,42 76,68" />
+        <line x1="24" y1="68" x2="76" y2="68" strokeWidth="1" />
+        <line x1="50" y1="82" x2="50" y2="20" />
+        <polyline points="44,28 50,18 56,28" />
+      </g>
+    )}
+    {horseman === 'WAR' && (
+      <g stroke={color} strokeWidth="2.2" fill="none">
+        {/* Crossed Greatsword & Flaming Octagram */}
+        <polygon points="50,14 62,38 86,50 62,62 50,86 38,62 14,50 38,38" strokeWidth="1.2" />
+        <line x1="50" y1="12" x2="50" y2="88" strokeWidth="3" />
+        <line x1="32" y1="32" x2="68" y2="32" strokeWidth="2.8" />
+        <line x1="25" y1="25" x2="75" y2="75" strokeWidth="1.4" />
+        <line x1="75" y1="25" x2="25" y2="75" strokeWidth="1.4" />
+      </g>
+    )}
+    {horseman === 'FAMINE' && (
+      <g stroke={color} strokeWidth="2.2" fill="none">
+        {/* Alchemical Balance Scales */}
+        <line x1="50" y1="18" x2="50" y2="82" />
+        <line x1="36" y1="82" x2="64" y2="82" />
+        <line x1="22" y1="38" x2="78" y2="38" />
+        <polyline points="22,38 15,58 29,58 22,38" />
+        <polyline points="78,38 71,58 85,58 78,38" />
+        <polygon points="50,24 57,38 43,38" />
+      </g>
+    )}
+    {horseman === 'DEATH' && (
+      <g stroke={color} strokeWidth="2.2" fill="none">
+        {/* Scythe & Necrotic Hourglass */}
+        <polygon points="34,24 66,24 34,76 66,76" />
+        <path d="M 24,80 L 68,20 Q 86,26 78,48 Q 66,34 58,34" />
+        <circle cx="50" cy="50" r="6" />
+      </g>
+    )}
+  </svg>
+);
+
 const YOKAI_INVOCATIONS: Record<string, { label: string; maxCharges: number; desc: string }> = {
-  yokai_kitsune: { label: 'FOXFIRE SHROUD', maxCharges: 2, desc: 'Vent -30% Local Sector Heat.' },
+  yokai_kitsune: { label: 'FOXFIRE SHROUD', maxCharges: 2, desc: 'Vent -30% Inquisition Heat.' },
   yokai_tengu: { label: 'GALE SWEEP', maxCharges: 2, desc: 'Spend 5 HUM to reveal all room nodes in sector.' },
-  yokai_baku: { label: 'DEVOUR NIGHTMARE', maxCharges: 2, desc: 'Convert -15% Local Heat into +20 Humanity.' },
+  yokai_baku: { label: 'DEVOUR NIGHTMARE', maxCharges: 2, desc: 'Convert -15% Inquisition Heat into +20 Humanity.' },
   yokai_zashiki: { label: 'FORTUNE BOON', maxCharges: 1, desc: 'Single-use: Gain +35 Obols & +1 Scrap Metal (Consumes Pact).' },
   yokai_kameosa: { label: 'FERMENT MATTER', maxCharges: 3, desc: 'Spend 8 HUM to generate +1 Metal, +1 Earth, +1 Distillate.' },
-  yokai_kamaitachi: { label: 'WIND SICKLE', maxCharges: 2, desc: 'Breach selected adjacent room with 0% Heat & disarm Ambush.' },
-  yokai_amabie: { label: 'PROPHETIC WARD', maxCharges: 1, desc: 'Single-use: Spend 10 Obols to purge -10% Global Entropy.' },
-  yokai_noppera: { label: 'FACELESS DECOY', maxCharges: 2, desc: 'Disarm sector Ambush nodes & reduce Local Heat by -15%.' }
+  yokai_kamaitachi: { label: 'WIND SICKLE', maxCharges: 2, desc: 'Breach selected room with 0% Heat & disarm Ambush/Hazards.' },
+  yokai_amabie: { label: 'PROPHETIC WARD', maxCharges: 1, desc: 'Single-use: Spend 10 Obols to purge -2.50% Global Entropy.' },
+  yokai_noppera: { label: 'FACELESS DECOY', maxCharges: 2, desc: 'Disarm sector Ambush nodes & reduce Inquisition Heat by -15%.' }
 };
 
 // ============================================================================ //
@@ -212,16 +256,116 @@ function generateSealMatrix() {
   return { id: `${prefix}${config.name}_PROTOCOL`, timeLimit, nodes, sequence };
 }
 
-// Helper to map square portrait path to full-body portrait path
 const getFullBodyPath = (squarePath: string) => {
   const filename = (squarePath || '/portraits/thaumaturge_m1.png').split('/').pop();
   return `/portraits/full_body/fb_${filename}`;
 };
 
 // ============================================================================ //
-// 4. START SCREEN WITH OPERATIVE PORTRAIT SELECTION & SAVE WIPE
+// 4. INTERACTIVE FIELD MANUAL & DEMONOLOGY GRIMOIRE MODAL
 // ============================================================================ //
-const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: string, agency: string) => void, onLoad: () => void }) => {
+const ManualModal = ({ onClose }: { onClose: () => void }) => {
+  const [tab, setTab] = useState<'LORE' | 'LOOP' | 'CLI' | 'INQUISITION'>('LORE');
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+      <div style={{ width: '780px', maxHeight: '85vh', backgroundColor: theme.bgPanel, border: `2px solid ${theme.textBright}`, padding: '26px', fontFamily: theme.fontMono, color: '#a8ccaf', display: 'flex', flexDirection: 'column', boxShadow: '0 0 40px rgba(98,240,128,0.2)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '10px', marginBottom: '14px' }}>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>SYNDICATE FIELD CODEX // THAUMATURGIC OS v4.09</div>
+            <h2 style={{ margin: 0, color: theme.textBright, letterSpacing: '2px' }}>OPERATIVE MANUAL &amp; SOLOMONIC LORE</h2>
+          </div>
+          <button onClick={onClose} className="macro-chip macro-chip-danger">[X] CLOSE MANUAL</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <button onClick={() => setTab('LORE')} className={`viewport-tab ${tab === 'LORE' ? 'active' : ''}`}>1. SOLOMONIC DEMONOLOGY</button>
+          <button onClick={() => setTab('LOOP')} className={`viewport-tab ${tab === 'LOOP' ? 'active' : ''}`}>2. INVESTIGATION &amp; CASCADES</button>
+          <button onClick={() => setTab('CLI')} className={`viewport-tab ${tab === 'CLI' ? 'active' : ''}`}>3. TERMINAL CLI COMMANDS</button>
+          <button onClick={() => setTab('INQUISITION')} className={`viewport-tab ${tab === 'INQUISITION' ? 'active' : ''}`}>4. MALLEUS INQUISITION &amp; HEAT</button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.84rem', lineHeight: '1.65', paddingRight: '8px' }}>
+          {tab === 'LORE' && (
+            <div>
+              <h3 style={{ color: theme.textBright, marginTop: 0 }}>THE ESCHATON &amp; THE 72 SPIRITS OF SOLOMON</h3>
+              <p>
+                According to the 17th-century <em>Lemegeton Clavicula Salomonis</em> (The Lesser Key of Solomon), King Solomon bound <strong>72 Goetic spirits</strong>—Kings, Dukes, Princes, Marquises, Presidents, Earls, and Knights—into a single <strong>Brass Vessel</strong> using their geometric seals and planetary catalysts.
+              </p>
+              <p>
+                In the modern era, the <strong>Four Horsemen of the Apocalypse</strong> (Conquest, War, Famine, and Death) are attempting to bleed through into mundane geography across Surrey and Greater London. Because the Horsemen are vast conceptual entities, they cannot manifest directly. Instead, each Horseman uses <strong>18 Goetian Lieutenants</strong> as physical anchors to tear open local reality.
+              </p>
+              <h4 style={{ color: theme.accentAmber }}>PLANETARY METALS &amp; ALCHEMICAL BINDING</h4>
+              <p>
+                In authentic Solomonic magic, each demonic rank corresponds to a classical planet and metal: <strong>Kings</strong> (Sun / Gold Leaf), <strong>Marquises</strong> (Moon / Silver Shavings), <strong>Dukes</strong> (Venus / Copper Wire), <strong>Presidents</strong> (Mercury / Quicksilver Drops), <strong>Princes</strong> (Jupiter / Tin &amp; Sacred Sand), <strong>Earls</strong> (Mars / Cold Iron Filings), and <strong>Knights</strong> (Saturn / Lead Weights). You must synthesize the target demon's exact planetary catalysts at your <strong>[F4] SAFEHOUSE / ALTAR</strong> before you can compel it into the Brass Vessel.
+              </p>
+            </div>
+          )}
+
+          {tab === 'LOOP' && (
+            <div>
+              <h3 style={{ color: theme.textBright, marginTop: 0 }}>THE DEDUCTION LOOP &amp; HIERARCHICAL CASCADES</h3>
+              <ol style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <li>
+                  <strong style={{ color: theme.textBright }}>INFILTRATE via CLI ([F1] FIELD_OPS):</strong> You begin each sector at the <em>Perimeter Tether</em> with Room 1 locked. Use CLI commands (<code>probe 1</code>, <code>breach 1</code>, <code>extract</code>) to move through the 6-room sub-grid and extract <strong>3 Forensic Clues</strong>.
+                </li>
+                <li>
+                  <strong style={{ color: theme.textBright }}>COUNTER ROOM HAZARDS:</strong> Some rooms are afflicted with <em>Aethyric Static</em>, <em>Inquisition Wiretaps</em>, or <em>Miasma Fog</em>. You must type <code>degauss</code>, <code>bypass</code>, or <code>purify</code> in the terminal before you can safely run <code>extract</code>.
+                </li>
+                <li>
+                  <strong style={{ color: theme.textBright }}>DEDUCE IN [F2] CODEX:</strong> Read your extracted forensic reports and check off the matching 3 Phenomena in the Codex to isolate the exact Goetia anchoring the sector.
+                </li>
+                <li>
+                  <strong style={{ color: theme.accentAmber }}>RESONANCE CASCADES (FAST-TRACKING THE 72):</strong> The Ars Goetia is a feudal hierarchy. Whenever you seal a high-ranking <strong>King, Prince, or Duke</strong>, the shockwave triggers a <em>Solomonic Resonance Cascade</em> that automatically severs and binds <strong>1 to 2 lesser demons</strong> of the same Horseman's court into your Brass Vessel!
+                </li>
+              </ol>
+            </div>
+          )}
+
+          {tab === 'CLI' && (
+            <div>
+              <h3 style={{ color: theme.textBright, marginTop: 0 }}>TERMINAL DIRECTIVES (WHY THE CONSOLE MATTERS)</h3>
+              <p>All field infiltration, room hazard neutralization, and Inquisition counter-measures are executed directly through the <strong>TTY1 Terminal Console</strong> in <code>[F1] FIELD_OPS</code>:</p>
+              <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'grid', gridTemplateColumns: '180px 1fr', rowGap: '8px' }}>
+                <strong style={{ color: theme.accentAmber }}>probe [1-6]</strong><span>Scans a room node (or selected room) for Ambushes, Shrines, &amp; Hazards (-5 HUM, or -2 HUM with Yokai).</span>
+                <strong style={{ color: theme.accentAmber }}>breach [1-6]</strong><span>Shatters the room's ward and moves your operative inside (+Inquisition Heat).</span>
+                <strong style={{ color: theme.accentAmber }}>move [1-6]</strong><span>Moves between already-breached adjacent rooms.</span>
+                <strong style={{ color: theme.accentAmber }}>extract</strong><span>Extracts the forensic phenomenon log, Kami Shrine relic, and raw salvage from your current room.</span>
+                <strong style={{ color: theme.accentCyan }}>degauss</strong><span>Neutralizes <code>AETHYRIC_STATIC</code> in the current room so you can extract clues.</span>
+                <strong style={{ color: theme.accentCyan }}>bypass</strong><span>Spoofs <code>INQUISITION_WIRE</code> tripwires in the current room (-10% Heat).</span>
+                <strong style={{ color: theme.accentCyan }}>purify</strong><span>Burns away <code>MIASMA_FOG</code> bio-hazards in the current room.</span>
+                <strong style={{ color: theme.accentRed }}>spoof</strong><span>Spends 15 Obols to broadcast false telemetry to Malleus vans (-25% Sector Heat).</span>
+                <strong style={{ color: theme.accentRed }}>bribe</strong><span>Spends 25 Obols to pay off corrupt Malleus Watch constables (-45% Sector Heat; unlocks 100% Lockdowns).</span>
+              </div>
+            </div>
+          )}
+
+          {tab === 'INQUISITION' && (
+            <div>
+              <h3 style={{ color: theme.accentRed, marginTop: 0 }}>THE ORDO MALLEUS &amp; INQUISITION HEAT</h3>
+              <p>
+                You are not the only faction operating in the dark. The <strong>Ordo Malleus</strong> (a clandestine Vatican-Crown counter-thaumaturgy directorate operating out of Croydon and Lambeth) monitors ley-line spikes using mobile direction-finding vans and witch-hound packs.
+              </p>
+              <p>
+                Every ward you shatter generates <strong>Inquisition Heat (0%–100%)</strong> in that sector:
+              </p>
+              <ul>
+                <li><strong>75%–99% Heat (Triangulation Warning):</strong> Malleus strike teams begin sweeping the perimeter. The HUD flashes crimson.</li>
+                <li><strong>100% Heat (TOTAL SECTOR LOCKDOWN):</strong> Inquisition Witch-Hounds lock down the building. All <code>probe</code>, <code>breach</code>, and <code>extract</code> directives are blocked! You must run <code>spoof</code> (-15 Obols), <code>bribe</code> (-25 Obols), invoke a Stealth Yokai, or retreat to the <strong>[F4] SAFEHOUSE / ALTAR</strong> to break the lockdown.</li>
+                <li><strong>Global Entropy (0.00%):</strong> Unlike local Heat, Global Entropy measures the irreversible fraying of mundane reality. It ticks upward by <code>+0.01%</code> to <code>+0.05%</code> as time passes during travel and rest, and spikes heavily if you botch a Sealing Ritual.</li>
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================ //
+// 5. START SCREEN WITH OPERATIVE PORTRAIT SELECTION & SAVE WIPE
+// ============================================================================ //
+const StartScreen = ({ onStart, onLoad, onOpenManual }: { onStart: (name: string, portrait: string, agency: string) => void; onLoad: () => void; onOpenManual: () => void }) => {
   const [name, setName] = useState('');
   const [agency, setAgency] = useState('');
   const [portrait, setPortrait] = useState('/portraits/thaumaturge_m1.png');
@@ -239,6 +383,7 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
       ThaumaturgicAudio.errorBuzz();
       localStorage.removeItem('thaumaturgic_os_save_v1');
       localStorage.removeItem('thaumaturgic_os_contracts_v1');
+      localStorage.removeItem('thaumaturgic_os_micro_entropy_v1');
       setSaveTick(prev => prev + 1);
     }
   };
@@ -252,7 +397,6 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono }}>
-      {/* FULL-BODY DEPLOYMENT CONFIRMATION MODAL */}
       {showConfirm && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <div style={{ display: 'flex', width: '820px', backgroundColor: theme.bgPanel, border: `2px solid ${theme.textBright}`, boxShadow: `0 0 40px rgba(98, 240, 128, 0.15)` }}>
@@ -273,6 +417,7 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
                   onClick={() => {
                     ThaumaturgicAudio.scryPing();
                     localStorage.removeItem('thaumaturgic_os_contracts_v1');
+                    localStorage.removeItem('thaumaturgic_os_micro_entropy_v1');
                     onStart(name || 'VERGIL', portrait, agency || 'DARKWIRE');
                   }}
                   style={{ padding: '14px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '1rem', letterSpacing: '2px' }}
@@ -291,15 +436,20 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
         </div>
       )}
 
-      {/* INITIAL DOSSIER REGISTRATION FORM */}
-      <div style={{ width: '540px', border: `1px solid ${theme.textBright}`, padding: '32px', backgroundColor: theme.bgPanel, boxShadow: `0 0 30px rgba(98, 240, 128, 0.12)` }}>
-        <div style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px', marginBottom: '4px' }}>THAUMATURGIC OS // NET-OPS v4.09</div>
-        <h1 style={{ margin: '0 0 14px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '12px', letterSpacing: '3px', color: theme.textBright, fontSize: '1.4rem' }}>
+      <div style={{ width: '560px', border: `1px solid ${theme.textBright}`, padding: '32px', backgroundColor: theme.bgPanel, boxShadow: `0 0 30px rgba(98, 240, 128, 0.12)` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+          <span style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.09</span>
+          <button onClick={onOpenManual} className="macro-chip macro-chip-amber">[? FIELD MANUAL &amp; LORE]</button>
+        </div>
+        <h1 style={{ margin: '0 0 10px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '10px', letterSpacing: '3px', color: theme.textBright, fontSize: '1.4rem' }}>
           ANIMUS MUNDI: SEALS OF THE 4
         </h1>
+        <p style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5', marginBottom: '16px' }}>
+          The Four Horsemen are bleeding into London through the 72 Spirits of Solomon. Infiltrate fractured sectors via terminal CLI, dodge Malleus Inquisition strike teams, deduce each demon's True Name, and bind them into the Brass Vessel.
+        </p>
 
         {savedOperative && (
-          <div style={{ marginBottom: '20px', padding: '14px', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgDark, textAlign: 'center' }}>
+          <div style={{ marginBottom: '18px', padding: '12px', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgDark, textAlign: 'center' }}>
             <div style={{ color: theme.textMuted, fontSize: '0.72rem', marginBottom: '8px' }}>EXISTING OPERATIVE TETHER FOUND:</div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => { ThaumaturgicAudio.scryPing(); onLoad(); }} style={{ flex: 2, padding: '11px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '1px' }}>
@@ -314,13 +464,13 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
 
         <div>
           <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', color: theme.textBright }}>&gt; INPUT OPERATIVE CALLSIGN:</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VERGIL" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '14px', outline: 'none' }} />
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VERGIL" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '12px', outline: 'none' }} />
 
           <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', color: theme.textBright }}>&gt; INPUT AFFILIATED SYNDICATE:</label>
-          <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. DARKWIRE" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '16px', outline: 'none' }} />
+          <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. DARKWIRE" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '14px', outline: 'none' }} />
 
           <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.78rem', color: theme.textBright }}>&gt; SELECT OPERATIVE DOSSIER PORTRAIT:</label>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '22px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
             {[
               { id: 'thaumaturge_m1', src: '/portraits/thaumaturge_m1.png' },
               { id: 'thaumaturge_m2', src: '/portraits/thaumaturge_m2.png' },
@@ -331,22 +481,17 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
                 key={p.id}
                 onClick={() => { ThaumaturgicAudio.keyClick(); setPortrait(p.src); }}
                 style={{
-                  padding: '4px',
-                  cursor: 'pointer',
+                  padding: '4px', cursor: 'pointer',
                   backgroundColor: portrait === p.src ? theme.textTerminal : 'transparent',
                   border: `2px solid ${portrait === p.src ? theme.textBright : theme.borderTerminal}`,
-                  borderRadius: '50%',
-                  transition: 'all 0.2s'
+                  borderRadius: '50%', transition: 'all 0.2s'
                 }}
               >
                 <img
                   src={p.src}
                   alt="Operative"
                   style={{
-                    width: '82px',
-                    height: '82px',
-                    objectFit: 'cover',
-                    borderRadius: '50%',
+                    width: '80px', height: '80px', objectFit: 'cover', borderRadius: '50%',
                     opacity: portrait === p.src ? 1 : 0.45,
                     filter: portrait === p.src ? 'none' : 'grayscale(100%) sepia(20%) hue-rotate(80deg)'
                   }}
@@ -365,7 +510,7 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
 };
 
 // ============================================================================ //
-// 5. SEALING & BANISHMENT TERMINALS
+// 6. SEALING & BANISHMENT TERMINALS (WITH VISIBLE TRACE LINES)
 // ============================================================================ //
 interface SealingTerminalProps {
   suspect: typeof allGoetia[0];
@@ -493,7 +638,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
 
     if (suspect.id !== actualAnchorId) {
       ThaumaturgicAudio.errorBuzz();
-      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 20 });
+      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 15 });
       dispatch({ type: 'MODIFY_HUMANITY', payload: -20 });
       setPhase('MISIDENTIFIED');
       addToast(`FALSE DEDUCTION! Entity rejected the seal of ${suspect.name}!`, 'ALERT');
@@ -514,8 +659,8 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
       addToast(`SEALING SUCCESSFUL. Target ${suspect.name} bound to the brass vessel.`, 'SEAL');
     } else {
       ThaumaturgicAudio.errorBuzz();
-      addToast(`RITUAL FRACTURE. Global Entropy spiked by 15%.`, 'ALERT');
-      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 15 });
+      addToast(`RITUAL FRACTURE. Global Entropy spiked by +10%.`, 'ALERT');
+      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 10 });
     }
   };
 
@@ -532,7 +677,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
           <form onSubmit={handleAuthSubmit}>
             <p style={{ fontSize: '0.8rem', marginBottom: '10px', lineHeight: '1.5' }}>
               HYPOTHESIS LOCKED: <strong style={{ color: theme.textBright }}>{suspect.name.toUpperCase()}</strong> ({suspect.rank} of {suspect.allegiance}).<br/>
-              <span style={{ color: theme.accentAmber }}>WARNING: If this entity is NOT the true Anchor of the current Sector, your catalysts will burn and the backlash will spike Global Entropy (+20%).</span>
+              <span style={{ color: theme.accentAmber }}>WARNING: If this entity is NOT the true Anchor of the current Sector, your catalysts will burn and the backlash will spike Global Entropy (+15%).</span>
             </p>
             <input autoFocus type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder={`TYPE "${suspect.name.toUpperCase()}" TO COMMIT`} style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }} />
             <button type="submit" style={{ marginTop: '12px', padding: '10px', width: '100%', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>&gt; BURN CATALYSTS &amp; ENGAGE SEAL</button>
@@ -545,7 +690,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
             <h2 style={{ color: theme.accentRed, letterSpacing: '3px', margin: '0 0 10px 0' }}>! FALSE TRUE-NAME BACKLASH !</h2>
             <p style={{ fontSize: '0.82rem', color: '#ffb3b3', lineHeight: '1.6' }}>
               You inscribed the seal of <strong>{suspect.name}</strong>, but the entity haunting this sector rejected the binding. Your catalysts vaporized in a violent backlash.<br/><br/>
-              <strong>PENALTY:</strong> -20 Humanity | +20% Global Entropy.<br/>
+              <strong>PENALTY:</strong> -20 Humanity | +15.00% Global Entropy.<br/>
               Extract more forensic logs in the field and re-verify the 3 Signs in your Codex!
             </p>
             <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontFamily: theme.fontMono }}>
@@ -574,18 +719,18 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
                 }}
               />
               <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
-                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.5" />
-                <polyline points={path.map((nodeId) => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.6" />
+                <polyline points={path.map((nodeId) => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
                 {currentPointer && path.length > 0 && path.length < matrix.sequence.length && (
-                  <line x1={matrix.nodes.find(n => n.id === path[path.length - 1])!.x} y1={matrix.nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={theme.textTerminal} strokeWidth="1" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
+                  <line x1={matrix.nodes.find(n => n.id === path[path.length - 1])!.x} y1={matrix.nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={theme.textTerminal} strokeWidth="1.2" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
                 )}
                 {matrix.nodes.map((node) => {
                   const isCompleted = path.includes(node.id);
                   const isNext = node.id === matrix.sequence[path.length] || (path.length === 0 && node.id === matrix.sequence[0]);
                   return (
                     <g key={node.id} style={{ pointerEvents: 'none' }}>
-                      <circle cx={node.x} cy={node.y} r={isNext ? "3.5" : "2"} fill={isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? theme.textBright : theme.textTerminal} strokeWidth="0.5" />
-                      {isNext && <circle cx={node.x} cy={node.y} r="5" fill="none" stroke={theme.textBright} strokeWidth="0.5" style={{ animation: 'blink 1s infinite' }} />}
+                      <circle cx={node.x} cy={node.y} r={isNext ? "3.5" : "2"} fill={isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? theme.textBright : theme.textTerminal} strokeWidth="0.6" />
+                      {isNext && <circle cx={node.x} cy={node.y} r="5.5" fill="none" stroke={theme.textBright} strokeWidth="0.6" style={{ animation: 'blink 1s infinite' }} />}
                     </g>
                   );
                 })}
@@ -617,7 +762,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
                 </p>
                 {!isCleanSeal && (
                   <p style={{ color: theme.textMuted, fontSize: '0.8rem', marginTop: '10px' }}>
-                    _CONTAINMENT FAILURE: GLOBAL ENTROPY SPIKED (+15%).
+                    _CONTAINMENT FAILURE: GLOBAL ENTROPY SPIKED (+10%).
                   </p>
                 )}
                 <button
@@ -695,8 +840,8 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
       addToast(`BANISHMENT SUCCESSFUL. ${horseman} severed from reality!`, 'SEAL');
     } else {
       ThaumaturgicAudio.errorBuzz();
-      addToast(`RITUAL FRACTURE. GLOBAL ENTROPY +40%.`, 'ALERT');
-      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 40 });
+      addToast(`RITUAL FRACTURE. GLOBAL ENTROPY +25%.`, 'ALERT');
+      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 25 });
     }
   };
 
@@ -747,13 +892,20 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
   };
 
   const overrideTheme = { bg: '#0f0202', border: '#ff3333', text: '#ff6666', bright: '#ffb3b3' };
+  const activeMatrix = matrices[currentMatrixIdx];
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
       <div style={{ width: '560px', padding: '32px', backgroundColor: overrideTheme.bg, border: `2px solid ${overrideTheme.border}`, boxShadow: `0 0 50px rgba(255, 51, 51, 0.2)`, fontFamily: theme.fontMono, color: overrideTheme.text }}>
         {phase === 'LEDGER' && (
           <div>
-            <h3 style={{ color: overrideTheme.bright, borderBottom: `1px solid ${overrideTheme.border}`, paddingBottom: '8px', marginTop: 0 }}>&gt; GRAND RITE OF BANISHMENT // {horseman}</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', borderBottom: `1px solid ${overrideTheme.border}`, paddingBottom: '10px', marginBottom: '12px' }}>
+              <HorsemanSigilSvg horseman={horseman} color={overrideTheme.bright} size={52} />
+              <div>
+                <h3 style={{ color: overrideTheme.bright, margin: 0 }}>&gt; GRAND RITE OF BANISHMENT // {horseman}</h3>
+                <div style={{ fontSize: '0.74rem', color: overrideTheme.text }}>{HORSEMAN_LORE[horseman].riderTitle}</div>
+              </div>
+            </div>
             <p style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>Each sealed Goetia Lieutenant of {horseman} adds +5% to your Grand Rite stabilization roll (5% Base + {sealedCount} × 5%).</p>
             <div style={{ maxHeight: '170px', overflowY: 'auto', fontSize: '0.76rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: 'black', padding: '10px', border: `1px solid ${overrideTheme.border}` }}>
               {lieutenants.map(g => {
@@ -776,17 +928,37 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
         {phase === 'RITUAL' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '1rem', fontWeight: 'bold' }}>
-              <span style={{ color: overrideTheme.bright }}>MATRIX: {currentMatrixIdx + 1}/3</span>
+              <span style={{ color: overrideTheme.bright }}>MATRIX: {currentMatrixIdx + 1}/3 [{activeMatrix.id}]</span>
               <span style={{ color: overrideTheme.bright }}>T-MINUS: {timeLeft}s</span>
             </div>
             <div style={{ position: 'relative', width: '310px', height: '310px', border: `2px solid ${overrideTheme.border}`, backgroundColor: 'black', borderRadius: '50%' }}>
               <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
-                <polygon points={matrices[currentMatrixIdx].sequence.map(id => `${matrices[currentMatrixIdx].nodes.find(n => n.id === id)!.x},${matrices[currentMatrixIdx].nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={overrideTheme.border} strokeWidth="0.6" strokeDasharray="1 3" />
-                <polyline points={path.map((nodeId) => `${matrices[currentMatrixIdx].nodes.find(n => n.id === nodeId)!.x},${matrices[currentMatrixIdx].nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={overrideTheme.bright} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
-                {matrices[currentMatrixIdx].nodes.map((node) => {
+                {/* Guide Polygon (Now Solid & Clearly Visible) */}
+                <polygon points={activeMatrix.sequence.map(id => `${activeMatrix.nodes.find(n => n.id === id)!.x},${activeMatrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={overrideTheme.border} strokeWidth="0.9" strokeOpacity="0.7" />
+                {/* Completed Trace Path */}
+                <polyline points={path.map((nodeId) => `${activeMatrix.nodes.find(n => n.id === nodeId)!.x},${activeMatrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+                {/* Active Pointer Rubber-Band Line (Restored!) */}
+                {currentPointer && path.length > 0 && path.length < activeMatrix.sequence.length && (
+                  <line
+                    x1={activeMatrix.nodes.find(n => n.id === path[path.length - 1])!.x}
+                    y1={activeMatrix.nodes.find(n => n.id === path[path.length - 1])!.y}
+                    x2={currentPointer.x}
+                    y2={currentPointer.y}
+                    stroke={overrideTheme.bright}
+                    strokeWidth="1.5"
+                    strokeDasharray="2 2"
+                    style={{ pointerEvents: 'none' }}
+                  />
+                )}
+                {activeMatrix.nodes.map((node) => {
                   const isCompleted = path.includes(node.id);
-                  const isNext = node.id === matrices[currentMatrixIdx].sequence[path.length] || (path.length === 0 && node.id === matrices[currentMatrixIdx].sequence[0]);
-                  return <g key={node.id} style={{ pointerEvents: 'none' }}><circle cx={node.x} cy={node.y} r={isNext ? "4" : "2"} fill={isCompleted ? overrideTheme.bright : 'black'} stroke={isNext ? overrideTheme.bright : overrideTheme.border} strokeWidth="0.6" /></g>;
+                  const isNext = node.id === activeMatrix.sequence[path.length] || (path.length === 0 && node.id === activeMatrix.sequence[0]);
+                  return (
+                    <g key={node.id} style={{ pointerEvents: 'none' }}>
+                      <circle cx={node.x} cy={node.y} r={isNext ? "4" : "2.4"} fill={isCompleted ? '#ffffff' : 'black'} stroke={isNext ? '#ffffff' : overrideTheme.border} strokeWidth="0.8" />
+                      {isNext && <circle cx={node.x} cy={node.y} r="6" fill="none" stroke="#ffffff" strokeWidth="0.7" style={{ animation: 'blink 1s infinite' }} />}
+                    </g>
+                  );
                 })}
               </svg>
             </div>
@@ -800,7 +972,7 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
             <p style={{ color: overrideTheme.text, lineHeight: '1.6', fontSize: '0.9rem' }}>
               {isVictory
                 ? `The conceptual apex of ${horseman} has been permanently severed from mundane reality.`
-                : `The Grand Rite fractured (${winProbability}% roll failed or timed out). Global Entropy spiked by +40%. Seal more Lieutenants before retrying!`}
+                : `The Grand Rite fractured (${winProbability}% roll failed or timed out). Global Entropy spiked by +25%. Seal more Lieutenants before retrying!`}
             </p>
             <button onClick={onClose} style={{ padding: '12px 24px', marginTop: '25px', backgroundColor: 'white', color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>&gt; RETURN TO OS</button>
           </div>
@@ -811,17 +983,32 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
 };
 
 // ============================================================================ //
-// 6. MAIN 6-VIEWPORT THAUMATURGIC OS COMPONENT
+// 7. MAIN 6-VIEWPORT THAUMATURGIC OS COMPONENT
 // ============================================================================ //
 export default function App() {
   const { state, dispatch, draftContract, resetGame, sealGoetia, startInvestigation, loadGame, travelTo } = useEngine();
 
-  // Viewport & Map Layer State
+  // Viewport, Font Scaling, Manual Modal & Map Zoom/Pan States
   const [viewport, setViewport] = useState<ViewportMode>('FIELD_OPS');
   const [mapViewMode, setMapViewMode] = useState<'SUB_GRID' | 'GEO_TRACKER'>('SUB_GRID');
+  const [fontScale, setFontScale] = useState<FontScale>('MD');
+  const [showManual, setShowManual] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
 
-  // Procedural Sector Contracts Dictionary (Persisted to localStorage)
+  // Map Zoom & Pan State
+  const [mapZoom, setMapZoom] = useState<number>(1);
+  const [mapPan, setMapPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const didDragRef = useRef(false);
+
+  // Micro-Entropy State (0.01% increments for travel/rest/breach)
+  const [microEntropy, setMicroEntropy] = useState<number>(() => {
+    const saved = localStorage.getItem('thaumaturgic_os_micro_entropy_v1');
+    return saved ? parseFloat(saved) || 0 : 0;
+  });
+
+  // Procedural Sector Contracts Dictionary
   const [contracts, setContracts] = useState<Record<string, SectorContract>>(() => {
     const saved = localStorage.getItem('thaumaturgic_os_contracts_v1');
     if (saved) {
@@ -850,6 +1037,7 @@ export default function App() {
   const mapCanvasRef = useRef<HTMLCanvasElement>(null);
   const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
+  const cliInputRef = useRef<HTMLInputElement>(null);
   const visualFxRef = useRef<{
     sonarRings: { x: number; y: number; r: number; alpha: number }[];
     angle: number;
@@ -858,13 +1046,21 @@ export default function App() {
 
   const formatLabel = (str: string) => str.replace(/_/g, ' ').toUpperCase();
 
-  // Helper: Check if a macro sector is unlocked or secured
   const isSectorSecured = (sectorId: string) => !!state.flags[`sector_secured_${sectorId}`];
   const isSectorUnlocked = (sec: MacroSectorDef) => {
     if (sec.unlockedByDefault || state.flags[`sector_unlocked_${sec.id}`] || isSectorSecured(sec.id)) return true;
-    // Also unlock if any connected neighbor has been secured!
     return sec.connections.some(connId => isSectorSecured(connId));
   };
+
+  const addMicroEntropy = (delta: number) => {
+    setMicroEntropy(prev => {
+      const next = Math.max(0, +(prev + delta).toFixed(2));
+      localStorage.setItem('thaumaturgic_os_micro_entropy_v1', String(next));
+      return next;
+    });
+  };
+
+  const totalGlobalEntropy = Math.min(100, +(state.globalEntropy + microEntropy).toFixed(2));
 
   const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' | 'SEAL' = 'ALERT') => {
     const id = Date.now() + Math.random();
@@ -876,14 +1072,12 @@ export default function App() {
     setTerminalLines(prev => [...prev, { id: Date.now() + Math.random(), html, type }]);
   };
 
-  // Persist contracts to localStorage
   useEffect(() => {
     if (Object.keys(contracts).length > 0) {
       localStorage.setItem('thaumaturgic_os_contracts_v1', JSON.stringify(contracts));
     }
   }, [contracts]);
 
-  // Initialize all 16 sector contracts when investigation begins
   useEffect(() => {
     if (state.gameStage === 'ACTIVE' && Object.keys(contracts).length === 0) {
       const initialContracts: Record<string, SectorContract> = {};
@@ -896,7 +1090,7 @@ export default function App() {
       setContracts(initialContracts);
 
       if (Object.keys(state.inventory).length === 0) {
-        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 45 } });
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 55 } });
         dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 2 } });
         dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'cursed_earth', amount: 2 } });
         dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'alchemical_distillate', amount: 2 } });
@@ -906,11 +1100,13 @@ export default function App() {
 
       appendLog(
         `<div style="border-left:2px solid #62f080;padding-left:10px;margin:4px 0;">` +
-        `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.09 ONLINE — CAMPAIGN DIRECTIVE</div>` +
-        `<div style="color:#a8ccaf;font-size:0.78rem;line-height:1.5;">` +
-        `• <strong>16-SECTOR REGIONAL GRID:</strong> Securing a sector permanently closes its rift and unlocks deeper ley-line routes toward Central London.<br/>` +
-        `• <strong>THE 4 HORSEMEN ([F5]):</strong> Every Goetia Lieutenant you bind weakens its Horseman (+5% Banishment Probability). Open <strong>[F5] APOCALYPSE_SEALS</strong> to track all 4 Riders.<br/>` +
-        `• <strong>AGENT DOSSIER ([F6]):</strong> Inspect your operative portrait, campaign statistics, or wipe local save data.` +
+        `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.09 — TERMINAL INFILTRATION PROTOCOL</div>` +
+        `<div style="color:#a8ccaf;line-height:1.55;">` +
+        `You are stationed at the <strong>PERIMETER TETHER</strong> outside Room 1. Field actions are executed via this CLI console:<br/>` +
+        `• Type <code style="color:#ffb800;">probe 1</code> to scan Room 1, then <code style="color:#ffb800;">breach 1</code> to enter it.<br/>` +
+        `• Type <code style="color:#ffb800;">extract</code> inside a breached room to harvest Forensic Clues &amp; Salvage.<br/>` +
+        `• If a room has a Hazard (<code>AETHYRIC_STATIC</code>, <code>INQUISITION_WIRE</code>, <code>MIASMA_FOG</code>), type <code style="color:#00f3ff;">degauss</code>, <code style="color:#00f3ff;">bypass</code>, or <code style="color:#00f3ff;">purify</code> first!<br/>` +
+        `• If Inquisition Heat nears 100%, type <code style="color:#ff2a55;">spoof</code> (-15 Obols) or <code style="color:#ff2a55;">bribe</code> (-25 Obols) to call off Malleus strike teams.` +
         `</div></div>`,
         'info'
       );
@@ -921,7 +1117,6 @@ export default function App() {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [terminalLines]);
 
-  // Keyboard shortcuts F1 - F6
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F1') { e.preventDefault(); setViewport('FIELD_OPS'); }
@@ -936,10 +1131,29 @@ export default function App() {
   }, []);
 
   const currentContract = contracts[state.currentNode];
-  const currentSubNode = currentContract?.subNodes.find(n => n.id === currentContract.activeSubNodeId);
-  const selectedSubNode = currentContract?.subNodes.find(n => n.id === currentContract.selectedSubNodeId);
+  const currentSubNode = currentContract?.subNodes.find(n => n.id === currentContract.activeSubNodeId) || null;
+  const selectedSubNode = currentContract?.subNodes.find(n => n.id === currentContract.selectedSubNodeId) || null;
+  const currentHeat = state.sectorEntropy[state.currentNode] || 0;
 
-  // Unbind a Yokai manually or when its charges hit 0
+  // Helper to resolve a room argument (e.g. "1", "2", or selectedSubNode)
+  const resolveTargetRoom = (arg?: string): SubGridNode | null => {
+    if (!currentContract) return null;
+    if (!arg) return selectedSubNode;
+    const num = parseInt(arg.trim(), 10);
+    if (!isNaN(num)) {
+      return currentContract.subNodes.find(n => n.index === num) || null;
+    }
+    return currentContract.subNodes.find(n => n.label.toLowerCase().includes(arg.toLowerCase())) || null;
+  };
+
+  const isAdjacentOrEntry = (targetNode: SubGridNode): boolean => {
+    if (!currentSubNode) {
+      // At Perimeter Tether: only Room 1 (index 1) is reachable
+      return targetNode.index === 1;
+    }
+    return currentSubNode.connections.includes(targetNode.id);
+  };
+
   const handleUnbindYokai = (yokaiId: string, reason = 'Manually severed') => {
     ThaumaturgicAudio.errorBuzz();
     const updatedTether = state.tetheredYokai.filter(id => id !== yokaiId);
@@ -952,13 +1166,20 @@ export default function App() {
     addToast(`Unbound: ${yName}`, 'ALERT');
   };
 
-  // --- SUB-GRID FIELD ACTIONS (PROBE, BREACH, EXTRACT) ---
-  const handleProbeSubNode = (targetNode?: SubGridNode) => {
-    if (!currentContract || !currentSubNode) return;
+  // --- CLI FIELD OPERATIONS ---
+  const handleProbeSubNode = (targetNode?: SubGridNode | null) => {
+    if (!currentContract) return;
     if (isSectorSecured(currentContract.sectorId)) {
-      appendLog(`[✓] This sector is already permanently SECURED. Switch to SECTOR MAP (TRAVEL) to deploy to a new hotspot.`, 'success');
+      appendLog(`[✓] Sector is permanently SECURED. Switch to REGIONAL MAP to deploy elsewhere.`, 'success');
       return;
     }
+    if (currentHeat >= 100) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[!] MALLEUS INQUISITION LOCKDOWN (100% HEAT)! Field actions blocked. Type <code>spoof</code> (-15 Obols) or <code>bribe</code> (-25 Obols) to clear lockdown!`, 'error');
+      addToast(`100% Heat Lockdown! Run 'spoof' or 'bribe'`, 'ALERT');
+      return;
+    }
+
     const node = targetNode || selectedSubNode;
     if (!node) return;
 
@@ -966,9 +1187,9 @@ export default function App() {
       appendLog(`[i] Room <strong>${node.label}</strong> is already ${node.status}.`, 'system');
       return;
     }
-    if (!currentSubNode.connections.includes(node.id)) {
+    if (!isAdjacentOrEntry(node)) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Cannot probe <strong>${node.label}</strong>—not adjacent to ${currentSubNode.label}.`, 'error');
+      appendLog(`[-] Cannot probe <strong>${node.label}</strong>—not adjacent to your current position (${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER - Room 1 only'}).`, 'error');
       return;
     }
 
@@ -986,59 +1207,76 @@ export default function App() {
     const updatedNodes = currentContract.subNodes.map(n =>
       n.id === node.id ? { ...n, status: 'PROBED' as const } : n
     );
-    setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, subNodes: updatedNodes } }));
+    setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: node.id, subNodes: updatedNodes } }));
 
     const sigDesc =
       node.nodeType === 'ANOMALY' ? '<span style="color:#62f080;">[ESOTERIC ANOMALY + SALVAGE]</span>' :
       node.nodeType === 'SHRINE' ? '<span style="color:#00f3ff;">[DORMANT KAMI SHRINE]</span>' :
-      node.nodeType === 'AMBUSH' ? '<span style="color:#ff2a55;">[WARNING: MALLEUS INQUISITION HOUND PATROL!]</span>' :
+      node.nodeType === 'AMBUSH' ? '<span style="color:#ff2a55;">[WARNING: MALLEUS INQUISITION HOUND AMBUSH!]</span>' :
       node.nodeType === 'ANCHOR' ? '<span style="color:#ffb800;">[GOETIAN CONDUIT ANCHOR]</span>' : '[MUNDANE ROOM]';
 
-    appendLog(`[📡 AUSPEX PROBE] <strong>${node.label}</strong> (-${humCost} HUM): Detected ${sigDesc}`, 'info');
+    const hazardDesc = node.hazard !== 'NONE' ? ` | HAZARD: <span style="color:#ffb800;">[${node.hazard}]</span>` : '';
+    appendLog(`[📡 AUSPEX PROBE] <strong>${node.label}</strong> (-${humCost} HUM): ${sigDesc}${hazardDesc}`, 'info');
   };
 
-  const handleBreachSubNode = (targetNode?: SubGridNode) => {
-    if (!currentContract || !currentSubNode) return;
+  const handleBreachOrMoveSubNode = (targetNode?: SubGridNode | null) => {
+    if (!currentContract) return;
     if (isSectorSecured(currentContract.sectorId)) {
-      appendLog(`[✓] Sector already SECURED. Use SECTOR MAP (TRAVEL) to move to an active hotspot.`, 'success');
+      appendLog(`[✓] Sector already SECURED.`, 'success');
       return;
     }
+    if (currentHeat >= 100) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[!] MALLEUS INQUISITION LOCKDOWN (100% HEAT)! Witch-hound squads have sealed all doors. Type <code>spoof</code> (-15 Obols) or <code>bribe</code> (-25 Obols) to break the cordon!`, 'error');
+      addToast(`SECTOR LOCKED AT 100% HEAT!`, 'ALERT');
+      return;
+    }
+
     const node = targetNode || selectedSubNode;
     if (!node) return;
 
-    const currentHeat = state.sectorEntropy[state.currentNode] || 0;
-    if (currentHeat >= 100) {
-      ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT). Burn Obols to Ward or retreat to Safehouse!`, 'error');
-      return;
-    }
-
-    if (node.id === currentSubNode.id) {
+    if (currentSubNode && node.id === currentSubNode.id) {
       appendLog(`[i] Already positioned inside <strong>${node.label}</strong>.`, 'system');
       return;
     }
-    if (!currentSubNode.connections.includes(node.id)) {
+    if (!isAdjacentOrEntry(node)) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] <strong>${node.label}</strong> is not connected to ${currentSubNode.label}.`, 'error');
+      appendLog(`[-] <strong>${node.label}</strong> is not connected to your current position (${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER -> Breach Room 1 first'}).`, 'error');
       return;
     }
 
     ThaumaturgicAudio.senseSweep();
+    addMicroEntropy(0.01);
     visualFxRef.current.sonarRings.push({ x: node.x, y: node.y, r: 8, alpha: 1.0 });
 
     const wasLocked = node.status === 'LOCKED' || node.status === 'PROBED';
-    let heatGain = wasLocked ? node.wardLevel * 8 : 2;
+    let heatGain = wasLocked ? node.wardLevel * 9 : 2;
 
     if (wasLocked && node.nodeType === 'AMBUSH') {
-      heatGain += 18;
+      heatGain += 20;
       dispatch({ type: 'MODIFY_HUMANITY', payload: -12 });
-      appendLog(`[!] INQUISITION AMBUSH in <strong>${node.label}</strong>! Hounds lashed your tether (-12 Humanity, +${heatGain}% Heat)!`, 'error');
+      appendLog(`[!] MALLEUS INQUISITION AMBUSH in <strong>${node.label}</strong>! Witch-hounds tracked your tether (-12 Humanity, +${heatGain}% Inquisition Heat)!`, 'error');
       addToast(`Inquisition Ambush! -12 Humanity`, 'ALERT');
     } else {
-      appendLog(`[⚡ BREACH] Moved into <strong>${node.label}</strong> (+${heatGain}% Local Heat).`, 'info');
+      appendLog(`[⚡ ${wasLocked ? 'BREACH' : 'MOVE'}] Entered <strong>${node.label}</strong> (+${heatGain}% Inquisition Heat).`, 'info');
     }
 
+    if (node.hazard !== 'NONE') {
+      const counterCmd = node.hazard === 'AETHYRIC_STATIC' ? 'degauss' : node.hazard === 'INQUISITION_WIRE' ? 'bypass' : 'purify';
+      appendLog(`[⚠️ ROOM HAZARD ACTIVE: <strong>${node.hazard}</strong>] Run CLI directive <code style="color:#00f3ff;">${counterCmd}</code> before extracting!`, 'warn');
+    }
+
+    const newHeat = Math.min(100, currentHeat + heatGain);
     dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: heatGain } });
+
+    if (newHeat >= 100) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`<div style="background:rgba(255,42,85,0.2);border:1px solid #ff2a55;padding:8px;color:#ff2a55;font-weight:bold;">[🚨 100% INQUISITION HEAT — TOTAL SECTOR LOCKDOWN!] Malleus Strike Teams have cordoned ${currentContract.sectorLabel}. Type <code>spoof</code> or <code>bribe</code> in CLI immediately!</div>`, 'error');
+      addToast(`100% HEAT! SECTOR LOCKED DOWN!`, 'ALERT');
+    } else if (newHeat >= 75 && currentHeat < 75) {
+      ThaumaturgicAudio.errorBuzz();
+      addToast(`WARNING: Inquisition Heat at ${newHeat}%!`, 'ALERT');
+    }
 
     const updatedNodes = currentContract.subNodes.map(n =>
       n.id === node.id && (n.status === 'LOCKED' || n.status === 'PROBED') ? { ...n, status: 'BREACHED' as const } : n
@@ -1055,10 +1293,41 @@ export default function App() {
     }));
   };
 
+  const handleClearRoomHazard = (expectedHazard: 'AETHYRIC_STATIC' | 'INQUISITION_WIRE' | 'MIASMA_FOG') => {
+    if (!currentContract || !currentSubNode) {
+      appendLog(`[-] You must breach Room 1 to enter the sub-grid first.`, 'error');
+      return;
+    }
+    if (currentSubNode.hazard !== expectedHazard) {
+      appendLog(`[i] No ${expectedHazard} present in ${currentSubNode.label}.`, 'system');
+      return;
+    }
+    ThaumaturgicAudio.scryPing();
+    const updatedNodes = currentContract.subNodes.map(n =>
+      n.id === currentSubNode.id ? { ...n, hazard: 'NONE' as const } : n
+    );
+    setContracts(prev => ({
+      ...prev,
+      [currentContract.sectorId]: { ...currentContract, subNodes: updatedNodes }
+    }));
+    if (expectedHazard === 'INQUISITION_WIRE') {
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -10 } });
+      appendLog(`[+] INQUISITION WIRETAP BYPASSED in <strong>${currentSubNode.label}</strong> (-10% Inquisition Heat). Safe to run <code>extract</code>.`, 'success');
+    } else {
+      appendLog(`[+] HAZARD CLEARED: <strong>${expectedHazard}</strong> neutralized in ${currentSubNode.label}. Safe to run <code>extract</code>.`, 'success');
+    }
+    addToast(`Cleared ${expectedHazard}!`, 'SEAL');
+  };
+
   const handleExtractSubNode = () => {
-    if (!currentContract || !currentSubNode) return;
-    if (isSectorSecured(currentContract.sectorId)) {
-      appendLog(`[✓] Sector already SECURED.`, 'system');
+    if (!currentContract || !currentSubNode) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[-] You are at the Perimeter Tether. Type <code>breach 1</code> to enter Room 1 first.`, 'error');
+      return;
+    }
+    if (currentHeat >= 100) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT). Extraction blocked! Type <code>spoof</code> or <code>bribe</code> first.`, 'error');
       return;
     }
     if (currentSubNode.status === 'EXTRACTED') {
@@ -1066,7 +1335,19 @@ export default function App() {
       return;
     }
 
+    // Check active room hazard!
+    if (currentSubNode.hazard !== 'NONE') {
+      ThaumaturgicAudio.errorBuzz();
+      const counterCmd = currentSubNode.hazard === 'AETHYRIC_STATIC' ? 'degauss' : currentSubNode.hazard === 'INQUISITION_WIRE' ? 'bypass' : 'purify';
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -6 });
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 10 } });
+      appendLog(`[!] EXTRACTION BLOCKED BY <strong>${currentSubNode.hazard}</strong> (-6 HUM, +10% Heat)! Type <code style="color:#00f3ff;">${counterCmd}</code> in the CLI to clear the hazard first!`, 'error');
+      addToast(`Hazard Blocked Extraction! Type '${counterCmd}'`, 'ALERT');
+      return;
+    }
+
     ThaumaturgicAudio.sealSuccess();
+    addMicroEntropy(0.01);
     const updatedLogs = [...currentContract.discoveredLogs];
 
     if (currentSubNode.forensicText) {
@@ -1079,7 +1360,7 @@ export default function App() {
         `<div style="background:rgba(98,240,128,0.07);border-left:3px solid #62f080;padding:8px 10px;margin:4px 0;">` +
         `<div style="color:#62f080;font-weight:bold;">[🔍 FORENSIC ANOMALY RECORDED AT ${currentSubNode.label}]</div>` +
         `<div style="color:#ffffff;margin-top:4px;">"${currentSubNode.forensicText}"</div>` +
-        `<div style="color:#ffb800;font-size:0.72rem;margin-top:4px;">-&gt; Open <strong>[F2] GOETIAN_CODEX</strong> to deduce this phenomenon!</div>` +
+        `<div style="color:#ffb800;font-size:0.75rem;margin-top:4px;">-&gt; Open <strong>[F2] CODEX</strong> to cross-reference this phenomenon!</div>` +
         `</div>`,
         'success'
       );
@@ -1099,7 +1380,6 @@ export default function App() {
       const { itemId, amount, obols } = currentSubNode.salvageDrop;
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
-      dispatch({ type: 'ADVANCE_TIME', payload: 2 });
       appendLog(`[📦 SALVAGE HARVESTED] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
     }
 
@@ -1117,7 +1397,6 @@ export default function App() {
     }));
   };
 
-  // Active Yokai Invocation with finite charges
   const handleInvokeYokaiPower = (yokaiId: string) => {
     const spec = YOKAI_INVOCATIONS[yokaiId] || { label: 'INVOKE', maxCharges: 1, desc: '' };
     const currentCharges = yokaiCharges[yokaiId] ?? spec.maxCharges;
@@ -1130,7 +1409,7 @@ export default function App() {
 
     if (yokaiId === 'yokai_kitsune') {
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -30 } });
-      appendLog(`[👹 ${yName.toUpperCase()} // FOXFIRE SHROUD] Illusory flames masked your trail (-30% Local Heat).`, 'success');
+      appendLog(`[👹 ${yName.toUpperCase()} // FOXFIRE SHROUD] Illusory flames masked your trail (-30% Inquisition Heat).`, 'success');
     } else if (yokaiId === 'yokai_tengu') {
       if (!currentContract) return;
       if (state.humanity <= 5) { addToast('Requires 5 Humanity!', 'ALERT'); return; }
@@ -1154,14 +1433,14 @@ export default function App() {
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'alchemical_distillate', amount: 1 } });
       appendLog(`[👹 ${yName.toUpperCase()} // FERMENT MATTER] Turned your blood (-8 HUM) into +1 Metal, +1 Earth, and +1 Distillate!`, 'success');
     } else if (yokaiId === 'yokai_kamaitachi') {
-      if (!currentContract || !selectedSubNode || !currentSubNode) return;
-      if (selectedSubNode.id === currentSubNode.id || !currentSubNode.connections.includes(selectedSubNode.id)) {
-        addToast('Select an adjacent room on the Sub-Grid first!', 'ALERT');
+      if (!currentContract || !selectedSubNode) return;
+      if (!isAdjacentOrEntry(selectedSubNode)) {
+        addToast('Select an adjacent room (or Room 1 from Perimeter) first!', 'ALERT');
         return;
       }
       const updatedNodes = currentContract.subNodes.map(n =>
         n.id === selectedSubNode.id
-          ? { ...n, status: 'BREACHED' as const, nodeType: n.nodeType === 'AMBUSH' ? ('SALVAGE' as const) : n.nodeType }
+          ? { ...n, status: 'BREACHED' as const, hazard: 'NONE' as const, nodeType: n.nodeType === 'AMBUSH' ? ('SALVAGE' as const) : n.nodeType }
           : n
       );
       setContracts(prev => ({
@@ -1172,16 +1451,16 @@ export default function App() {
           subNodes: updatedNodes
         }
       }));
-      appendLog(`[👹 ${yName.toUpperCase()} // WIND SICKLE] Sliced silently into <strong>${selectedSubNode.label}</strong> (0% Heat, Ambush neutralized)!`, 'success');
+      appendLog(`[👹 ${yName.toUpperCase()} // WIND SICKLE] Sliced silently into <strong>${selectedSubNode.label}</strong> (0% Heat, Ambush &amp; Hazards neutralized)!`, 'success');
     } else if (yokaiId === 'yokai_amabie') {
       if ((state.inventory.obols || 0) < 10) { addToast('Requires 10 Obols!', 'ALERT'); return; }
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -10 } });
-      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: -10 });
-      appendLog(`[👹 ${yName.toUpperCase()} // PROPHETIC WARD] Purged -10% Global Entropy (-10 Obols).`, 'success');
+      addMicroEntropy(-2.5);
+      appendLog(`[👹 ${yName.toUpperCase()} // PROPHETIC WARD] Purged -2.50% Global Entropy (-10 Obols).`, 'success');
     } else if (yokaiId === 'yokai_noppera') {
       if (currentContract) {
         const disarmNodes = currentContract.subNodes.map(n =>
-          n.nodeType === 'AMBUSH' ? { ...n, nodeType: 'SALVAGE' as const, status: 'PROBED' as const } : n
+          n.nodeType === 'AMBUSH' ? { ...n, nodeType: 'SALVAGE' as const, hazard: 'NONE' as const, status: 'PROBED' as const } : n
         );
         setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, subNodes: disarmNodes } }));
       }
@@ -1200,7 +1479,94 @@ export default function App() {
     }
   };
 
-  // --- CANVAS RENDERING LOOP (SUB-GRID OR 16-SECTOR GEO-TRACKER) ---
+  // --- CLI COMMAND PROCESSOR ---
+  const processCliCommand = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    const parts = trimmed.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const arg = parts.slice(1).join(' ');
+
+    appendLog(`<span style="color:#62f080;">root@${state.playerName.toLowerCase() || 'operative'}:~#</span> ${trimmed}`, 'command');
+
+    if (cmd === 'help' || cmd === '?') {
+      appendLog(
+        `<div style="background:rgba(31,61,38,0.25);border:1px solid #1f3d26;padding:10px;line-height:1.6;">` +
+        `<strong style="color:#62f080;">FIELD OPS CLI DIRECTIVES:</strong><br/>` +
+        `• <code style="color:#ffb800;">probe [1-6]</code> — Scan room # (or selected room) for Ambushes, Shrines &amp; Hazards<br/>` +
+        `• <code style="color:#ffb800;">breach [1-6]</code> / <code style="color:#ffb800;">move [1-6]</code> — Breach or enter room #<br/>` +
+        `• <code style="color:#ffb800;">extract</code> — Harvest forensic clue, shrine relic, &amp; salvage from current room<br/>` +
+        `• <code style="color:#00f3ff;">degauss</code> | <code style="color:#00f3ff;">bypass</code> | <code style="color:#00f3ff;">purify</code> — Clear Static, Wiretaps, or Miasma hazards<br/>` +
+        `• <code style="color:#ff2a55;">spoof</code> (-15 Obols: -25% Heat) | <code style="color:#ff2a55;">bribe</code> (-25 Obols: -45% Heat, clears 100% Lockdown)<br/>` +
+        `• <code style="color:#62f080;">status</code> | <code style="color:#62f080;">map</code> | <code style="color:#62f080;">codex</code> | <code style="color:#62f080;">safehouse</code> | <code style="color:#62f080;">horsemen</code> | <code style="color:#62f080;">clear</code>` +
+        `</div>`,
+        'info'
+      );
+    } else if (cmd === 'probe' || cmd === 'scan') {
+      handleProbeSubNode(resolveTargetRoom(arg));
+    } else if (cmd === 'breach' || cmd === 'move' || cmd === 'enter' || cmd === 'node') {
+      handleBreachOrMoveSubNode(resolveTargetRoom(arg));
+    } else if (cmd === 'extract' || cmd === 'loot') {
+      handleExtractSubNode();
+    } else if (cmd === 'degauss') {
+      handleClearRoomHazard('AETHYRIC_STATIC');
+    } else if (cmd === 'bypass') {
+      handleClearRoomHazard('INQUISITION_WIRE');
+    } else if (cmd === 'purify') {
+      handleClearRoomHazard('MIASMA_FOG');
+    } else if (cmd === 'spoof') {
+      if ((state.inventory.obols || 0) < 15) {
+        ThaumaturgicAudio.errorBuzz();
+        appendLog(`[-] Frequency Spoofing requires 15 Obols.`, 'error');
+        return;
+      }
+      ThaumaturgicAudio.scryPing();
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -15 } });
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -25 } });
+      appendLog(`[📡 SIGNAL SPOOFED] Broadcasted phantom telemetry to Malleus vans (-15 Obols, -25% Inquisition Heat).`, 'success');
+      addToast(`Inquisition Heat -25%`, 'SEAL');
+    } else if (cmd === 'bribe') {
+      if ((state.inventory.obols || 0) < 25) {
+        ThaumaturgicAudio.errorBuzz();
+        appendLog(`[-] Bribing Malleus Watch constables requires 25 Obols.`, 'error');
+        return;
+      }
+      ThaumaturgicAudio.sealSuccess();
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -25 } });
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -45 } });
+      appendLog(`[🪙 INQUISITION BRIBED] Paid 25 Obols to corrupt Malleus Watch officers (-45% Inquisition Heat; Cordon lifted).`, 'success');
+      addToast(`Inquisition Cordon Lifted (-45% Heat)!`, 'SEAL');
+    } else if (cmd === 'status' || cmd === 'look') {
+      if (!currentContract) return;
+      appendLog(`[+] SECTOR: <strong>${currentContract.sectorLabel}</strong> | POSITION: <strong>${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}</strong> | HEAT: <strong>${currentHeat}%</strong>`, 'info');
+      currentContract.subNodes.forEach(n => {
+        const reach = isAdjacentOrEntry(n) ? '<span style="color:#62f080;">[ADJACENT]</span>' : '';
+        const haz = n.status !== 'LOCKED' && n.hazard !== 'NONE' ? `<span style="color:#ffb800;">[HAZARD: ${n.hazard}]</span>` : '';
+        appendLog(`  Room ${n.index}: <strong>${n.label}</strong> [${n.status}] ${reach} ${haz}`, 'normal');
+      });
+    } else if (cmd === 'map') {
+      setMapViewMode(prev => prev === 'SUB_GRID' ? 'GEO_TRACKER' : 'SUB_GRID');
+    } else if (cmd === 'codex') {
+      setViewport('CODEX');
+    } else if (cmd === 'kage') {
+      setViewport('KAGE_NO_SHO');
+    } else if (cmd === 'safehouse' || cmd === 'altar') {
+      setViewport('SAFEHOUSE_ALTAR');
+    } else if (cmd === 'horsemen') {
+      setViewport('HORSEMEN');
+    } else if (cmd === 'dossier') {
+      setViewport('DOSSIER');
+    } else if (cmd === 'manual') {
+      setShowManual(true);
+    } else if (cmd === 'clear' || cmd === 'cls') {
+      setTerminalLines([]);
+    } else {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[-] Unknown directive "${cmd}". Type <code>help</code> for tactical CLI syntax.`, 'error');
+    }
+  };
+
+  // --- CANVAS RENDERING LOOP (WITH ZOOM & PAN TRANSFORM) ---
   useEffect(() => {
     if (state.gameStage !== 'ACTIVE' || viewport !== 'FIELD_OPS') return;
     let animId: number;
@@ -1208,8 +1574,8 @@ export default function App() {
     const renderLoop = () => {
       const fx = visualFxRef.current;
       fx.angle += 0.025;
-      const currentHeat = state.sectorEntropy[state.currentNode] || 0;
-      fx.wavePhase += 0.14 + (currentHeat / 220);
+      const heat = state.sectorEntropy[state.currentNode] || 0;
+      fx.wavePhase += 0.14 + (heat / 220);
 
       const canvas = mapCanvasRef.current;
       if (canvas) {
@@ -1224,11 +1590,17 @@ export default function App() {
           const h = canvas.height;
           ctx.clearRect(0, 0, w, h);
 
-          // Tactical Grid
+          // Background Grid
           ctx.strokeStyle = 'rgba(74, 124, 89, 0.08)';
           ctx.lineWidth = 1;
           for (let x = 0; x < w; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
           for (let y = 0; y < h; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+          // Apply Zoom & Pan Transform around Canvas Center
+          ctx.save();
+          ctx.translate(w / 2 + mapPan.x, h / 2 + mapPan.y);
+          ctx.scale(mapZoom, mapZoom);
+          ctx.translate(-w / 2, -h / 2);
 
           // Expanding Sonar Rings
           for (let i = fx.sonarRings.length - 1; i >= 0; i--) {
@@ -1279,7 +1651,7 @@ export default function App() {
               ctx.translate(nx, ny);
               ctx.rotate(isCurrent ? fx.angle : -fx.angle * 0.5);
               ctx.beginPath();
-              const r = isCurrent ? 20 : 15;
+              const r = isCurrent ? 21 : 16;
               for (let i = 0; i < 6; i++) {
                 const a = (i * Math.PI) / 3;
                 if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
@@ -1287,7 +1659,7 @@ export default function App() {
               }
               ctx.closePath();
               ctx.strokeStyle = isSelected ? '#ffffff' : color;
-              ctx.lineWidth = isSelected ? 2.2 : 1.4;
+              ctx.lineWidth = isSelected ? 2.4 : 1.5;
               ctx.stroke();
               ctx.restore();
 
@@ -1299,18 +1671,23 @@ export default function App() {
               ctx.lineWidth = 2;
               ctx.stroke();
 
-              ctx.font = 'bold 10px "Courier New", monospace';
+              ctx.font = 'bold 11px "Courier New", monospace';
               ctx.textAlign = 'center';
               ctx.fillStyle = isSelected ? '#ffffff' : '#a8ccaf';
-              ctx.fillText(node.label, nx, ny + 29);
+              ctx.fillText(node.label, nx, ny + 30);
 
               let subBadge = sectorSecured ? '[SECURED]' : `[${node.status}]`;
               if (!sectorSecured && node.status === 'PROBED') {
                 subBadge = node.nodeType === 'AMBUSH' ? '[! AMBUSH !]' : node.nodeType === 'SHRINE' ? '[SHRINE]' : node.nodeType === 'ANCHOR' ? '[ANCHOR]' : '[ANOMALY]';
               }
-              ctx.font = '9px "Courier New", monospace';
+              ctx.font = '10px "Courier New", monospace';
               ctx.fillStyle = color;
-              ctx.fillText(subBadge, nx, ny + 40);
+              ctx.fillText(subBadge, nx, ny + 42);
+
+              if (node.status !== 'LOCKED' && node.hazard !== 'NONE' && !sectorSecured) {
+                ctx.fillStyle = '#00f3ff';
+                ctx.fillText(`! ${node.hazard} !`, nx, ny - 22);
+              }
             });
           } else {
             // DRAW 16-SECTOR REGIONAL CAMPAIGN MAP
@@ -1323,8 +1700,8 @@ export default function App() {
                 ctx.beginPath();
                 ctx.moveTo(node.x * w, node.y * h);
                 ctx.lineTo(target.x * w, target.y * h);
-                ctx.strokeStyle = unlockedA && unlockedB ? 'rgba(98, 240, 128, 0.32)' : 'rgba(42, 82, 51, 0.14)';
-                ctx.lineWidth = unlockedA && unlockedB ? 1.4 : 0.8;
+                ctx.strokeStyle = unlockedA && unlockedB ? 'rgba(98, 240, 128, 0.35)' : 'rgba(42, 82, 51, 0.15)';
+                ctx.lineWidth = unlockedA && unlockedB ? 1.5 : 0.9;
                 ctx.stroke();
               });
             });
@@ -1335,34 +1712,36 @@ export default function App() {
               const isCurrent = node.id === state.currentNode;
               const secured = isSectorSecured(node.id);
               const unlocked = isSectorUnlocked(node);
-              const heat = state.sectorEntropy[node.id] || 0;
+              const nodeHeat = state.sectorEntropy[node.id] || 0;
 
-              let color = '#2a5233'; // Locked fog-of-war
+              let color = '#2a5233';
               if (node.id === 'safehouse') color = '#00f3ff';
               else if (secured) color = '#62f080';
-              else if (unlocked) color = heat >= 75 ? '#ff2a55' : '#ffb800';
+              else if (unlocked) color = nodeHeat >= 75 ? '#ff2a55' : '#ffb800';
 
               ctx.beginPath();
-              ctx.arc(nx, ny, isCurrent ? 12 : unlocked ? 8 : 5, 0, Math.PI * 2);
+              ctx.arc(nx, ny, isCurrent ? 13 : unlocked ? 9 : 5, 0, Math.PI * 2);
               ctx.fillStyle = secured ? 'rgba(98, 240, 128, 0.25)' : '#050706';
               ctx.fill();
               ctx.strokeStyle = isCurrent ? '#ffffff' : color;
-              ctx.lineWidth = isCurrent ? 2.5 : 1.6;
+              ctx.lineWidth = isCurrent ? 2.5 : 1.8;
               ctx.stroke();
 
-              ctx.font = unlocked ? 'bold 9px "Courier New", monospace' : '8px "Courier New", monospace';
+              ctx.font = unlocked ? 'bold 10px "Courier New", monospace' : '9px "Courier New", monospace';
               ctx.textAlign = 'center';
               ctx.fillStyle = isCurrent ? '#ffffff' : unlocked ? '#a8ccaf' : '#2a5233';
-              ctx.fillText(unlocked ? node.short : '??? [LOCKED]', nx, ny + 21);
+              ctx.fillText(unlocked ? node.short : '??? [LOCKED]', nx, ny + 23);
 
               if (unlocked) {
-                ctx.font = '8px "Courier New", monospace';
+                ctx.font = '9px "Courier New", monospace';
                 ctx.fillStyle = color;
-                const statusTxt = node.id === 'safehouse' ? '[HUB]' : secured ? '✓ SECURED' : `HEAT:${heat}%`;
-                ctx.fillText(statusTxt, nx, ny + 31);
+                const statusTxt = node.id === 'safehouse' ? '[SAFEHOUSE]' : secured ? '✓ SECURED' : `HEAT:${nodeHeat}%`;
+                ctx.fillText(statusTxt, nx, ny + 34);
               }
             });
           }
+
+          ctx.restore();
         }
       }
 
@@ -1374,9 +1753,9 @@ export default function App() {
           const w = waveCanvas.width;
           const h = waveCanvas.height;
           ctx.clearRect(0, 0, w, h);
-          const amp = Math.min(h / 2 - 2, 3 + (currentHeat / 10));
+          const amp = Math.min(h / 2 - 2, 3 + (heat / 10));
           ctx.beginPath();
-          ctx.strokeStyle = currentHeat >= 75 ? '#ff2a55' : currentHeat >= 35 ? '#ffb800' : '#62f080';
+          ctx.strokeStyle = heat >= 75 ? '#ff2a55' : heat >= 35 ? '#ffb800' : '#62f080';
           ctx.lineWidth = 1.5;
           for (let x = 0; x < w; x++) {
             const y = h / 2 + Math.sin(x * 0.22 + fx.wavePhase) * amp * Math.sin(x * 0.05);
@@ -1392,41 +1771,80 @@ export default function App() {
 
     animId = requestAnimationFrame(renderLoop);
     return () => cancelAnimationFrame(animId);
-  }, [state.gameStage, viewport, mapViewMode, currentContract, state.currentNode, state.sectorEntropy, state.flags]);
+  }, [state.gameStage, viewport, mapViewMode, currentContract, state.currentNode, state.sectorEntropy, state.flags, mapZoom, mapPan]);
 
-  // Handle Canvas Clicks (Sub-Grid Room Selection or 16-Sector Travel)
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Convert Mouse Screen Coordinates into Zoomed/Panned Canvas World Coordinates
+  const getWorldCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = mapCanvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return { wx: 0, wy: 0, w: 1, h: 1 };
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const w = canvas.width;
+    const h = canvas.height;
+    const wx = (sx - w / 2 - mapPan.x) / mapZoom + w / 2;
+    const wy = (sy - h / 2 - mapPan.y) / mapZoom + h / 2;
+    return { wx, wy, w, h };
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    isPanningRef.current = true;
+    didDragRef.current = false;
+    panStartRef.current = { x: e.clientX - mapPan.x, y: e.clientY - mapPan.y };
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isPanningRef.current) return;
+    const dx = e.clientX - panStartRef.current.x;
+    const dy = e.clientY - panStartRef.current.y;
+    if (Math.hypot(dx - mapPan.x, dy - mapPan.y) > 4) {
+      didDragRef.current = true;
+    }
+    setMapPan({ x: dx, y: dy });
+  };
+
+  const handleCanvasMouseUp = () => {
+    isPanningRef.current = false;
+  };
+
+  const handleCanvasWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.18 : -0.18;
+    setMapZoom(prev => Math.min(2.8, Math.max(0.6, +(prev + delta).toFixed(2))));
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (didDragRef.current) return;
+    const { wx, wy, w, h } = getWorldCoords(e);
 
     if (mapViewMode === 'SUB_GRID' && currentContract) {
       for (const node of currentContract.subNodes) {
-        const nx = node.x * canvas.width;
-        const ny = node.y * canvas.height;
-        if (Math.hypot(mx - nx, my - ny) <= 28) {
+        const nx = node.x * w;
+        const ny = node.y * h;
+        if (Math.hypot(wx - nx, wy - ny) <= 28) {
           ThaumaturgicAudio.keyClick();
           setContracts(prev => ({
             ...prev,
             [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: node.id }
           }));
           visualFxRef.current.sonarRings.push({ x: node.x, y: node.y, r: 6, alpha: 0.9 });
+          cliInputRef.current?.focus();
           break;
         }
       }
     } else {
       for (const sec of MACRO_SECTORS) {
-        const nx = sec.x * canvas.width;
-        const ny = sec.y * canvas.height;
-        if (Math.hypot(mx - nx, my - ny) <= 22) {
+        const nx = sec.x * w;
+        const ny = sec.y * h;
+        if (Math.hypot(wx - nx, wy - ny) <= 24) {
           if (!isSectorUnlocked(sec)) {
             ThaumaturgicAudio.errorBuzz();
             addToast(`Sector Locked! Secure an adjacent sector first to open this ley-line.`, 'ALERT');
             return;
           }
           ThaumaturgicAudio.scryPing();
+          addMicroEntropy(0.02); // Travel time increases Global Entropy by +0.02%
+          setDeducedSigns([]);
           if (sec.id === 'safehouse') {
             travelTo('safehouse');
             setViewport('SAFEHOUSE_ALTAR');
@@ -1434,7 +1852,7 @@ export default function App() {
             travelTo(sec.id);
             setMapViewMode('SUB_GRID');
             const statusNote = isSectorSecured(sec.id) ? '[SECTOR SECURED]' : '[ACTIVE RUPTURE]';
-            appendLog(`[*] ROUTED TETHER TO SECTOR: <strong style="color:#62f080;">${sec.label}</strong> (${sec.region}) ${statusNote}.`, 'info');
+            appendLog(`[*] ROUTED TETHER TO SECTOR: <strong style="color:#62f080;">${sec.label}</strong> (${sec.region}) ${statusNote}. (+0.02% Global Entropy)`, 'info');
           }
           break;
         }
@@ -1442,15 +1860,25 @@ export default function App() {
     }
   };
 
+  // Secure Logout Handler (Returns to Start Screen without deleting save)
+  const handleLogout = () => {
+    ThaumaturgicAudio.keyClick();
+    dispatch({ type: 'LOAD_GAME', payload: { ...state, gameStage: 'START_SCREEN' } });
+  };
+
   if (state.gameStage === 'START_SCREEN') {
-    return <StartScreen onStart={startInvestigation} onLoad={loadGame} />;
+    return (
+      <>
+        {showManual && <ManualModal onClose={() => setShowManual(false)} />}
+        <StartScreen onStart={startInvestigation} onLoad={loadGame} onOpenManual={() => setShowManual(true)} />
+      </>
+    );
   }
 
-  const currentHeat = state.sectorEntropy[state.currentNode] || 0;
-  
-  const allCollectedLogs = Object.values(contracts).flatMap(c =>
-    c.discoveredLogs.map(l => ({ ...l, sectorLabel: c.sectorLabel }))
-  );
+  // Current Sector's active clue count (Resets to 0 when sector is secured!)
+  const activeSectorClueCount = currentContract && !isSectorSecured(currentContract.sectorId)
+    ? currentContract.discoveredLogs.length
+    : 0;
 
   const filteredCodexGoetia = allGoetia.filter(g => {
     if (codexHorsemanFilter !== 'ALL' && g.allegiance !== codexHorsemanFilter) return false;
@@ -1480,14 +1908,14 @@ export default function App() {
         }
         .macro-chip {
           background: rgba(98, 240, 128, 0.07); border: 1px solid #1f3d26; color: #62f080;
-          padding: 5px 10px; font-family: inherit; font-size: 0.72rem; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+          padding: 5px 10px; font-family: inherit; font-size: 0.74rem; cursor: pointer; white-space: nowrap; transition: all 0.15s;
         }
         .macro-chip:hover:not(:disabled) { background: rgba(98, 240, 128, 0.2); border-color: #62f080; }
         .macro-chip:disabled { opacity: 0.4; cursor: not-allowed; }
         .macro-chip-amber { background: rgba(255, 184, 0, 0.09); border-color: rgba(255, 184, 0, 0.45); color: #ffb800; }
         .macro-chip-danger { background: rgba(255, 42, 85, 0.12); border-color: rgba(255, 42, 85, 0.5); color: #ff2a55; }
         .viewport-tab {
-          padding: 6px 11px; font-family: inherit; font-size: 0.72rem; font-weight: bold; letter-spacing: 0.5px;
+          padding: 6px 10px; font-family: inherit; font-size: 0.72rem; font-weight: bold; letter-spacing: 0.5px;
           cursor: pointer; border: 1px solid #1f3d26; background: #060907; color: #4a7c59; transition: all 0.15s;
         }
         .viewport-tab.active {
@@ -1496,23 +1924,24 @@ export default function App() {
       `}</style>
 
       <div className="crt-scanlines" />
+      {showManual && <ManualModal onClose={() => setShowManual(false)} />}
 
       {/* ================================================================== */}
-      {/* TOP TACTICAL BAR: 6-VIEWPORT SWITCHER & TELEMETRY                  */}
+      {/* TOP TACTICAL BAR: 6-VIEWPORT SWITCHER, TEXT SIZE, MANUAL & LOGOUT  */}
       {/* ================================================================== */}
-      <header style={{ height: '48px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', zIndex: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+      <header style={{ height: '48px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.73rem', zIndex: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}>
             [F1] FIELD_OPS
           </button>
           <button className={`viewport-tab ${viewport === 'CODEX' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('CODEX'); }}>
-            [F2] CODEX ({allCollectedLogs.length})
+            [F2] CODEX ({activeSectorClueCount})
           </button>
           <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}>
             [F3] KAGE_NO_SHO ({state.tetheredYokai.length}/2)
           </button>
           <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}>
-            [F4] ALTAR
+            [F4] SAFEHOUSE / ALTAR
           </button>
           <button
             className={`viewport-tab ${viewport === 'HORSEMEN' ? 'active' : ''}`}
@@ -1522,43 +1951,67 @@ export default function App() {
             [F5] THE 4 HORSEMEN
           </button>
           <button className={`viewport-tab ${viewport === 'DOSSIER' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('DOSSIER'); }}>
-            [F6] DOSSIER ({state.playerName.toUpperCase()})
+            [F6] DOSSIER
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ padding: '4px 8px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.textBright }}>
-            SECTORS: <strong>{securedSectorsCount}/16 SECURED</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ padding: '4px 7px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentRed }}>
+            ENTROPY: <strong>{totalGlobalEntropy.toFixed(2)}%</strong>
           </span>
 
-          <span style={{ padding: '4px 8px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: state.humanity < 40 ? theme.accentRed : theme.textBright }}>
+          <span style={{ padding: '4px 7px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: state.humanity < 40 ? theme.accentRed : theme.textBright }}>
             HUM: <strong>{state.humanity}%</strong>
           </span>
 
-          <span style={{ padding: '4px 8px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentAmber, fontWeight: 'bold' }}>
+          <span style={{ padding: '4px 7px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentAmber, fontWeight: 'bold' }}>
             OBOLS: {state.inventory.obols || 0}
           </span>
 
-          <button onClick={() => { ThaumaturgicAudio.enabled = !audioEnabled; setAudioEnabled(!audioEnabled); }} style={{ padding: '4px 8px', backgroundColor: 'transparent', border: `1px solid ${theme.borderTerminal}`, color: theme.textTerminal, cursor: 'pointer', fontFamily: theme.fontMono }}>
+          {/* Text Scale Toggle */}
+          <button
+            onClick={() => {
+              ThaumaturgicAudio.keyClick();
+              setFontScale(prev => prev === 'SM' ? 'MD' : prev === 'MD' ? 'LG' : 'SM');
+            }}
+            title="Cycle Interface Text Size (SM / MD / LG)"
+            className="macro-chip"
+            style={{ padding: '4px 7px' }}
+          >
+            TXT:{fontScale}
+          </button>
+
+          {/* Interactive Manual Button */}
+          <button onClick={() => setShowManual(true)} className="macro-chip macro-chip-amber" style={{ padding: '4px 8px' }}>
+            ? MANUAL
+          </button>
+
+          <button onClick={() => { ThaumaturgicAudio.enabled = !audioEnabled; setAudioEnabled(!audioEnabled); }} style={{ padding: '4px 7px', backgroundColor: 'transparent', border: `1px solid ${theme.borderTerminal}`, color: theme.textTerminal, cursor: 'pointer' }}>
             {audioEnabled ? '🔊' : '🔇'}
+          </button>
+
+          {/* Log Out Button */}
+          <button onClick={handleLogout} className="macro-chip macro-chip-danger" style={{ padding: '4px 8px' }} title="Save & Return to Start Screen">
+            LOG OUT
           </button>
         </div>
       </header>
 
       {/* ================================================================== */}
-      {/* VIEWPORT 1: [F1] FIELD_OPS (SUB-GRID & EXPANDING 16-SECTOR MAP)    */}
+      {/* VIEWPORT 1: [F1] FIELD_OPS (SUB-GRID, ZOOM/PAN MAP & CLI CONSOLE)  */}
       {/* ================================================================== */}
       {viewport === 'FIELD_OPS' && (
         <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '8px', padding: '8px' }}>
           <section style={{ width: '52%', display: 'flex', flexDirection: 'column', gap: '8px', overflow: 'hidden' }}>
-            {/* Heat & Entropy Bar */}
-            <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '10px', flexShrink: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '6px' }}>
+
+            {/* Inquisition Heat & High-Risk Alert Banner */}
+            <div style={{ backgroundColor: currentHeat >= 75 ? '#1f050a' : theme.bgPanel, border: `1px solid ${currentHeat >= 75 ? theme.accentRed : theme.borderTerminal}`, padding: '10px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: '6px' }}>
                 <span style={{ color: theme.textBright, fontWeight: 'bold' }}>
-                  {currentContract?.sectorLabel || formatLabel(state.currentNode)} {isSectorSecured(state.currentNode) ? '[✓ SECURED]' : `// ROOM: ${currentSubNode?.label || 'HUB'}`}
+                  {currentContract?.sectorLabel || formatLabel(state.currentNode)} // POS: {currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}
                 </span>
                 <span style={{ color: currentHeat >= 75 ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
-                  HEAT: {currentHeat}% | ENTROPY: {state.globalEntropy}%
+                  INQUISITION HEAT: {currentHeat}% {currentHeat >= 100 ? '[LOCKED DOWN!]' : currentHeat >= 75 ? '[CRITICAL!]' : ''}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1567,57 +2020,63 @@ export default function App() {
                 </div>
                 <canvas ref={waveformCanvasRef} width={96} height={22} style={{ backgroundColor: '#020302', border: `1px solid ${theme.borderTerminal}`, flexShrink: 0 }} />
               </div>
+              {currentHeat >= 75 && (
+                <div style={{ marginTop: '6px', color: theme.accentRed, fontSize: '0.74rem', fontWeight: 'bold', animation: 'blink 1s infinite' }}>
+                  {currentHeat >= 100
+                    ? '🚨 ORDO MALLEUS LOCKDOWN ACTIVE (100% HEAT): All room actions blocked! Type `spoof` (-15 Obols) or `bribe` (-25 Obols) in CLI!'
+                    : '⚠️ WARNING: Malleus Witch-Hound triangulation at 75%+! Type `spoof` in CLI or retreat to Safehouse before Heat hits 100%!'}
+                </div>
+              )}
             </div>
 
-            {/* Interactive Sub-Grid / 16-Sector Geo-Tracker Canvas */}
+            {/* Interactive Sub-Grid / 16-Sector Geo-Tracker Canvas with Zoom & Pan */}
             <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ position: 'absolute', top: 8, left: 10, right: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, fontSize: '0.72rem' }}>
-                <div style={{ backgroundColor: 'rgba(5,7,6,0.9)', padding: '4px 8px', border: `1px solid ${theme.borderTerminal}` }}>
-                  <span style={{ color: theme.textMuted }}>LAYER: </span>
-                  <strong style={{ color: theme.textBright }}>
-                    {mapViewMode === 'SUB_GRID' ? `LOCAL 6-ROOM SUB-GRID` : `16-SECTOR REGIONAL CAMPAIGN MAP (${securedSectorsCount}/16 SECURED)`}
-                  </strong>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <button onClick={() => { setMapViewMode('SUB_GRID'); setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className={`macro-chip ${mapViewMode === 'SUB_GRID' ? 'macro-chip-amber' : ''}`}>LOCAL SUB-GRID</button>
+                  <button onClick={() => { setMapViewMode('GEO_TRACKER'); setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className={`macro-chip ${mapViewMode === 'GEO_TRACKER' ? 'macro-chip-amber' : ''}`}>REGIONAL MAP ({securedSectorsCount}/16)</button>
                 </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button onClick={() => setMapViewMode('SUB_GRID')} className={`macro-chip ${mapViewMode === 'SUB_GRID' ? 'macro-chip-amber' : ''}`}>LOCAL SUB-GRID</button>
-                  <button onClick={() => setMapViewMode('GEO_TRACKER')} className={`macro-chip ${mapViewMode === 'GEO_TRACKER' ? 'macro-chip-amber' : ''}`}>REGIONAL MAP ({securedSectorsCount}/16)</button>
+
+                {/* Zoom & Pan Controls */}
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', backgroundColor: 'rgba(5,7,6,0.9)', padding: '3px 6px', border: `1px solid ${theme.borderTerminal}` }}>
+                  <span style={{ color: theme.textMuted, marginRight: '4px' }}>ZOOM: {Math.round(mapZoom * 100)}%</span>
+                  <button onClick={() => setMapZoom(z => Math.min(2.8, +(z + 0.25).toFixed(2)))} className="macro-chip" style={{ padding: '2px 7px' }}>+</button>
+                  <button onClick={() => setMapZoom(z => Math.max(0.6, +(z - 0.25).toFixed(2)))} className="macro-chip" style={{ padding: '2px 7px' }}>-</button>
+                  <button onClick={() => { setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className="macro-chip" style={{ padding: '2px 7px' }}>RESET</button>
                 </div>
               </div>
 
-              <canvas ref={mapCanvasRef} onClick={handleCanvasClick} style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair' }} />
+              <canvas
+                ref={mapCanvasRef}
+                onMouseDown={handleCanvasMouseDown}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={handleCanvasMouseUp}
+                onMouseLeave={handleCanvasMouseUp}
+                onWheel={handleCanvasWheel}
+                onClick={handleCanvasClick}
+                style={{ width: '100%', height: '100%', display: 'block', cursor: isPanningRef.current ? 'grabbing' : 'grab' }}
+              />
 
+              {/* Bottom Status Strip (CLI Driven — No Clickable Probe/Breach/Extract Buttons!) */}
               {mapViewMode === 'SUB_GRID' && selectedSubNode && (
-                <div style={{ position: 'absolute', bottom: 8, left: 10, right: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(5,7,6,0.92)', border: `1px solid ${theme.borderTerminal}`, padding: '8px 12px', zIndex: 10, fontSize: '0.74rem' }}>
+                <div style={{ position: 'absolute', bottom: 8, left: 10, right: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(5,7,6,0.94)', border: `1px solid ${theme.borderTerminal}`, padding: '8px 12px', zIndex: 10, fontSize: '0.75rem' }}>
                   <div>
-                    <span style={{ color: theme.textMuted }}>ROOM: </span>
+                    <span style={{ color: theme.textMuted }}>SELECTED: </span>
                     <strong style={{ color: theme.textBright }}>{selectedSubNode.label}</strong>
-                    <span style={{ marginLeft: '8px', color: isSectorSecured(state.currentNode) ? theme.textBright : theme.accentAmber }}>
-                      [{isSectorSecured(state.currentNode) ? 'SECTOR SECURED' : selectedSubNode.status}]
-                    </span>
+                    <span style={{ marginLeft: '8px', color: theme.accentAmber }}>[{selectedSubNode.status}]</span>
+                    {selectedSubNode.status !== 'LOCKED' && selectedSubNode.hazard !== 'NONE' && (
+                      <span style={{ marginLeft: '8px', color: theme.accentCyan }}>[HAZARD: {selectedSubNode.hazard}]</span>
+                    )}
                   </div>
-                  {isSectorSecured(state.currentNode) ? (
-                    <button onClick={() => setMapViewMode('GEO_TRACKER')} className="macro-chip macro-chip-amber">
-                      ✓ SECTOR SECURED — OPEN REGIONAL MAP TO DEPLOY
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => handleProbeSubNode(selectedSubNode)} disabled={selectedSubNode.status !== 'LOCKED'} className="macro-chip">
-                        1. PROBE (-{state.tetheredYokai.length > 0 ? 2 : 5} HUM)
-                      </button>
-                      <button onClick={() => handleBreachSubNode(selectedSubNode)} disabled={selectedSubNode.id === currentSubNode?.id} className="macro-chip macro-chip-amber">
-                        2. BREACH &amp; ENTER
-                      </button>
-                      <button onClick={handleExtractSubNode} disabled={selectedSubNode.id !== currentSubNode?.id || currentSubNode?.status === 'EXTRACTED'} className="macro-chip macro-chip-danger">
-                        3. EXTRACT SIGN / LOOT
-                      </button>
-                    </div>
-                  )}
+                  <div style={{ color: '#a8ccaf', fontSize: '0.72rem' }}>
+                    CLI: <code style={{ color: theme.accentAmber }}>probe {selectedSubNode.index}</code> | <code style={{ color: theme.accentAmber }}>breach {selectedSubNode.index}</code> | <code style={{ color: theme.accentAmber }}>extract</code>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Active Shikigami & Raw Salvage Strip */}
-            <div style={{ height: '108px', flexShrink: 0, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '10px', display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '0.74rem' }}>
+            <div style={{ height: '108px', flexShrink: 0, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '10px', display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '0.75rem' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ color: theme.textBright, fontWeight: 'bold', marginBottom: '6px' }}>ACTIVE SHIKIGAMI TETHER ({state.tetheredYokai.length}/2)</div>
                 {state.tetheredYokai.length === 0 ? (
@@ -1658,14 +2117,14 @@ export default function App() {
             </div>
           </section>
 
-          {/* RIGHT PANE: FIELD FORENSIC CLI */}
-          <section style={{ width: '48%', display: 'flex', flexDirection: 'column', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, overflow: 'hidden' }}>
-            <div style={{ height: '32px', backgroundColor: '#040805', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.73rem', flexShrink: 0 }}>
-              <span><strong style={{ color: theme.textBright }}>● FIELD TELEMETRY</strong> // {currentContract?.sectorLabel} ({currentContract?.discoveredLogs.length || 0} Clues)</span>
+          {/* RIGHT PANE: FIELD FORENSIC CLI CONSOLE */}
+          <section style={{ width: '48%', display: 'flex', flexDirection: 'column', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, overflow: 'hidden', zoom: FONT_ZOOM_MAP[fontScale] }}>
+            <div style={{ height: '32px', backgroundColor: '#040805', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', flexShrink: 0 }}>
+              <span><strong style={{ color: theme.textBright }}>● TTY1 CONSOLE</strong> // {currentContract?.sectorLabel} ({activeSectorClueCount}/3 Clues)</span>
               <span style={{ color: theme.accentAmber }}>VESSEL: {state.sealedGoetia.length}/72 SEALED</span>
             </div>
 
-            <div style={{ flex: 1, padding: '14px', overflowY: 'auto', fontSize: '0.81rem', lineHeight: '1.55', backgroundColor: '#030504', userSelect: 'text' }}>
+            <div onClick={() => cliInputRef.current?.focus()} style={{ flex: 1, padding: '14px', overflowY: 'auto', fontSize: '0.82rem', lineHeight: '1.58', backgroundColor: '#030504', userSelect: 'text', cursor: 'text' }}>
               {terminalLines.map(line => {
                 const colorMap = { normal: '#a8ccaf', info: '#62f080', system: '#4a7c59', success: '#62f080', warn: '#ffb800', error: '#ff2a55', command: '#ffffff' };
                 return <div key={line.id} style={{ color: colorMap[line.type], marginBottom: '6px' }} dangerouslySetInnerHTML={{ __html: line.html }} />;
@@ -1673,37 +2132,31 @@ export default function App() {
               <div ref={terminalEndRef} />
             </div>
 
-            <div style={{ backgroundColor: '#050906', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', gap: '6px', flexWrap: 'wrap', flexShrink: 0 }}>
-              <button onClick={() => handleProbeSubNode()} className="macro-chip">📡 Probe Room</button>
-              <button onClick={() => handleBreachSubNode()} className="macro-chip macro-chip-amber">⚡ Breach Room</button>
-              <button onClick={handleExtractSubNode} className="macro-chip macro-chip-danger">🔍 Extract Sign</button>
-              <button onClick={() => setViewport('CODEX')} className="macro-chip">📖 Codex ([F2])</button>
-              <button onClick={() => setViewport('HORSEMEN')} className="macro-chip macro-chip-danger">💀 4 Horsemen ([F5])</button>
+            {/* CLI Syntax Reference Strip (No Auto-Click Field Action Buttons) */}
+            <div style={{ backgroundColor: '#050906', borderTop: `1px solid ${theme.borderTerminal}`, padding: '6px 12px', fontSize: '0.7rem', color: '#a8ccaf', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+              <span>SYNTAX: <code style={{ color: theme.accentAmber }}>probe [1-6]</code> | <code style={{ color: theme.accentAmber }}>breach [1-6]</code> | <code style={{ color: theme.accentAmber }}>extract</code></span>
+              <span>HAZARDS: <code style={{ color: theme.accentCyan }}>degauss</code> | <code style={{ color: theme.accentCyan }}>bypass</code> | <code style={{ color: theme.accentCyan }}>purify</code></span>
+              <span>HEAT: <code style={{ color: theme.accentRed }}>spoof</code> | <code style={{ color: theme.accentRed }}>bribe</code></span>
             </div>
 
             <form
               onSubmit={e => {
                 e.preventDefault();
-                const cmd = cliInput.trim().toLowerCase();
-                if (!cmd) return;
+                if (!cliInput.trim()) return;
+                processCliCommand(cliInput);
                 setCliInput('');
-                appendLog(`<span style="color:#62f080;">root@operative:~#</span> ${cmd}`, 'command');
-                if (cmd === 'probe') handleProbeSubNode();
-                else if (cmd === 'breach') handleBreachSubNode();
-                else if (cmd === 'extract') handleExtractSubNode();
-                else if (cmd === 'map') setMapViewMode('GEO_TRACKER');
-                else if (cmd === 'codex') setViewport('CODEX');
-                else if (cmd === 'kage') setViewport('KAGE_NO_SHO');
-                else if (cmd === 'altar') setViewport('SAFEHOUSE_ALTAR');
-                else if (cmd === 'horsemen') setViewport('HORSEMEN');
-                else if (cmd === 'dossier') setViewport('DOSSIER');
-                else if (cmd === 'clear') setTerminalLines([]);
-                else appendLog(`Commands: <code>probe</code>, <code>breach</code>, <code>extract</code>, <code>map</code>, <code>codex</code>, <code>kage</code>, <code>altar</code>, <code>horsemen</code>, <code>dossier</code>, <code>clear</code>.`, 'system');
               }}
-              style={{ height: '40px', backgroundColor: '#000', borderTop: `1px solid ${theme.borderTerminal}`, padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{ height: '42px', backgroundColor: '#000', borderTop: `1px solid ${theme.borderTerminal}`, padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>root@os:~#</span>
-              <input value={cliInput} onChange={e => setCliInput(e.target.value)} placeholder="Type probe, breach, extract, map, codex, horsemen, dossier..." style={{ flex: 1, backgroundColor: 'transparent', color: theme.textBright, border: 'none', outline: 'none', fontFamily: theme.fontMono, fontSize: '0.8rem' }} />
+              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem' }}>root@os:~#</span>
+              <input
+                ref={cliInputRef}
+                autoFocus
+                value={cliInput}
+                onChange={e => setCliInput(e.target.value)}
+                placeholder="Type directive (e.g. probe 1, breach 1, extract, degauss, spoof, help)..."
+                style={{ flex: 1, backgroundColor: 'transparent', color: theme.textBright, border: 'none', outline: 'none', fontFamily: theme.fontMono, fontSize: '0.82rem' }}
+              />
               <button type="submit" className="macro-chip">EXEC</button>
             </form>
           </section>
@@ -1714,23 +2167,26 @@ export default function App() {
       {/* VIEWPORT 2: [F2] GOETIAN_CODEX (MANUAL DEDUCTION & SIGIL MATRIX)   */}
       {/* ================================================================== */}
       {viewport === 'CODEX' && (
-        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '10px', padding: '10px' }}>
-          {/* LEFT COLUMN: EXTRACTED FORENSIC LOGS & PHENOMENON CHECKLIST */}
+        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '10px', padding: '10px', zoom: FONT_ZOOM_MAP[fontScale] }}>
           <section style={{ width: '34%', display: 'flex', flexDirection: 'column', gap: '8px', overflow: 'hidden' }}>
-            <div style={{ height: '42%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ height: '40%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>1. SECTOR FORENSIC LOGS</span>
+                <span>1. ACTIVE SECTOR CLUES ({activeSectorClueCount})</span>
                 <span style={{ color: theme.accentAmber }}>{currentContract?.sectorLabel}</span>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.76rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {(!currentContract || currentContract.discoveredLogs.length === 0) ? (
+              <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.78rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {(!currentContract || isSectorSecured(currentContract.sectorId)) ? (
+                  <div style={{ color: theme.textBright }}>
+                    ✓ {currentContract?.sectorLabel || 'Sector'} has been permanently SECURED and its logs archived. Deploy to a new sector on the Regional Map!
+                  </div>
+                ) : currentContract.discoveredLogs.length === 0 ? (
                   <div style={{ color: theme.textMuted, fontStyle: 'italic' }}>
-                    No forensic logs extracted in {currentContract?.sectorLabel || 'this sector'} yet. Return to [F1] FIELD_OPS, breach anomalous rooms, and click EXTRACT SIGN.
+                    No forensic logs extracted in {currentContract.sectorLabel} yet. Return to [F1] FIELD_OPS and run <code>probe 1</code> &rarr; <code>breach 1</code> &rarr; <code>extract</code>.
                   </div>
                 ) : (
                   currentContract.discoveredLogs.map((log, i) => (
                     <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.textBright}` }}>
-                      <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '0.7rem' }}>CLUE #{i + 1} // {log.nodeLabel}</div>
+                      <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '0.72rem' }}>CLUE #{i + 1} // {log.nodeLabel}</div>
                       <div style={{ color: '#ffffff', marginTop: '3px' }}>"{log.text}"</div>
                     </div>
                   ))
@@ -1758,11 +2214,11 @@ export default function App() {
                         );
                       }}
                       style={{
-                        padding: '6px 8px', textAlign: 'left',
+                        padding: '7px 8px', textAlign: 'left',
                         backgroundColor: isChecked ? 'rgba(98, 240, 128, 0.2)' : '#030504',
                         border: `1px solid ${isChecked ? theme.textBright : theme.borderTerminal}`,
                         color: isChecked ? theme.textBright : '#a8ccaf',
-                        cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.7rem'
+                        cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.74rem'
                       }}
                     >
                       {isChecked ? '[X] ' : '[ ] '} {phenom.label}
@@ -1773,13 +2229,12 @@ export default function App() {
             </div>
           </section>
 
-          {/* CENTER COLUMN: MATCHING SUSPECT LIST */}
           <section style={{ width: '34%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px' }}>
               <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem' }}>3. MATCHING GOETIA ({filteredCodexGoetia.length}/72)</span>
               <div style={{ display: 'flex', gap: '4px' }}>
                 {(['ALL', 'CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => (
-                  <button key={h} onClick={() => setCodexHorsemanFilter(h)} className={`macro-chip ${codexHorsemanFilter === h ? 'macro-chip-amber' : ''}`} style={{ padding: '2px 6px', fontSize: '0.66rem' }}>
+                  <button key={h} onClick={() => setCodexHorsemanFilter(h)} className={`macro-chip ${codexHorsemanFilter === h ? 'macro-chip-amber' : ''}`} style={{ padding: '2px 6px', fontSize: '0.68rem' }}>
                     {h === 'ALL' ? 'ALL' : h.slice(0, 3)}
                   </button>
                 ))}
@@ -1805,7 +2260,7 @@ export default function App() {
                   >
                     <div>
                       <strong>#{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()}</strong>
-                      <div style={{ fontSize: '0.68rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance} — {g.title}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance} — {g.title}</div>
                     </div>
                     <span
                       style={{
@@ -1824,7 +2279,6 @@ export default function App() {
             </div>
           </section>
 
-          {/* RIGHT COLUMN: SUSPECT DOSSIER, GLITCHED/STAMPED SIGIL & SEALING TRIGGER */}
           <section style={{ width: '32%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflowY: 'auto' }}>
             <div>
               <div style={{ fontSize: '0.72rem', color: theme.accentAmber, letterSpacing: '1px' }}>
@@ -1837,7 +2291,6 @@ export default function App() {
                 {selectedSuspect.rank} — "{selectedSuspect.title}"
               </div>
 
-              {/* SOLOMONIC SEAL TELEMETRY BOX */}
               {(() => {
                 const isTargetSealed = state.sealedGoetia.includes(selectedSuspect.id);
                 return (
@@ -1937,7 +2390,7 @@ export default function App() {
                         fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '1px', fontSize: '0.8rem'
                       }}
                     >
-                      {canAfford ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}` : `> SYNTHESIZE CATALYSTS IN [F4] ALTAR FIRST`}
+                      {canAfford ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}` : `> SYNTHESIZE CATALYSTS IN [F4] SAFEHOUSE FIRST`}
                     </button>
                   );
                 })()}
@@ -1951,7 +2404,7 @@ export default function App() {
       {/* VIEWPORT 3: [F3] KAGE_NO_SHO (SPIRIT COMPENDIUM & TETHER SLOTS)    */}
       {/* ================================================================== */}
       {viewport === 'KAGE_NO_SHO' && (
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px' }}>
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
           <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.9rem' }}>KAGE-NO-SHO // THE BOOK OF SHADOWS (RULE OF TWO)</div>
@@ -2039,16 +2492,16 @@ export default function App() {
       )}
 
       {/* ================================================================== */}
-      {/* VIEWPORT 4: [F4] SAFEHOUSE_ALTAR (SYNTHESIS, RECOVERY & WARDING)   */}
+      {/* VIEWPORT 4: [F4] SAFEHOUSE / ALTAR (SYNTHESIS, REST & WARDING)     */}
       {/* ================================================================== */}
       {viewport === 'SAFEHOUSE_ALTAR' && (
-        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '10px', padding: '12px' }}>
+        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
           <section style={{ width: '62%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '8px', marginBottom: '10px' }}>
               <div>
-                <h2 style={{ margin: 0, color: theme.textBright, fontSize: '1rem', letterSpacing: '2px' }}>&gt; ALTAR OF ALCHEMICAL SYNTHESIS</h2>
+                <h2 style={{ margin: 0, color: theme.textBright, fontSize: '1rem', letterSpacing: '2px' }}>&gt; SAFEHOUSE ALTAR // ALCHEMICAL SYNTHESIS</h2>
                 <div style={{ fontSize: '0.74rem', color: '#a8ccaf', marginTop: '2px' }}>
-                  Transmute raw field salvage into refined Solomonic catalysts.
+                  Transmute raw field salvage into refined planetary Solomonic catalysts.
                   {state.tetheredYokai.includes('yokai_kameosa') && <span style={{ color: theme.accentAmber }}> [KAMEOSA ACTIVE: 0 Obol Cost, -2 Humanity per craft!]</span>}
                 </div>
               </div>
@@ -2104,50 +2557,53 @@ export default function App() {
 
           <section style={{ width: '38%', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'hidden' }}>
             <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 8px 0', color: theme.textBright, fontSize: '0.9rem' }}>&gt; SAFEHOUSE HEARTH // TETHER ALIGNMENT</h3>
+              <h3 style={{ margin: '0 0 8px 0', color: theme.textBright, fontSize: '0.9rem' }}>&gt; SAFEHOUSE HEARTH // TETHER RECOVERY</h3>
               <p style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5' }}>
-                Rest inside the brass-warded safehouse to restore +30 Humanity. Resting advances time (+4% Heat across active sectors).
+                Rest inside the brass-warded safehouse to restore +30 Humanity. Resting advances world time (+0.05% Global Entropy &amp; +4% Inquisition Heat in active sectors).
               </p>
               <button
                 onClick={() => {
                   ThaumaturgicAudio.sealSuccess();
                   dispatch({ type: 'MODIFY_HUMANITY', payload: 30 });
                   dispatch({ type: 'ADVANCE_TIME', payload: 4 });
-                  addToast(`Tether Restored (+30 Humanity). Time advanced.`, 'SEAL');
+                  addMicroEntropy(0.05);
+                  addToast(`Restored +30 Humanity (+0.05% Global Entropy).`, 'SEAL');
                 }}
                 disabled={state.humanity >= 100}
                 className="macro-chip"
                 style={{ width: '100%', padding: '10px', marginTop: '8px', fontWeight: 'bold' }}
               >
-                &gt; REST &amp; REALIGN TETHER (+30 HUMANITY)
+                &gt; REST AT SAFEHOUSE (+30 HUMANITY / +0.05% ENTROPY)
               </button>
             </div>
 
             <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.9rem' }}>&gt; REMOTE SECTOR WARDING // HEAT TRIAGE</h3>
+              <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.9rem' }}>&gt; INQUISITION COUNTER-INTELLIGENCE</h3>
               <p style={{ fontSize: '0.74rem', color: '#a8ccaf', marginBottom: '10px' }}>
-                Burn 20 Obols to jam Malleus Inquisition direction-finders in an unlocked sector (-30% Local Heat).
+                Burn 20 Obols to jam Ordo Malleus direction-finders and lift lockouts in an active sector (-35% Inquisition Heat).
               </p>
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorUnlocked(s) && !isSectorSecured(s.id)).map(sec => {
                   const heat = state.sectorEntropy[sec.id] || 0;
                   return (
-                    <div key={sec.id} style={{ padding: '8px 10px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={sec.id} style={{ padding: '8px 10px', backgroundColor: '#030504', border: `1px solid ${heat >= 100 ? theme.accentRed : theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <strong style={{ color: theme.textBright, fontSize: '0.76rem' }}>{sec.label}</strong>
-                        <div style={{ fontSize: '0.7rem', color: heat >= 75 ? theme.accentRed : theme.accentAmber }}>HEAT: {heat}%</div>
+                        <div style={{ fontSize: '0.7rem', color: heat >= 75 ? theme.accentRed : theme.accentAmber }}>
+                          INQUISITION HEAT: {heat}% {heat >= 100 ? '[LOCKED DOWN]' : ''}
+                        </div>
                       </div>
                       <button
                         onClick={() => {
                           ThaumaturgicAudio.scryPing();
                           dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -20 } });
-                          dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: sec.id, amount: -30 } });
-                          addToast(`Suppressed -30% Heat in ${sec.label}`, 'SEAL');
+                          dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: sec.id, amount: -35 } });
+                          addToast(`Suppressed -35% Heat in ${sec.label}`, 'SEAL');
                         }}
                         disabled={heat === 0 || (state.inventory.obols || 0) < 20}
                         className="macro-chip macro-chip-danger"
                       >
-                        WARD (-20 OBOLS)
+                        JAM MALLEUS (-20 OBOLS)
                       </button>
                     </div>
                   );
@@ -2159,17 +2615,17 @@ export default function App() {
       )}
 
       {/* ================================================================== */}
-      {/* VIEWPORT 5: [F5] THE 4 HORSEMEN (APOCALYPSE WAR ROOM)              */}
+      {/* VIEWPORT 5: [F5] THE 4 HORSEMEN (WITH VECTOR SIGILS)               */}
       {/* ================================================================== */}
       {viewport === 'HORSEMEN' && (
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px' }}>
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
           <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.accentRed}`, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ color: theme.accentRed, fontWeight: 'bold', fontSize: '0.95rem', letterSpacing: '2px' }}>
                 APOCALYPSE TELEMETRY // THE FOUR HORSEMEN OF THE ESCHATON
               </div>
               <div style={{ color: '#a8ccaf', fontSize: '0.76rem', marginTop: '4px' }}>
-                Each Horseman is tethered to reality by <strong>18 Goetian Lieutenants</strong>. Sealing a Lieutenant in the field permanently severs one anchor, raising your Grand Banishment Rite stabilization probability by <strong>+5%</strong> (from 5% Base up to 95%). Banish all 4 Riders to save the world.
+                Each Horseman is tethered to reality by <strong>18 Goetian Lieutenants</strong>. Sealing a high-ranking <strong>King, Prince, or Duke</strong> triggers a <em>Resonance Cascade</em> that severs 1–2 lesser Lieutenants automatically. Each severed anchor raises your Grand Banishment Rite probability by <strong>+5%</strong>.
               </div>
             </div>
             <div style={{ textAlign: 'right', minWidth: '190px' }}>
@@ -2207,11 +2663,18 @@ export default function App() {
                       <span>{info.sealName}</span>
                       <span>{isBanished ? '[BANISHED]' : `[${18 - sealedCount} ANCHORS ACTIVE]`}</span>
                     </div>
-                    <h2 style={{ margin: '4px 0', color: '#ffffff', letterSpacing: '3px', fontSize: '1.35rem' }}>{h}</h2>
-                    <div style={{ fontSize: '0.7rem', color: info.color, fontWeight: 'bold', marginBottom: '8px' }}>{info.riderTitle}</div>
+
+                    {/* Horseman Header + Custom Vector Sigil */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '8px 0' }}>
+                      <HorsemanSigilSvg horseman={h} color={info.color} size={56} />
+                      <div>
+                        <h2 style={{ margin: 0, color: '#ffffff', letterSpacing: '3px', fontSize: '1.3rem' }}>{h}</h2>
+                        <div style={{ fontSize: '0.68rem', color: info.color, fontWeight: 'bold', marginTop: '2px' }}>{info.riderTitle}</div>
+                      </div>
+                    </div>
+
                     <p style={{ fontSize: '0.72rem', color: '#a8ccaf', lineHeight: '1.45', margin: '0 0 10px 0' }}>{info.omenDesc}</p>
 
-                    {/* Anchor Severance Progress Bar */}
                     <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '8px', marginBottom: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '4px' }}>
                         <span style={{ color: '#a8ccaf' }}>ANCHORS SEVERED: <strong>{sealedCount}/18</strong></span>
@@ -2222,7 +2685,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Scrollable 18 Lieutenants Ledger */}
                     <div style={{ fontSize: '0.68rem', color: theme.textMuted, marginBottom: '4px', fontWeight: 'bold' }}>
                       COURT OF {h} (18 LIEUTENANTS):
                     </div>
@@ -2251,7 +2713,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Grand Rite Trigger Button */}
                   <div style={{ marginTop: '12px' }}>
                     {isBanished ? (
                       <div style={{ padding: '12px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold', fontSize: '0.78rem', letterSpacing: '2px' }}>
@@ -2280,11 +2741,10 @@ export default function App() {
       )}
 
       {/* ================================================================== */}
-      {/* VIEWPORT 6: [F6] AGENT_DOSSIER (FULL PORTRAIT, STATS & WIPE SAVE)  */}
+      {/* VIEWPORT 6: [F6] AGENT_DOSSIER (LOCKED PORTRAIT & 0.01% ENTROPY)   */}
       {/* ================================================================== */}
       {viewport === 'DOSSIER' && (
-        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '12px', padding: '12px' }}>
-          {/* LEFT PANE (38%): FULL-BODY OPERATIVE VISUAL (LOCKED TO DOSSIER) */}
+        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '12px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
           <section style={{ width: '38%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '8px', fontSize: '0.75rem' }}>
               <span style={{ color: theme.textBright, fontWeight: 'bold' }}>BIOMETRIC TETHER FEED</span>
@@ -2302,7 +2762,6 @@ export default function App() {
             </div>
           </section>
 
-          {/* RIGHT PANE (62%): SERVICE RECORD, STATS & SAVE MANAGEMENT */}
           <section style={{ width: '62%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflowY: 'auto' }}>
             <div>
               <div style={{ fontSize: '0.74rem', color: theme.accentAmber, letterSpacing: '2px' }}>NOCTURNAL SYNDICATE // OPERATIVE SERVICE RECORD</div>
@@ -2310,7 +2769,6 @@ export default function App() {
                 OPERATIVE {state.playerName.toUpperCase()} // {state.agencyName.toUpperCase()}
               </h1>
 
-              {/* Primary Playthrough Statistics Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
                 <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
                   <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>GOETIA BOUND IN VESSEL</div>
@@ -2331,8 +2789,8 @@ export default function App() {
                   <div style={{ fontSize: '1.6rem', color: theme.textBright, fontWeight: 'bold', marginTop: '4px' }}>{state.humanity}%</div>
                 </div>
                 <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>GLOBAL ENTROPY</div>
-                  <div style={{ fontSize: '1.6rem', color: theme.accentRed, fontWeight: 'bold', marginTop: '4px' }}>{state.globalEntropy}%</div>
+                  <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>GLOBAL ENTROPY (PRECISION)</div>
+                  <div style={{ fontSize: '1.6rem', color: theme.accentRed, fontWeight: 'bold', marginTop: '4px' }}>{totalGlobalEntropy.toFixed(2)}%</div>
                 </div>
                 <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
                   <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>OBOL TREASURY</div>
@@ -2340,7 +2798,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Sealed Goetia Trophy List */}
               <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', marginBottom: '20px' }}>
                 <div style={{ fontSize: '0.78rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '8px' }}>
                   SOLOMONIC BRASS VESSEL // BOUND ENTITIES ({state.sealedGoetia.length})
@@ -2362,32 +2819,38 @@ export default function App() {
               </div>
             </div>
 
-            {/* Danger Zone: Purge Save & Start Over */}
             <div style={{ borderTop: `1px dashed ${theme.accentRed}`, paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ color: theme.accentRed, fontWeight: 'bold', fontSize: '0.82rem' }}>EMERGENCY TETHER PURGE (DELETE LOCAL SAVE)</div>
-                <div style={{ color: '#a8ccaf', fontSize: '0.72rem' }}>Wipes all local browser storage and returns to the Operative Registration screen.</div>
+                <div style={{ color: theme.accentRed, fontWeight: 'bold', fontSize: '0.82rem' }}>SESSION MANAGEMENT &amp; TETHER PURGE</div>
+                <div style={{ color: '#a8ccaf', fontSize: '0.72rem' }}>Log out safely to the Start Screen, or permanently wipe all local save data.</div>
               </div>
-              <button
-                onClick={() => {
-                  if (window.confirm('TERMINATE SESSION & WIPE LOCAL SAVE DATA? This cannot be undone.')) {
-                    ThaumaturgicAudio.errorBuzz();
-                    localStorage.removeItem('thaumaturgic_os_contracts_v1');
-                    setContracts({});
-                    resetGame();
-                  }
-                }}
-                style={{ padding: '12px 20px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '1px' }}
-              >
-                &gt; WIPE SAVE &amp; START OVER
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={handleLogout} className="macro-chip macro-chip-amber" style={{ padding: '12px 16px', fontWeight: 'bold' }}>
+                  &gt; LOG OUT TO TITLE
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm('TERMINATE SESSION & WIPE LOCAL SAVE DATA? This cannot be undone.')) {
+                      ThaumaturgicAudio.errorBuzz();
+                      localStorage.removeItem('thaumaturgic_os_contracts_v1');
+                      localStorage.removeItem('thaumaturgic_os_micro_entropy_v1');
+                      setContracts({});
+                      setMicroEntropy(0);
+                      resetGame();
+                    }
+                  }}
+                  style={{ padding: '12px 18px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '1px' }}
+                >
+                  &gt; WIPE SAVE &amp; RESET
+                </button>
+              </div>
             </div>
           </section>
         </main>
       )}
 
       {/* ================================================================== */}
-      {/* SEALING & BANISHMENT MODALS + TOASTS                               */}
+      {/* SEALING & BANISHMENT MODALS + RESONANCE CASCADES + TOASTS          */}
       {/* ================================================================== */}
       {activeSealSuspectId && (() => {
         const suspect = allGoetia.find(g => g.id === activeSealSuspectId);
@@ -2399,9 +2862,8 @@ export default function App() {
             actualAnchorId={actualAnchorId}
             sealCost={suspect.sealCost || {}}
             onClose={() => setActiveSealSuspectId(null)}
-            onSuccessSeal={() => {
-              // Permanently secure current sector, award bounty, and unlock connected deeper sectors!
-              dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 40 } });
+            onSuccessSeal={(sealedId) => {
+              dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 45 } });
               dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -100 } });
               dispatch({ type: 'SET_FLAG', payload: { flagId: `sector_secured_${state.currentNode}`, value: true } });
 
@@ -2412,11 +2874,39 @@ export default function App() {
                 });
               }
 
+              // SOLOMONIC HIERARCHY RESONANCE CASCADE:
+              // Sealing a King, Prince, or Duke automatically collapses 1-2 lesser Lieutenants of the same Horseman!
+              let cascadeMsg = '';
+              if (['King', 'Prince', 'Duke'].includes(suspect.rank)) {
+                const vassals = allGoetia.filter(
+                  g => g.allegiance === suspect.allegiance &&
+                  g.id !== sealedId &&
+                  !state.sealedGoetia.includes(g.id) &&
+                  !['King', 'Prince'].includes(g.rank)
+                );
+                const cascadeTargets = vassals.slice(0, suspect.rank === 'King' ? 2 : 1);
+                if (cascadeTargets.length > 0) {
+                  cascadeTargets.forEach(v => sealGoetia(v.id));
+                  cascadeMsg = `<br/><span style="color:#ffb800;">⚡ SOLOMONIC RESONANCE CASCADE: Binding ${suspect.rank} ${suspect.name} collapsed the feudal tether of ${cascadeTargets.map(v => `#${v.manifestId} ${v.name} (${v.rank})`).join(' & ')} into the Brass Vessel!</span>`;
+                }
+              }
+
+              // Clear Codex filters & discovered logs for the secured sector so the badge resets to (0)
               setDeducedSigns([]);
+              if (currentContract) {
+                setContracts(prev => ({
+                  ...prev,
+                  [currentContract.sectorId]: {
+                    ...currentContract,
+                    discoveredLogs: []
+                  }
+                }));
+              }
+
               appendLog(
                 `<div style="border-left:3px solid #62f080;padding-left:10px;margin:6px 0;color:#62f080;">` +
                 `<strong>[✓ SECTOR PERMANENTLY SECURED: ${currentContract?.sectorLabel}]</strong><br/>` +
-                `Goetian Anchor severed! +40 Obols awarded. Adjacent ley-line sectors have been unlocked on your <strong>REGIONAL MAP</strong>!` +
+                `Goetian Anchor <strong>${suspect.name}</strong> severed! +45 Obols awarded. Adjacent ley-line sectors unlocked on your <strong>REGIONAL MAP</strong>.${cascadeMsg}` +
                 `</div>`,
                 'success'
               );
