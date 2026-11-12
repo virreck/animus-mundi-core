@@ -645,6 +645,20 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
 };
 
 // ============================================================================ //
+// 5.1 YOKAI INVOCATIONS
+// ============================================================================ //
+const YOKAI_INVOCATIONS: Record<string, { label: string; maxCharges: number; desc: string }> = {
+  yokai_kitsune: { label: 'FOXFIRE SHROUD', maxCharges: 2, desc: 'Vent -30% Local Sector Heat.' },
+  yokai_tengu: { label: 'GALE SWEEP', maxCharges: 2, desc: 'Spend 5 HUM to reveal all room nodes in sector.' },
+  yokai_baku: { label: 'DEVOUR NIGHTMARE', maxCharges: 2, desc: 'Convert -15% Local Heat into +20 Humanity.' },
+  yokai_zashiki: { label: 'FORTUNE BOON', maxCharges: 1, desc: 'Single-use: Gain +35 Obols & +1 Scrap Metal (Consumes Pact).' },
+  yokai_kameosa: { label: 'FERMENT MATTER', maxCharges: 3, desc: 'Spend 8 HUM to generate +1 Metal, +1 Earth, +1 Distillate.' },
+  yokai_kamaitachi: { label: 'WIND SICKLE', maxCharges: 2, desc: 'Breach selected adjacent room with 0% Heat & disarm Ambush.' },
+  yokai_amabie: { label: 'PROPHETIC WARD', maxCharges: 1, desc: 'Single-use: Spend 10 Obols to purge -10% Global Entropy.' },
+  yokai_noppera: { label: 'FACELESS DECOY', maxCharges: 2, desc: 'Disarm sector Ambush nodes & reduce Local Heat by -15%.' }
+};
+
+// ============================================================================ //
 // 6. MAIN 4-VIEWPORT OS COMPONENT
 // ============================================================================ //
 export default function App() {
@@ -657,6 +671,21 @@ export default function App() {
 
   // Procedural Sector Contracts Dictionary (Keyed by Sector ID)
   const [contracts, setContracts] = useState<Record<string, SectorContract>>({});
+
+  const [yokaiCharges, setYokaiCharges] = useState<Record<string, number>>({});
+
+  // Unbind a Yokai manually or when its charges hit 0
+  const handleUnbindYokai = (yokaiId: string, reason = 'Manually severed') => {
+    ThaumaturgicAudio.errorBuzz();
+    const updatedTether = state.tetheredYokai.filter(id => id !== yokaiId);
+    dispatch({
+      type: 'LOAD_GAME',
+      payload: { ...state, tetheredYokai: updatedTether, activeContracts: updatedTether }
+    });
+    const yName = allYokai.find(y => y.id === yokaiId)?.nameEn || yokaiId;
+    appendLog(`[*] TETHER SEVERED: <strong style="color:#ff2a55;">${yName}</strong> unbound (${reason}).`, 'warn');
+    addToast(`Unbound: ${yName}`, 'ALERT');
+  };
 
   // Codex Deduction State (Manual Phenomenon Toggles & Selected Suspect)
   const [deducedSigns, setDeducedSigns] = useState<string[]>([]);
@@ -909,33 +938,85 @@ export default function App() {
 
   // Active Yokai Field Invocation
   const handleInvokeYokaiPower = (yokaiId: string) => {
-    ThaumaturgicAudio.scryPing();
-    if (yokaiId === 'yokai_kitsune' || yokaiId === 'yokai_noppera') {
-      if ((state.inventory.obols || 0) < 10) {
-        addToast(`Requires 10 Obols as tribute.`, 'ALERT');
-        return;
-      }
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -10 } });
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -25 } });
-      appendLog(`[👹 YOKAI INVOCATION] Illusory shroud deployed (-10 Obols). Local Sector Heat reduced by -25%!`, 'success');
-      addToast(`Sector Heat -25%`, 'SEAL');
-    } else {
-      // Reveal all nodes on current sub-grid for 8 Humanity
+    const spec = YOKAI_INVOCATIONS[yokaiId] || { label: 'INVOKE', maxCharges: 1, desc: '' };
+    const currentCharges = yokaiCharges[yokaiId] ?? spec.maxCharges;
+    if (currentCharges <= 0) {
+      handleUnbindYokai(yokaiId, 'Contract charges exhausted');
+      return;
+    }
+
+    const yName = allYokai.find(y => y.id === yokaiId)?.nameEn || yokaiId;
+
+    // Execute Lore-Specific Active Ability
+    if (yokaiId === 'yokai_kitsune') {
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -30 } });
+      appendLog(`[👹 ${yName.toUpperCase()} // FOXFIRE SHROUD] Illusory flames masked your trail (-30% Local Heat).`, 'success');
+    } else if (yokaiId === 'yokai_tengu') {
       if (!currentContract) return;
-      if (state.humanity <= 10) {
-        addToast(`Requires 10 Humanity to invoke Astral Sight.`, 'ALERT');
+      if (state.humanity <= 5) { addToast('Requires 5 Humanity!', 'ALERT'); return; }
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -5 });
+      const revealedNodes = currentContract.subNodes.map(n => n.status === 'LOCKED' ? { ...n, status: 'PROBED' as const } : n);
+      setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, subNodes: revealedNodes } }));
+      appendLog(`[👹 ${yName.toUpperCase()} // GALE SWEEP] Mountain winds scoured the sector (-5 HUM). All room signatures revealed!`, 'success');
+    } else if (yokaiId === 'yokai_baku') {
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
+      dispatch({ type: 'MODIFY_HUMANITY', payload: 20 });
+      appendLog(`[👹 ${yName.toUpperCase()} // DEVOUR NIGHTMARE] Baku consumed local paranoia (-15% Heat, +20 Humanity).`, 'success');
+    } else if (yokaiId === 'yokai_zashiki') {
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 35 } });
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 1 } });
+      appendLog(`[👹 ${yName.toUpperCase()} // FORTUNE BOON] Bestowed +35 Obols and +1 Scrap Metal before departing!`, 'success');
+    } else if (yokaiId === 'yokai_kameosa') {
+      if (state.humanity <= 8) { addToast('Requires 8 Humanity!', 'ALERT'); return; }
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -8 });
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 1 } });
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'cursed_earth', amount: 1 } });
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'alchemical_distillate', amount: 1 } });
+      appendLog(`[👹 ${yName.toUpperCase()} // FERMENT MATTER] Turned your blood (-8 HUM) into +1 Metal, +1 Earth, and +1 Distillate!`, 'success');
+    } else if (yokaiId === 'yokai_kamaitachi') {
+      if (!currentContract || !selectedSubNode || !currentSubNode) return;
+      if (selectedSubNode.id === currentSubNode.id || !currentSubNode.connections.includes(selectedSubNode.id)) {
+        addToast('Select an adjacent room on the Sub-Grid first!', 'ALERT');
         return;
       }
-      dispatch({ type: 'MODIFY_HUMANITY', payload: -8 });
-      const revealedNodes = currentContract.subNodes.map(n =>
-        n.status === 'LOCKED' ? { ...n, status: 'PROBED' as const } : n
+      const updatedNodes = currentContract.subNodes.map(n =>
+        n.id === selectedSubNode.id
+          ? { ...n, status: 'BREACHED' as const, nodeType: n.nodeType === 'AMBUSH' ? ('SALVAGE' as const) : n.nodeType }
+          : n
       );
       setContracts(prev => ({
         ...prev,
-        [currentContract.sectorId]: { ...currentContract, subNodes: revealedNodes }
+        [currentContract.sectorId]: {
+          ...currentContract,
+          activeSubNodeId: selectedSubNode.id,
+          subNodes: updatedNodes
+        }
       }));
-      appendLog(`[👹 YOKAI INVOCATION] Astral Sight swept the entire sector (-8 Humanity). All room signatures revealed!`, 'success');
-      addToast(`All Sub-Grid Nodes Revealed!`, 'INTEL');
+      appendLog(`[👹 ${yName.toUpperCase()} // WIND SICKLE] Sliced silently into <strong>${selectedSubNode.label}</strong> (0% Heat, Ambush neutralized)!`, 'success');
+    } else if (yokaiId === 'yokai_amabie') {
+      if ((state.inventory.obols || 0) < 10) { addToast('Requires 10 Obols!', 'ALERT'); return; }
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -10 } });
+      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: -10 });
+      appendLog(`[👹 ${yName.toUpperCase()} // PROPHETIC WARD] Purged -10% Global Entropy (-10 Obols).`, 'success');
+    } else if (yokaiId === 'yokai_noppera') {
+      if (currentContract) {
+        const disarmNodes = currentContract.subNodes.map(n =>
+          n.nodeType === 'AMBUSH' ? { ...n, nodeType: 'SALVAGE' as const, status: 'PROBED' as const } : n
+        );
+        setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, subNodes: disarmNodes } }));
+      }
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
+      appendLog(`[👹 ${yName.toUpperCase()} // FACELESS DECOY] Disarmed sector Inquisition ambushes and dropped Heat by -15%.`, 'success');
+    }
+
+    ThaumaturgicAudio.scryPing();
+    const remaining = currentCharges - 1;
+    setYokaiCharges(prev => ({ ...prev, [yokaiId]: remaining }));
+
+    if (remaining <= 0) {
+      handleUnbindYokai(yokaiId, 'All charges expended');
+    } else {
+      addToast(`${yName}: ${remaining}/${spec.maxCharges} Charges Left`, 'SEAL');
     }
   };
 
@@ -1254,106 +1335,7 @@ export default function App() {
             [F4] SAFEHOUSE_ALTAR
           </button>
         </div>
-
-        {/* SOLOMONIC SEAL TELEMETRY BOX (GLITCHED UNSEALED vs. STAMPED SEALED) */}
-              {(() => {
-                const isTargetSealed = state.sealedGoetia.includes(selectedSuspect.id);
-                return (
-                  <div
-                    style={{
-                      position: 'relative',
-                      width: '150px',
-                      height: '150px',
-                      margin: '0 auto 14px auto',
-                      backgroundColor: '#030504',
-                      border: `1px solid ${isTargetSealed ? theme.accentRed : theme.borderTerminal}`,
-                      borderRadius: '4px',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      overflow: 'hidden',
-                      boxShadow: isTargetSealed
-                        ? 'inset 0 0 20px rgba(255, 42, 85, 0.2)'
-                        : 'inset 0 0 15px rgba(98, 240, 128, 0.08)'
-                    }}
-                  >
-                    {/* The Sigil Image */}
-                    <img
-                      src={`/seals/${selectedSuspect.id}.png`}
-                      alt={`${selectedSuspect.name} Seal`}
-                      style={{
-                        width: '120px',
-                        height: '120px',
-                        opacity: isTargetSealed ? 0.85 : 0.22,
-                        filter: isTargetSealed
-                          ? 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
-                          : undefined,
-                        animation: isTargetSealed ? 'none' : 'sigilGlitch 2.2s infinite steps(2)',
-                        pointerEvents: 'none'
-                      }}
-                    />
-
-                    {/* UNSEALED STATE: Scanline Noise & Encrypted Watermark */}
-                    {!isTargetSealed && (
-                      <>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            inset: 0,
-                            background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0px, rgba(0,0,0,0.55) 2px, transparent 2px, transparent 4px)',
-                            pointerEvents: 'none'
-                          }}
-                        />
-                        <div
-                          style={{
-                            position: 'absolute',
-                            backgroundColor: 'rgba(5, 7, 6, 0.88)',
-                            border: `1px dashed ${theme.borderTerminal}`,
-                            padding: '3px 8px',
-                            fontSize: '0.62rem',
-                            color: theme.accentAmber,
-                            letterSpacing: '1px',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          [ SIGIL_OBSCURED ]
-                        </div>
-                      </>
-                    )}
-
-                    {/* SEALED STATE: Red Cross-Out 'X' & Angled [SEALED] Stamp */}
-                    {isTargetSealed && (
-                      <>
-                        <svg
-                          viewBox="0 0 100 100"
-                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-                        >
-                          <line x1="12" y1="12" x2="88" y2="88" stroke={theme.accentRed} strokeWidth="3.5" strokeOpacity="0.85" />
-                          <line x1="88" y1="12" x2="12" y2="88" stroke={theme.accentRed} strokeWidth="3.5" strokeOpacity="0.85" />
-                        </svg>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            transform: 'rotate(-14deg)',
-                            border: `2px solid ${theme.accentRed}`,
-                            backgroundColor: 'rgba(15, 2, 2, 0.92)',
-                            color: theme.accentRed,
-                            padding: '3px 10px',
-                            fontSize: '0.85rem',
-                            fontWeight: 'bold',
-                            letterSpacing: '3px',
-                            boxShadow: '0 0 12px rgba(255, 42, 85, 0.6)',
-                            textShadow: '0 0 6px rgba(255, 42, 85, 0.8)'
-                          }}
-                        >
-                          [SEALED]
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
-
+        
         {/* Right Telemetry: 4 Horsemen Progress, Humanity, Obols */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {(['CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => {
@@ -1477,10 +1459,32 @@ export default function App() {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {state.tetheredYokai.map(yid => {
                       const y = allYokai.find(item => item.id === yid);
+                      const spec = YOKAI_INVOCATIONS[yid] || { label: 'INVOKE', maxCharges: 1, desc: '' };
+                      const charges = yokaiCharges[yid] ?? spec.maxCharges;
                       return (
-                        <div key={yid} style={{ flex: 1, padding: '6px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: theme.textBright, fontWeight: 'bold' }}>{y?.nameEn}</span>
-                          <button onClick={() => handleInvokeYokaiPower(yid)} className="macro-chip macro-chip-amber">INVOKE</button>
+                        <div key={yid} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <strong style={{ color: theme.textBright, fontSize: '0.72rem' }}>{y?.nameEn}</strong>
+                            <span style={{ color: theme.accentAmber, fontSize: '0.66rem' }}>[{charges}/{spec.maxCharges} USES]</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={() => handleInvokeYokaiPower(yid)}
+                              title={spec.desc}
+                              className="macro-chip macro-chip-amber"
+                              style={{ flex: 1, padding: '3px 6px', fontSize: '0.66rem', textAlign: 'center' }}
+                            >
+                              ⚡ {spec.label}
+                            </button>
+                            <button
+                              onClick={() => handleUnbindYokai(yid, 'Manually severed by operative')}
+                              title="Sever Pact & Unbind Spirit"
+                              className="macro-chip macro-chip-danger"
+                              style={{ padding: '3px 6px', fontSize: '0.66rem' }}
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -1685,6 +1689,104 @@ export default function App() {
               <div style={{ fontSize: '0.8rem', color: '#ffffff', fontWeight: 'bold', marginBottom: '12px' }}>
                 {selectedSuspect.rank} — "{selectedSuspect.title}"
               </div>
+              {/* SOLOMONIC SEAL TELEMETRY BOX (GLITCHED UNSEALED vs. STAMPED SEALED) */}
+              {(() => {
+                const isTargetSealed = state.sealedGoetia.includes(selectedSuspect.id);
+                return (
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '150px',
+                      height: '150px',
+                      margin: '0 auto 14px auto',
+                      backgroundColor: '#030504',
+                      border: `1px solid ${isTargetSealed ? theme.accentRed : theme.borderTerminal}`,
+                      borderRadius: '4px',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      overflow: 'hidden',
+                      boxShadow: isTargetSealed
+                        ? 'inset 0 0 20px rgba(255, 42, 85, 0.2)'
+                        : 'inset 0 0 15px rgba(98, 240, 128, 0.08)'
+                    }}
+                  >
+                    {/* The Sigil Image */}
+                    <img
+                      src={`/seals/${selectedSuspect.id}.png`}
+                      alt={`${selectedSuspect.name} Seal`}
+                      style={{
+                        width: '120px',
+                        height: '120px',
+                        opacity: isTargetSealed ? 0.85 : 0.22,
+                        filter: isTargetSealed
+                          ? 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
+                          : undefined,
+                        animation: isTargetSealed ? 'none' : 'sigilGlitch 2.2s infinite steps(2)',
+                        pointerEvents: 'none'
+                      }}
+                    />
+
+                    {/* UNSEALED STATE: Scanline Noise & Encrypted Watermark */}
+                    {!isTargetSealed && (
+                      <>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0px, rgba(0,0,0,0.55) 2px, transparent 2px, transparent 4px)',
+                            pointerEvents: 'none'
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            backgroundColor: 'rgba(5, 7, 6, 0.88)',
+                            border: `1px dashed ${theme.borderTerminal}`,
+                            padding: '3px 8px',
+                            fontSize: '0.62rem',
+                            color: theme.accentAmber,
+                            letterSpacing: '1px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          [ SIGIL_OBSCURED ]
+                        </div>
+                      </>
+                    )}
+
+                    {/* SEALED STATE: Red Cross-Out 'X' & Angled [SEALED] Stamp */}
+                    {isTargetSealed && (
+                      <>
+                        <svg
+                          viewBox="0 0 100 100"
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                        >
+                          <line x1="12" y1="12" x2="88" y2="88" stroke={theme.accentRed} strokeWidth="3.5" strokeOpacity="0.85" />
+                          <line x1="88" y1="12" x2="12" y2="88" stroke={theme.accentRed} strokeWidth="3.5" strokeOpacity="0.85" />
+                        </svg>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            transform: 'rotate(-14deg)',
+                            border: `2px solid ${theme.accentRed}`,
+                            backgroundColor: 'rgba(15, 2, 2, 0.92)',
+                            color: theme.accentRed,
+                            padding: '3px 10px',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold',
+                            letterSpacing: '3px',
+                            boxShadow: '0 0 12px rgba(255, 42, 85, 0.6)',
+                            textShadow: '0 0 6px rgba(255, 42, 85, 0.8)'
+                          }}
+                        >
+                          [SEALED]
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
               <p style={{ fontSize: '0.8rem', color: '#a8ccaf', lineHeight: '1.6', padding: '10px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}` }}>
                 {selectedSuspect.description}
               </p>
@@ -1807,6 +1909,9 @@ export default function App() {
               const canAfford = (!cost.obols || (state.inventory.obols || 0) >= cost.obols) && (!cost.humanity || state.humanity > cost.humanity) && (!cost.ink || (state.ink || 0) >= cost.ink);
               const costStr = [cost.obols ? `${cost.obols} Obols` : '', cost.humanity ? `${cost.humanity} Humanity` : '', cost.ink ? `${cost.ink} Ink` : ''].filter(Boolean).join(' + ');
 
+              const spec = YOKAI_INVOCATIONS[yokai.id] || { label: 'INVOKE', maxCharges: 1, desc: '' };
+              const chargesLeft = yokaiCharges[yokai.id] ?? spec.maxCharges;
+
               return (
                 <div key={yokai.id} style={{ backgroundColor: theme.bgPanel, border: `1px solid ${isBound ? theme.textBright : theme.borderTerminal}`, padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
@@ -1815,27 +1920,40 @@ export default function App() {
                       {isBound && <span style={{ fontSize: '0.68rem', backgroundColor: theme.textBright, color: 'black', padding: '1px 6px', fontWeight: 'bold' }}>BOUND</span>}
                     </div>
                     <h3 style={{ margin: '0 0 8px 0', color: theme.textBright, fontSize: '0.95rem' }}>{yokai.nameEn}</h3>
-                    <p style={{ fontSize: '0.76rem', color: '#ffffff', lineHeight: '1.5' }}>{yokai.gameUtility}</p>
+                    <p style={{ fontSize: '0.74rem', color: '#ffffff', lineHeight: '1.45', marginBottom: '6px' }}>{yokai.gameUtility}</p>
+                    <div style={{ padding: '6px', backgroundColor: '#030504', border: `1px dashed ${theme.borderTerminal}`, fontSize: '0.7rem', color: theme.accentAmber }}>
+                      <strong>ACTIVE ({spec.maxCharges} CHARGES):</strong> {spec.label} — {spec.desc}
+                    </div>
                     <p style={{ fontSize: '0.7rem', color: theme.textMuted, fontStyle: 'italic', marginTop: '8px' }}>"{yokai.costDescription}"</p>
                   </div>
 
-                  <div style={{ marginTop: '12px', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '10px' }}>
-                    <div style={{ fontSize: '0.74rem', color: theme.accentRed, fontWeight: 'bold', marginBottom: '8px' }}>
-                      PACT COST: {costStr}
+                  <div style={{ marginTop: '10px', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '10px' }}>
+                    <div style={{ fontSize: '0.72rem', color: isBound ? theme.textBright : theme.accentRed, fontWeight: 'bold', marginBottom: '8px' }}>
+                      {isBound ? `CHARGES REMAINING: ${chargesLeft} / ${spec.maxCharges}` : `PACT COST: ${costStr}`}
                     </div>
-                    <button
-                      onClick={() => {
-                        if (isBound) return;
-                        ThaumaturgicAudio.sealSuccess();
-                        draftContract(yokai.id, yokai.draftCost);
-                        addToast(`Bound ${yokai.nameEn} to Tether!`, 'SEAL');
-                      }}
-                      disabled={isBound || !canAfford}
-                      className="macro-chip"
-                      style={{ width: '100%', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}
-                    >
-                      {isBound ? 'ACTIVE ON TETHER' : canAfford ? '> FORGE PACT & BIND' : '> INSUFFICIENT TRIBUTE'}
-                    </button>
+                    {isBound ? (
+                      <button
+                        onClick={() => handleUnbindYokai(yokai.id, 'Manually severed in Kage-no-Sho')}
+                        className="macro-chip macro-chip-danger"
+                        style={{ width: '100%', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}
+                      >
+                        &gt; SEVER PACT (UNBIND)
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          ThaumaturgicAudio.sealSuccess();
+                          draftContract(yokai.id, yokai.draftCost);
+                          setYokaiCharges(prev => ({ ...prev, [yokai.id]: spec.maxCharges }));
+                          addToast(`Bound ${yokai.nameEn} (${spec.maxCharges} Charges)!`, 'SEAL');
+                        }}
+                        disabled={!canAfford}
+                        className="macro-chip"
+                        style={{ width: '100%', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}
+                      >
+                        {canAfford ? '> FORGE PACT & BIND' : '> INSUFFICIENT TRIBUTE'}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
