@@ -279,14 +279,26 @@ export const ALTAR_RECIPES: AltarRecipe[] = [
 const ROOM_NAMES_BY_SECTOR: Record<string, string[]> = {
   caterham_churchyard: ['WEST LICHGATE', 'WEATHERED TOMBSTONES', 'BELLFRY CRYPT', 'OSSUARY VAULT', 'SEXTON SHED', 'SUNKEN ALTAR'],
   caterham_asylum: ['RIOT PERIMETER', 'ADMIN RECORDS', 'HYDROTHERAPY WARD', 'PADDED CELLS', 'MORGUE CHUTE', 'INCINERATOR ANCHOR'],
+  chaldon_quarry: ['BLASTING PIT', 'CHALK GALLERIES', 'FOREMAN SHACK', 'FLOODED SHAFT', 'TIMBER WINCH', 'SUBTERRANEAN FAULT'],
+  croydon_relay: ['MICROWAVE TOWER', 'SERVER COOLING BAY', 'FIBER JUNCTION', 'BACKUP GENERATOR', 'SIGNAL BUNKER', 'DEAD-AIR CORE'],
   malleus_precinct: ['CHECKPOINT ALPHA', 'EVIDENCE LOCKER', 'INTERROGATION CELL', 'HOUND KENNELS', 'ARMORY VAULT', 'DETENTION CORE'],
-  thames_nexus: ['FLOODED TUNNEL', 'SLUICE GATE 04', 'SUB-STATION RELAY', 'DRIFTWOOD SHRINE', 'TURBINE HALL', 'TIDAL VORTEX']
+  brixton_morgue: ['AUTOPSY SUITE B', 'COLD LOCKERS', 'CREMATORIUM FLUE', 'TOXICOLOGY LAB', 'DRAINAGE SLUICE', 'EMBALMING SANCTUM'],
+  waddon_marsh: ['STAGNANT WEIR', 'GASWORKS RUINS', 'SILT PUMPING HOUSE', 'BOG BOARDWALK', 'RUSTED GASHOLDER', 'MIASMA SINKHOLE'],
+  thames_nexus: ['FLOODED TUNNEL', 'SLUICE GATE 04', 'SUB-STATION RELAY', 'DRIFTWOOD SHRINE', 'TURBINE HALL', 'TIDAL VORTEX'],
+  blackfriars_vault: ['MITHRAEUM RUINS', 'BULLION CAGE', 'LEDGER ARCHIVE', 'PNEUMATIC TUBE HUB', 'FLOODWALL BULKHEAD', 'USURY ALTAR'],
+  highgate_catacombs: ['EGYPTIAN AVENUE', 'CIRCLE OF LEBANON', 'DISSENTERS CHAPEL', 'COLUMBARIUM WALL', 'IVY MAUSOLEUM', 'NECROPOLIS HEART'],
+  woolwich_arsenal: ['FOUNDRY FLOOR', 'SHELL MAGAZINE', 'PROVING GROUNDS', 'BLAST FURNACE 02', 'GUNCOTTON STORE', 'ORDNANCE BREACH'],
+  greenwich_observatory: ['MERIDIAN COURTYARD', 'TRANSIT ROOM', 'OCTAGON CHAMBER', 'TELESCOPE DOME', 'CHRONOMETER VAULT', 'ASTRAL ZENITH'],
+  whitechapel_abattoir: ['CATTLE CHUTE', 'MEATHOOK GALLERY', 'RENDERING VATS', 'BONE GRINDER', 'SALTING CELLAR', 'CRIMSON CONDUIT'],
+  lambeth_sanctum: ['Lollard TOWER', 'CRYPT ARCHIVES', 'CLOISTER GARTH', 'BELLFOUNDERS PIT', 'APOTHECARY CELL', 'PROFANED NAVE'],
+  battersea_forge: ['COAL WHARF', 'TURBINE HALL A', 'CONTROL GALLERY', 'BOILER HOUSE', 'SWITCHGEAR ROOM', 'ASHEN REACTOR'],
+  st_pauls_whisper: ['DEAN STAIRWELL', 'WHISPERING GALLERY', 'GEOMETRIC DOME', 'CRYPT OF ST FAITH', 'BELL CRADLE', 'OMEGA THRONE']
 };
 
-export function generateSectorContract(sectorId: string, sectorLabel: string, sealedGoetia: string[]): SectorContract {
-  const unsealed = allGoetia.filter(g => !sealedGoetia.includes(g.id));
-  const pool = unsealed.length > 0 ? unsealed : allGoetia;
-  // Deterministic-ish or random pick for this sector
+export function generateSectorContract(sectorId: string, sectorLabel: string, sealedGoetia: string[], usedGoetiaIds: string[] = []): SectorContract {
+  const available = allGoetia.filter(g => !sealedGoetia.includes(g.id) && !usedGoetiaIds.includes(g.id));
+  const fallbackPool = allGoetia.filter(g => !sealedGoetia.includes(g.id));
+  const pool = available.length > 0 ? available : fallbackPool.length > 0 ? fallbackPool : allGoetia;
   const target = pool[Math.floor(Math.random() * pool.length)];
 
   const labels = ROOM_NAMES_BY_SECTOR[sectorId] || ['PERIMETER', 'OUTER HALL', 'STORAGE BAY', 'SHRINE ALCOVE', 'SECURITY HUB', 'INNER SANCTUM'];
@@ -303,12 +315,9 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
     ? target.requiredIntel
     : ['hoarse_voice', 'weapon_decay', 'corpse_theft'];
 
-  // Pick a random Yokai for the Shrine node
   const randomYokai = allYokai[Math.floor(Math.random() * allYokai.length)];
   const rawMaterials: ('scrap_metal' | 'cursed_earth' | 'alchemical_distillate')[] = ['scrap_metal', 'cursed_earth', 'alchemical_distillate'];
 
-  // Shuffle middle 4 indices (1, 2, 3, 4) for 2 Anomalies, 1 Shrine, 1 Ambush/Salvage
-  // Node 0 is ENTRY (also holds Sign #1 on extraction), Node 5 is ANCHOR (holds Sign #3)
   const getReport = (tag: string) => {
     const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
     if (!def) return `FORENSIC LOG: Anomalous resonance signature [${tag}] detected in the immediate vicinity.`;
@@ -388,7 +397,7 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
       status: 'LOCKED',
       nodeType: 'ANCHOR',
       signTag: requiredTags[2],
-      forensicText: `CONDUITEPICENTER: The conceptual tear is wide open here. ${getReport(requiredTags[2])}`,
+      forensicText: `CONDUIT EPICENTER: The conceptual tear is wide open here. ${getReport(requiredTags[2])}`,
       salvageDrop: { itemId: 'cursed_earth', amount: 2, obols: 25 }
     }
   ];
