@@ -436,7 +436,20 @@ const StartScreen = ({ onStart, onLoad, onOpenManual }: { onStart: (name: string
       <div style={{ width: '560px', border: `1px solid ${theme.textBright}`, padding: '32px', backgroundColor: theme.bgPanel, boxShadow: `0 0 30px rgba(98, 240, 128, 0.12)` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
           <span style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.09</span>
-          <button onClick={onOpenManual} className="macro-chip macro-chip-amber">[? FIELD MANUAL &amp; LORE]</button>
+          <button
+            onClick={onOpenManual}
+            style={{
+              backgroundColor: 'rgba(255, 184, 0, 0.09)',
+              border: '1px solid rgba(255, 184, 0, 0.45)',
+              color: theme.accentAmber,
+              padding: '4px 10px',
+              fontFamily: theme.fontMono,
+              fontSize: '0.72rem',
+              cursor: 'pointer'
+            }}
+          >
+            [? FIELD MANUAL &amp; LORE]
+          </button>
         </div>
         <h1 style={{ margin: '0 0 10px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '10px', letterSpacing: '3px', color: theme.textBright, fontSize: '1.4rem' }}>
           ANIMUS MUNDI: SEALS OF THE 4
@@ -1990,11 +2003,6 @@ export default function App() {
             style={{ padding: '4px 7px' }}
           >
             TXT:{fontScale}
-          </button>
-
-          {/* Interactive Manual Button */}
-          <button onClick={() => setShowManual(true)} className="macro-chip macro-chip-amber" style={{ padding: '4px 8px' }}>
-            ? MANUAL
           </button>
 
           <button onClick={() => { ThaumaturgicAudio.enabled = !audioEnabled; setAudioEnabled(!audioEnabled); }} style={{ padding: '4px 7px', backgroundColor: 'transparent', border: `1px solid ${theme.borderTerminal}`, color: theme.textTerminal, cursor: 'pointer' }}>
