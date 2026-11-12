@@ -360,9 +360,9 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
 };
 
 // ============================================================================ //
-// 5. START SCREEN WITH OPERATIVE PORTRAIT SELECTION & SAVE WIPE
+// 5. START SCREEN WITH OPERATIVE PORTRAIT SELECTION, SAVE WIPE & TITLE ART
 // ============================================================================ //
-const StartScreen = ({ onStart, onLoad, onOpenManual }: { onStart: (name: string, portrait: string, agency: string) => void; onLoad: () => void; onOpenManual: () => void }) => {
+const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: string, agency: string) => void; onLoad: () => void; onOpenManual: () => void }) => {
   const [name, setName] = useState('');
   const [agency, setAgency] = useState('');
   const [portrait, setPortrait] = useState('/portraits/thaumaturge_m1.png');
@@ -393,7 +393,7 @@ const StartScreen = ({ onStart, onLoad, onOpenManual }: { onStart: (name: string
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100vw', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono, margin: 0, padding: 0, overflow: 'hidden' }}>
       {showConfirm && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <div style={{ display: 'flex', width: '820px', backgroundColor: theme.bgPanel, border: `2px solid ${theme.textBright}`, boxShadow: `0 0 40px rgba(98, 240, 128, 0.15)` }}>
@@ -433,86 +433,102 @@ const StartScreen = ({ onStart, onLoad, onOpenManual }: { onStart: (name: string
         </div>
       )}
 
-      <div style={{ width: '560px', border: `1px solid ${theme.textBright}`, padding: '32px', backgroundColor: theme.bgPanel, boxShadow: `0 0 30px rgba(98, 240, 128, 0.12)` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-          <span style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.09</span>
-          <button
-            onClick={onOpenManual}
-            style={{
-              backgroundColor: 'rgba(255, 184, 0, 0.09)',
-              border: '1px solid rgba(255, 184, 0, 0.45)',
-              color: theme.accentAmber,
-              padding: '4px 10px',
-              fontFamily: theme.fontMono,
-              fontSize: '0.72rem',
-              cursor: 'pointer'
+      {/* Unified boundary container without margin or overflow issues */}
+      <div style={{ width: '640px', maxHeight: '96vh', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgPanel, boxShadow: `0 0 30px rgba(98, 240, 128, 0.12)`, overflow: 'hidden', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        
+        {/* Responsive, Uncropped Title Banner (image_30.png) */}
+        <div style={{ width: '100%', height: '350px', position: 'relative', borderBottom: `1px solid ${theme.borderTerminal}`, overflow: 'hidden', backgroundColor: 'black', flexShrink: 0 }}>
+          <img 
+            src="/title_art.jpg" 
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src.endsWith('/title_art.jpg')) {
+                target.src = '/title_art.png';
+              } else if (target.src.endsWith('/title_art.png')) {
+                target.src = '/branding/animus_mundi_start_banner.png';
+              }
             }}
-          >
-            [? FIELD MANUAL &amp; LORE]
-          </button>
+            alt="Animus Mundi: Seals of the 4" 
+            style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain', backgroundColor: '#020403' }}
+          />
+          {/* Transition overlay */}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(9,13,10,1) 0%, rgba(9,13,10,0) 25%, rgba(0,0,0,0) 100%)', pointerEvents: 'none' }} />
         </div>
-        <h1 style={{ margin: '0 0 10px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '10px', letterSpacing: '3px', color: theme.textBright, fontSize: '1.4rem' }}>
-          ANIMUS MUNDI: SEALS OF THE 4
-        </h1>
-        <p style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5', marginBottom: '16px' }}>
-          The Four Horsemen are bleeding into London through the 72 Spirits of Solomon. Infiltrate fractured sectors via terminal CLI, dodge Malleus Inquisition strike teams, deduce each demon's True Name, and bind them into the Brass Vessel.
-        </p>
 
-        {savedOperative && (
-          <div style={{ marginBottom: '18px', padding: '12px', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgDark, textAlign: 'center' }}>
-            <div style={{ color: theme.textMuted, fontSize: '0.72rem', marginBottom: '8px' }}>EXISTING OPERATIVE TETHER FOUND:</div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => { ThaumaturgicAudio.scryPing(); onLoad(); }} style={{ flex: 2, padding: '11px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '1px' }}>
-                &gt; RESUME: OP_{savedOperative.toUpperCase()}
-              </button>
-              <button onClick={handleWipeSave} style={{ flex: 1, padding: '11px', backgroundColor: '#2a0808', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.72rem' }}>
-                WIPE SAVE
-              </button>
+        <div style={{ padding: '16px 28px 24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.09</span>
+
+          </div>
+          <h2 style={{ margin: '0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '6px', letterSpacing: '3px', color: theme.textBright, fontSize: '1.15rem' }}>
+            INITIATING DATA-TETHER
+          </h2>
+          <p style={{ fontSize: '0.74rem', color: '#a8ccaf', lineHeight: '1.4', margin: '0' }}>
+            The Four Horsemen are bleeding into London through the 72 Spirits of Solomon. Infiltrate fractured sectors via terminal CLI, dodge Malleus Inquisition strike teams, deduce each demon's True Name, and bind them into the Brass Vessel.
+          </p>
+
+          {savedOperative && (
+            <div style={{ padding: '10px', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgDark, textAlign: 'center' }}>
+              <div style={{ color: theme.textMuted, fontSize: '0.68rem', marginBottom: '6px' }}>EXISTING OPERATIVE TETHER FOUND:</div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => { ThaumaturgicAudio.scryPing(); onLoad(); }} style={{ flex: 2, padding: '9px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '1px' }}>
+                  &gt; RESUME: OP_{savedOperative.toUpperCase()}
+                </button>
+                <button onClick={handleWipeSave} style={{ flex: 1, padding: '9px', backgroundColor: '#2a0808', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.72rem' }}>
+                  WIPE
+                </button>
+              </div>
             </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.74rem', color: theme.textBright }}>&gt; INPUT OPERATIVE CALLSIGN:</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VERGIL" style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none' }} />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.74rem', color: theme.textBright }}>&gt; INPUT AFFILIATED SYNDICATE:</label>
+              <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. DARKWIRE" style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none' }} />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.74rem', color: theme.textBright }}>&gt; SELECT OPERATIVE DOSSIER PORTRAIT:</label>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                {[
+                  { id: 'thaumaturge_m1', src: '/portraits/thaumaturge_m1.png' },
+                  { id: 'thaumaturge_m2', src: '/portraits/thaumaturge_m2.png' },
+                  { id: 'thaumaturge_f1', src: '/portraits/thaumaturge_f1.png' },
+                  { id: 'thaumaturge_f2', src: '/portraits/thaumaturge_f2.png' }
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => { ThaumaturgicAudio.keyClick(); setPortrait(p.src); }}
+                    style={{
+                      padding: '3px', cursor: 'pointer',
+                      backgroundColor: portrait === p.src ? theme.textTerminal : 'transparent',
+                      border: `2px solid ${portrait === p.src ? theme.textBright : theme.borderTerminal}`,
+                      borderRadius: '50%', transition: 'all 0.15s'
+                    }}
+                  >
+                    <img
+                      src={p.src}
+                      alt="Operative"
+                      style={{
+                        width: '56px', height: '56px', objectFit: 'cover', borderRadius: '50%',
+                        opacity: portrait === p.src ? 1 : 0.45,
+                        filter: portrait === p.src ? 'none' : 'grayscale(100%) sepia(20%) hue-rotate(80deg)'
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={handleInitiateClick} style={{ width: '100%', padding: '11px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '2px', marginTop: '4px' }}>
+              INITIALIZE TETHER PROTOCOL //
+            </button>
           </div>
-        )}
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', color: theme.textBright }}>&gt; INPUT OPERATIVE CALLSIGN:</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VERGIL" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '12px', outline: 'none' }} />
-
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', color: theme.textBright }}>&gt; INPUT AFFILIATED SYNDICATE:</label>
-          <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. DARKWIRE" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '14px', outline: 'none' }} />
-
-          <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.78rem', color: theme.textBright }}>&gt; SELECT OPERATIVE DOSSIER PORTRAIT:</label>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
-            {[
-              { id: 'thaumaturge_m1', src: '/portraits/thaumaturge_m1.png' },
-              { id: 'thaumaturge_m2', src: '/portraits/thaumaturge_m2.png' },
-              { id: 'thaumaturge_f1', src: '/portraits/thaumaturge_f1.png' },
-              { id: 'thaumaturge_f2', src: '/portraits/thaumaturge_f2.png' }
-            ].map(p => (
-              <button
-                key={p.id}
-                onClick={() => { ThaumaturgicAudio.keyClick(); setPortrait(p.src); }}
-                style={{
-                  padding: '4px', cursor: 'pointer',
-                  backgroundColor: portrait === p.src ? theme.textTerminal : 'transparent',
-                  border: `2px solid ${portrait === p.src ? theme.textBright : theme.borderTerminal}`,
-                  borderRadius: '50%', transition: 'all 0.2s'
-                }}
-              >
-                <img
-                  src={p.src}
-                  alt="Operative"
-                  style={{
-                    width: '80px', height: '80px', objectFit: 'cover', borderRadius: '50%',
-                    opacity: portrait === p.src ? 1 : 0.45,
-                    filter: portrait === p.src ? 'none' : 'grayscale(100%) sepia(20%) hue-rotate(80deg)'
-                  }}
-                />
-              </button>
-            ))}
-          </div>
-
-          <button onClick={handleInitiateClick} style={{ width: '100%', padding: '14px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '2px' }}>
-            INITIALIZE TETHER PROTOCOL //
-          </button>
         </div>
       </div>
     </div>
