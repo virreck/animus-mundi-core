@@ -1,291 +1,182 @@
 // src/App.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useEngine } from './ui/hooks/useEngine';
-import { caterhamChurchyard } from './content/narrative/caterham_churchyard';
-import { caterham_asylum_gates, asylum_records_room, asylum_basement_rupture } from './content/narrative/caterham_asylum';
-import { safehouse } from './content/narrative/safehouse';
 import { allGoetia } from './content/goetia';
 import { allYokai } from './content/yokai';
 import type { GameAction } from './engine/reducer';
 import type { GameState } from './engine/state';
-import NarrativeForge from './tools/NarrativeForge';
+import {
+  PHENOMENON_CATALOG,
+  ALTAR_RECIPES,
+  generateSectorContract,
+  type SectorContract,
+  type SubGridNode
+} from './engine/sectorGenerator';
 
 // ============================================================================ //
-// 1. TYPES & CONSTANTS
+// 1. TYPES, THEME & MACRO TOPOLOGY CONSTANTS
 // ============================================================================ //
-
-interface NarrativeChoice {
-  id: string;
-  label: string;
-  condition?: (state: GameState) => boolean;
-  actions: GameAction[];
+interface TerminalEntry {
+  id: number;
+  html: string;
+  type: 'normal' | 'info' | 'system' | 'success' | 'warn' | 'error' | 'command';
 }
 
+type ViewportMode = 'FIELD_OPS' | 'CODEX' | 'KAGE_NO_SHO' | 'SAFEHOUSE_ALTAR';
+
 const theme = {
-  bgDark: '#020202',          
-  bgPanel: '#080a08',         
-  borderTerminal: '#1f3d26',  
-  textTerminal: '#4a7c59',    
-  textBright: '#62f080',      
-  textMuted: '#2a5233',       
-  accentRed: '#a82c2c',
-  accentGreen: '#4a7c59',     
-  fontMono: '"Courier New", Courier, monospace', 
+  bgDark: '#050706',
+  bgPanel: '#090d0a',
+  borderTerminal: '#1f3d26',
+  textTerminal: '#4a7c59',
+  textBright: '#62f080',
+  textMuted: '#2a5233',
+  accentAmber: '#ffb800',
+  accentRed: '#ff2a55',
+  accentCyan: '#00f3ff',
+  fontMono: '"JetBrains Mono", "Courier New", Courier, monospace',
 };
 
-const MAP_NODES = [
-  { id: 'caterham_churchyard', label: 'ST. LAWRENCE CHURCHYARD', x: 50, y: 80, connections: ['safehouse', 'caterham_asylum'] },
-  { id: 'safehouse', label: 'OPERATIVE SAFEHOUSE', x: 50, y: 50, connections: ['caterham_churchyard', 'malleus_precinct', 'thames_nexus'] },
-  { id: 'caterham_asylum', label: 'ABANDONED ASYLUM', x: 80, y: 65, connections: ['caterham_churchyard', 'malleus_precinct'] },
-  { id: 'malleus_precinct', label: 'MALLEUS PRECINCT', x: 75, y: 25, connections: ['safehouse', 'caterham_asylum'] },
-  { id: 'thames_nexus', label: 'LEY-LINE NEXUS', x: 20, y: 35, connections: ['safehouse'] }
+const MACRO_SECTORS = [
+  { id: 'caterham_churchyard', label: 'ST. LAWRENCE CRYPT', short: 'CRYPT-01', x: 0.24, y: 0.72, connections: ['safehouse', 'caterham_asylum'] },
+  { id: 'safehouse', label: 'SYNDICATE SAFEHOUSE', short: 'SAFEHOUSE', x: 0.50, y: 0.50, connections: ['caterham_churchyard', 'caterham_asylum', 'malleus_precinct', 'thames_nexus'] },
+  { id: 'caterham_asylum', label: 'CATERHAM ASYLUM', short: 'ASYLUM-GW', x: 0.78, y: 0.70, connections: ['caterham_churchyard', 'safehouse', 'malleus_precinct'] },
+  { id: 'malleus_precinct', label: 'MALLEUS PRECINCT', short: 'PRECINCT', x: 0.76, y: 0.25, connections: ['safehouse', 'caterham_asylum'] },
+  { id: 'thames_nexus', label: 'THAMES LEY-NEXUS', short: 'LEY-NEXUS', x: 0.22, y: 0.26, connections: ['safehouse'] }
 ];
 
 // ============================================================================ //
-// 2. PROCEDURAL SEAL GENERATOR
+// 2. PROCEDURAL WEB AUDIO API SYNTHESIZER
 // ============================================================================ //
+const ThaumaturgicAudio = {
+  ctx: null as AudioContext | null,
+  enabled: true,
+  init() {
+    if (!this.ctx && typeof window !== 'undefined') {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (AudioCtx) this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  },
+  playTone(freq: number, type: OscillatorType = 'sine', duration = 0.08, vol = 0.06, slideTo: number | null = null) {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+      gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch { /* ignore */ }
+  },
+  keyClick() { this.playTone(820 + Math.random() * 240, 'triangle', 0.025, 0.025); },
+  scryPing() {
+    this.playTone(1120, 'sine', 0.32, 0.08, 560);
+    setTimeout(() => this.playTone(1490, 'sine', 0.22, 0.05), 110);
+  },
+  senseSweep() {
+    [330, 440, 554, 659].forEach((f, i) => setTimeout(() => this.playTone(f, 'sawtooth', 0.07, 0.04), i * 50));
+  },
+  sealSuccess() {
+    [440, 554.37, 659.25, 880].forEach((f, i) => setTimeout(() => this.playTone(f, 'triangle', 0.22, 0.09), i * 65));
+  },
+  errorBuzz() { this.playTone(135, 'sawtooth', 0.24, 0.09, 80); }
+};
 
+// ============================================================================ //
+// 3. PROCEDURAL SEAL GEOMETRY GENERATOR
+// ============================================================================ //
 function generateSealMatrix() {
   const geometries = [
     { n: 5, s: 2, name: "PENTAGRAM" }, { n: 7, s: 2, name: "HEPTAGRAM_OBTUSE" },
     { n: 7, s: 3, name: "HEPTAGRAM_ACUTE" }, { n: 8, s: 3, name: "OCTAGRAM" },
     { n: 9, s: 2, name: "ENNEAGRAM_OBTUSE" }, { n: 9, s: 4, name: "ENNEAGRAM_ACUTE" }
   ];
-  
   const config = geometries[Math.floor(Math.random() * geometries.length)];
-  const isBound = Math.random() > 0.5; 
-  const rotationOffset = Math.random() * Math.PI * 2; 
-  
-  const nodes = [];
-  const centerX = 50; const centerY = 50; const radius = 42; 
-  
+  const isBound = Math.random() > 0.5;
+  const rotationOffset = Math.random() * Math.PI * 2;
+  const nodes: { id: number; x: number; y: number }[] = [];
+  const centerX = 50; const centerY = 50; const radius = 42;
+
   for (let i = 0; i < config.n; i++) {
     const angle = rotationOffset + (i * 2 * Math.PI) / config.n;
     nodes.push({ id: i, x: centerX + radius * Math.sin(angle), y: centerY - radius * Math.cos(angle) });
   }
-  
-  const sequence = [];
+  const sequence: number[] = [];
   let current = 0;
   for (let i = 0; i < config.n; i++) {
     sequence.push(current);
     current = (current + config.s) % config.n;
   }
-  sequence.push(0); 
-  
+  sequence.push(0);
   if (isBound) {
     for (let i = 0; i < config.n; i++) {
       current = (current + 1) % config.n;
       sequence.push(current);
     }
   }
-  
   const edgeCount = sequence.length - 1;
-  const timeLimit = Math.ceil(edgeCount * 1.2); 
+  const timeLimit = Math.ceil(edgeCount * 1.25);
   const prefix = isBound ? "BOUND_" : "LESSER_";
-  
   return { id: `${prefix}${config.name}_PROTOCOL`, timeLimit, nodes, sequence };
 }
 
 // ============================================================================ //
-// 3. UI COMPONENTS: BOOT SEQUENCE & START SCREEN
+// 4. BOOT & START SCREEN
 // ============================================================================ //
-
-const BootSequence = ({ onComplete, hasSave }: { onComplete: () => void, hasSave: boolean }) => {
-  const [currentLineIdx, setCurrentLineIdx] = useState(0);
-  const [currentCharIdx, setCurrentCharIdx] = useState(0);
-
-  const bootTextFull = [
-    "> INITIALIZING THAUMATURGIC_OS v3.1 [MOBILE FIELD INSTANCE]...",
-    "> BIOMETRIC SYNC... [CONFIRMED]",
-    "> ENGAGING COGNITIVE SHIELDING... [ACTIVE]",
-    "",
-    "WARNING: CONCEPTUAL RUPTURE DETECTED IN LOCAL GEOGRAPHY.",
-    "The anchors are snapping. The Four are bleeding through.",
-    "",
-    "CONQUEST. WAR. FAMINE. DEATH.",
-    "",
-    "They cannot manifest without physical conduits. They are utilizing the 72 lieutenants of the Ars Goetia to bridge the gap into mundane reality.",
-    "",
-    "The Nocturnal Syndicates are being decimated in the streets. Worse, the Malleus Inquisition is using the chaos as cover for a holy purge.", 
-    "The Inquisition hounds are sweeping the sectors. If they track your casting signature, they will burn you before the demons do.",
-    "",
-    "You are boots on the ground. Rely on this OS to filter the esoteric hazards into survivable data. Your directive is absolute:",
-    "1. Physically navigate the compromised sectors.",
-    "2. Identify the Goetian conduits and bind them into the Brass Vessel.",
-    "3. Execute the Grand Banishment Rite to sever the Riders from our plane.",
-    "",
-    "Watch your Heat. Do not let the Tether snap.",
-    "",
-    "[ PRESS ANY KEY TO INITIALIZE OPERATIVE DOSSIER ]"
-  ];
-
-  const bootTextShort = [
-    "> INITIALIZING THAUMATURGIC_OS v3.1 [MOBILE FIELD INSTANCE]...",
-    "> BIOMETRIC SYNC... [CONFIRMED]",
-    "> ENGAGING COGNITIVE SHIELDING... [ACTIVE]",
-    "",
-    "> PREVIOUS TETHER DETECTED.",
-    "",
-    "[ PRESS ANY KEY TO RESUME SESSION ]"
-  ];
-
-  const currentBootText = hasSave ? bootTextShort : bootTextFull;
-
-  useEffect(() => {
-    if (currentLineIdx < currentBootText.length) {
-      const currentLine = currentBootText[currentLineIdx];
-      
-      if (currentCharIdx < currentLine.length) {
-        const char = currentLine[currentCharIdx];
-        let delay = 25; // Base typing speed
-        
-        // Dramatic pauses
-        if (currentLine === "CONQUEST. WAR. FAMINE. DEATH.") {
-            delay = 60; // Type the horsemen slightly slower
-            if (char === '.') delay = 1000; // MASSIVE dramatic pause after each name
-        } else {
-            // General punctuation pauses
-            if (char === '.' || char === '!' || char === '?') delay = 300;
-            else if (char === ',') delay = 150;
-        }
-
-        const timer = setTimeout(() => {
-          setCurrentCharIdx(prev => prev + 1);
-        }, delay);
-        return () => clearTimeout(timer);
-      } else {
-        // Line complete, move to next
-        const lineDelay = currentLine === "" ? 400 : 200;
-        const timer = setTimeout(() => {
-          setCurrentLineIdx(prev => prev + 1);
-          setCurrentCharIdx(0);
-        }, lineDelay);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [currentLineIdx, currentCharIdx, currentBootText]);
-
-  useEffect(() => {
-    const handleProceed = () => {
-      if (currentLineIdx >= currentBootText.length) onComplete();
-      else setCurrentLineIdx(currentBootText.length); // Skip typing and show all
-    };
-
-    window.addEventListener('keydown', handleProceed);
-    window.addEventListener('click', handleProceed);
-    
-    return () => {
-      window.removeEventListener('keydown', handleProceed);
-      window.removeEventListener('click', handleProceed);
-    };
-  }, [currentLineIdx, currentBootText.length, onComplete]);
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono, padding: '40px' }}>
-      <div style={{ width: '800px', maxWidth: '100%', textShadow: `0 0 5px ${theme.borderTerminal}` }}>
-        
-        {/* Render fully completed lines */}
-        {currentBootText.slice(0, currentLineIdx).map((line, index) => (
-          <p key={index} style={{ margin: '0 0 10px 0', lineHeight: '1.6', fontSize: '1.1rem', color: line.includes('WARNING') || line.includes('CONQUEST') || line.includes('snap') ? theme.accentRed : theme.textBright, fontWeight: line.includes('absolute') || line.includes('[ PRESS') ? 'bold' : 'normal' }}>
-            {line}
-          </p>
-        ))}
-        
-        {/* Render the line currently being typed */}
-        {currentLineIdx < currentBootText.length && (
-          <p style={{ margin: '0 0 10px 0', lineHeight: '1.6', fontSize: '1.1rem', color: currentBootText[currentLineIdx].includes('WARNING') || currentBootText[currentLineIdx].includes('CONQUEST') || currentBootText[currentLineIdx].includes('snap') ? theme.accentRed : theme.textBright, fontWeight: currentBootText[currentLineIdx].includes('absolute') || currentBootText[currentLineIdx].includes('[ PRESS') ? 'bold' : 'normal' }}>
-            {currentBootText[currentLineIdx].slice(0, currentCharIdx)}
-            <span style={{ animation: 'blink 1s infinite' }}>_</span>
-          </p>
-        )}
-        
-        {/* Blinking cursor at the end when completely finished */}
-        {currentLineIdx >= currentBootText.length && <span style={{ color: theme.textBright, animation: 'blink 1s infinite', fontSize: '1.2rem', display: 'block', marginTop: '-10px' }}>_</span>}
-      </div>
-    </div>
-  );
-};
-
 const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: string, agency: string) => void, onLoad: () => void }) => {
   const [name, setName] = useState('');
   const [agency, setAgency] = useState('');
-  const [portrait, setPortrait] = useState('/portraits/thaumaturge_m1.png'); 
-  const [showConfirm, setShowConfirm] = useState(false);
 
   const savedData = localStorage.getItem('thaumaturgic_os_save_v1');
-  let savedOperative = null;
+  let savedOperative: string | null = null;
   if (savedData) {
-    try { savedOperative = JSON.parse(savedData).playerName; } catch (e) {}
+    try { savedOperative = JSON.parse(savedData).playerName; } catch { /* ignore */ }
   }
 
-  const getFullBodyPath = (squarePath: string) => {
-    const filename = squarePath.split('/').pop();
-    return `/portraits/full_body/fb_${filename}`;
-  };
-
-  const handleInitiateClick = () => {
-    if (!name.trim()) setName('UNKNOWN_OPERATIVE');
-    if (!agency.trim()) setAgency('UNAFFILIATED');
-    setShowConfirm(true);
+  const handleInitiate = () => {
+    ThaumaturgicAudio.scryPing();
+    onStart(name.trim() || 'VERGIL', '/portraits/thaumaturge_m1.png', agency.trim() || 'DARKWIRE');
   };
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono }}>
-      
-      {showConfirm && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ display: 'flex', width: '800px', backgroundColor: theme.bgPanel, border: `2px solid ${theme.textBright}`, boxShadow: `0 0 40px rgba(98, 240, 128, 0.15)` }}>
-            <div style={{ flex: '1', borderRight: `1px dashed ${theme.borderTerminal}`, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#030503' }}>
-              <h2 style={{ margin: '0 0 20px 0', color: theme.textBright, letterSpacing: '4px', textTransform: 'uppercase' }}>{name}</h2>
-              <img src={getFullBodyPath(portrait)} alt="Full Body Operative" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(74,124,89,0.3))' }} />
-            </div>
-            <div style={{ flex: '1', padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <h3 style={{ color: theme.accentRed, borderBottom: `1px solid ${theme.accentRed}`, paddingBottom: '10px', letterSpacing: '2px', animation: 'blink 2s infinite' }}>&gt; CONFIRM DEPLOYMENT</h3>
-              <div style={{ marginTop: '20px', lineHeight: '2' }}>
-                <div><span style={{ color: theme.textMuted }}>DESIGNATION:</span> <span style={{ color: theme.textBright, fontWeight: 'bold' }}>{name.toUpperCase()}</span></div>
-                <div><span style={{ color: theme.textMuted }}>SYNDICATE:</span> <span style={{ color: theme.textBright, fontWeight: 'bold' }}>{agency.toUpperCase()}</span></div>
-                <div><span style={{ color: theme.textMuted }}>STARTING HUMANITY:</span> <span style={{ color: theme.textBright }}>100%</span></div>
-                <div><span style={{ color: theme.textMuted }}>TETHER ALIGNMENT:</span> <span style={{ color: theme.textBright }}>STABLE</span></div>
-              </div>
-              <div style={{ marginTop: '40px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <button onClick={() => onStart(name, portrait, agency)} style={{ padding: '15px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '2px' }}>&gt; FINALIZE TETHER</button>
-                <button onClick={() => setShowConfirm(false)} style={{ padding: '15px', backgroundColor: 'transparent', color: theme.textMuted, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer', fontFamily: theme.fontMono, transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = theme.textTerminal} onMouseOut={(e) => e.currentTarget.style.color = theme.textMuted}>&gt; REVISE PARAMETERS</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div style={{ width: '540px', border: `1px solid ${theme.textBright}`, padding: '36px', backgroundColor: theme.bgPanel, boxShadow: `0 0 30px rgba(98, 240, 128, 0.12)` }}>
+        <div style={{ fontSize: '0.72rem', color: theme.accentAmber, letterSpacing: '2px', marginBottom: '4px' }}>THAUMATURGIC OS // NET-OPS v4.09</div>
+        <h1 style={{ margin: '0 0 12px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '12px', letterSpacing: '3px', color: theme.textBright, fontSize: '1.5rem' }}>
+          ANIMUS MUNDI: SEALS OF THE 4
+        </h1>
+        <p style={{ fontSize: '0.8rem', color: '#a8ccaf', lineHeight: '1.5', marginBottom: '20px' }}>
+          Infiltrate corrupted sector sub-grids, extract raw forensic anomalies, deduce the True Name of the Goetian Anchor in the Codex, synthesize catalysts at the Safehouse Altar, and bind the 72 Lieutenants before the Four Horsemen manifest.
+        </p>
 
-      <div style={{ width: '500px', border: `2px solid ${theme.textTerminal}`, padding: '40px', backgroundColor: theme.bgPanel, boxShadow: `0 0 20px rgba(74, 124, 89, 0.2)` }}>
-        <h1 style={{ textAlign: 'center', borderBottom: `1px dashed ${theme.textTerminal}`, paddingBottom: '20px', letterSpacing: '4px', color: theme.textBright }}>THAUMATURGIC_OS v3.1</h1>
-        
         {savedOperative && (
-          <div style={{ marginTop: '30px', padding: '20px', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgDark, textAlign: 'center' }}>
-            <p style={{ color: theme.textMuted, fontSize: '0.85rem', marginBottom: '10px' }}>PREVIOUS SESSION DETECTED:</p>
-            <button onClick={onLoad} style={{ width: '100%', padding: '15px', backgroundColor: theme.textTerminal, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '2px', animation: 'slowPulse 2.5s ease-in-out infinite' }}>&gt; RESUME: OP_{savedOperative.toUpperCase()}</button>
-            <div style={{ marginTop: '20px', borderBottom: `1px dashed ${theme.borderTerminal}` }}></div>
-            <p style={{ color: theme.textMuted, fontSize: '0.85rem', marginTop: '20px' }}>OR INITIALIZE NEW INSTANCE BELOW:</p>
+          <div style={{ marginBottom: '20px', padding: '14px', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgDark, textAlign: 'center' }}>
+            <div style={{ color: theme.textMuted, fontSize: '0.72rem', marginBottom: '8px' }}>ACTIVE TETHER FOUND IN MEMORY:</div>
+            <button onClick={() => { ThaumaturgicAudio.scryPing(); onLoad(); }} style={{ width: '100%', padding: '12px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '2px' }}>
+              &gt; RESUME: OP_{savedOperative.toUpperCase()}
+            </button>
           </div>
         )}
 
-        <div style={{ marginTop: savedOperative ? '20px' : '30px' }}>
-          <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; INPUT OPERATIVE DESIGNATION:</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Vergil" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }} />
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', color: theme.textBright }}>&gt; OPERATIVE CALLSIGN:</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VERGIL" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '14px', outline: 'none' }} />
 
-          <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; INPUT AFFILIATED SYNDICATE:</label>
-          <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. Darkwire" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }} />
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', color: theme.textBright }}>&gt; NOCTURNAL SYNDICATE:</label>
+          <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. DARKWIRE" style={{ width: '100%', padding: '10px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, marginBottom: '20px', outline: 'none' }} />
 
-          <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem' }}>&gt; SELECT OPERATIVE DOSSIER:</label>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '30px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            {[ { id: 'thaumaturge_m1', src: '/portraits/thaumaturge_m1.png' }, { id: 'thaumaturge_m2', src: '/portraits/thaumaturge_m2.png' }, { id: 'thaumaturge_f1', src: '/portraits/thaumaturge_f1.png' }, { id: 'thaumaturge_f2', src: '/portraits/thaumaturge_f2.png' } ].map(p => (
-              <button key={p.id} onClick={() => setPortrait(p.src)} style={{ padding: '4px', cursor: 'pointer', backgroundColor: portrait === p.src ? theme.textTerminal : 'transparent', border: `2px solid ${portrait === p.src ? theme.textBright : theme.borderTerminal}`, transition: 'all 0.2s', borderRadius: '50%' }}>
-                <img src={p.src} alt="Operative" style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '50%', opacity: portrait === p.src ? 1 : 0.5, filter: portrait === p.src ? 'none' : 'grayscale(100%) sepia(20%) hue-rotate(80deg)' }} />
-              </button>
-            ))}
-          </div>
-
-          <button onClick={handleInitiateClick} style={{ width: '100%', padding: '15px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '2px' }}>
-            INITIALIZE TETHER PROTOCOL
+          <button onClick={handleInitiate} style={{ width: '100%', padding: '14px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '2px' }}>
+            INITIALIZE TETHER LINK //
           </button>
         </div>
       </div>
@@ -294,33 +185,31 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
 };
 
 // ============================================================================ //
-// 4. UI COMPONENTS: STANDARD SEALING TERMINAL (LIEUTENANTS)
+// 5. SEALING & BANISHMENT TERMINALS (WITH DEDUCTION VERIFICATION)
 // ============================================================================ //
-
 interface SealingTerminalProps {
-  target: any;
+  suspect: typeof allGoetia[0];
+  actualAnchorId: string;
   sealCost: Record<string, number>;
   onClose: () => void;
+  onSuccessSeal: (goetiaId: string) => void;
   dispatch: React.Dispatch<GameAction>;
   sealGoetia: (id: string) => void;
   addToast: (msg: string, type: 'INTEL'|'ITEM'|'ALERT'|'SEAL') => void;
   tetheredYokai: string[];
 }
 
-const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addToast, tetheredYokai }: SealingTerminalProps) => {
+const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccessSeal, dispatch, sealGoetia, addToast, tetheredYokai }: SealingTerminalProps) => {
   const [matrix] = useState(() => generateSealMatrix());
-  const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE'>('AUTH');
+  const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE' | 'MISIDENTIFIED'>('AUTH');
   const [nameInput, setNameInput] = useState('');
-  
-  // YOKAI UTILITY: RITUAL SUPPORT
+
   const hasTimeBuff = tetheredYokai.includes('yokai_kamaitachi');
-  const [timeLeft, setTimeLeft] = useState(matrix.timeLimit + (hasTimeBuff ? 5 : 0)); 
-  
+  const [timeLeft, setTimeLeft] = useState(matrix.timeLimit + (hasTimeBuff ? 5 : 0));
+
   const [path, setPath] = useState<number[]>([]);
   const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const [typedName, setTypedName] = useState(''); 
-  const [showSealed, setShowSealed] = useState(false); 
   const [isCleanSeal, setIsCleanSeal] = useState(true);
 
   useEffect(() => {
@@ -328,23 +217,10 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
     if (phase === 'WARDING' && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     } else if (phase === 'WARDING' && timeLeft <= 0) {
-      executeFinalSeal(false); 
+      executeFinalSeal(false);
     }
     return () => clearInterval(timer);
   }, [phase, timeLeft]);
-
-  useEffect(() => {
-    if (phase === 'COMPLETE') {
-      const fullName = target.name.toUpperCase();
-      let i = 0;
-      const interval = setInterval(() => {
-        setTypedName(fullName.substring(0, i + 1));
-        i++;
-        if (i >= fullName.length) { clearInterval(interval); setTimeout(() => setShowSealed(true), 1200); }
-      }, 300); 
-      return () => clearInterval(interval);
-    }
-  }, [phase, target.name]);
 
   useEffect(() => {
     if (phase === 'WARDING' && path.length === matrix.sequence.length) executeFinalSeal(true);
@@ -382,7 +258,10 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
         if (nextId === undefined) return prevPath;
         const targetNode = matrix.nodes.find(n => n.id === nextId)!;
         const dx = coords.x - targetNode.x; const dy = coords.y - targetNode.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 15) return [...prevPath, targetNode.id];
+        if (Math.sqrt(dx * dx + dy * dy) < 15) {
+          ThaumaturgicAudio.keyClick();
+          return [...prevPath, targetNode.id];
+        }
         return prevPath;
       });
     }
@@ -396,48 +275,89 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
 
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (nameInput.trim().toUpperCase() === target.name.toUpperCase()) setPhase('WARDING');
-    else { addToast("Signature mismatch.", "ALERT"); dispatch({ type: 'MODIFY_HUMANITY', payload: -2 }); }
+    if (nameInput.trim().toUpperCase() !== suspect.name.toUpperCase()) {
+      ThaumaturgicAudio.errorBuzz();
+      addToast("Vocalization mismatch! Type the exact True Name of your suspect.", "ALERT");
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -5 });
+      return;
+    }
+
+    // Burn the catalysts on ritual commitment
+    (Object.entries(sealCost) as [string, number][]).forEach(([item, amount]) =>
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } })
+    );
+
+    // Check if the player's deduction matches the actual Goetia haunting this sector!
+    if (suspect.id !== actualAnchorId) {
+      ThaumaturgicAudio.errorBuzz();
+      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 20 });
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -20 });
+      setPhase('MISIDENTIFIED');
+      addToast(`FALSE DEDUCTION! Entity rejected the seal of ${suspect.name}!`, 'ALERT');
+      return;
+    }
+
+    ThaumaturgicAudio.scryPing();
+    setPhase('WARDING');
   };
 
   const executeFinalSeal = (isClean: boolean) => {
     setIsCleanSeal(isClean);
-    setPhase('COMPLETE'); 
+    setPhase('COMPLETE');
     setCurrentPointer(null);
-    (Object.entries(sealCost) as [string, number][]).forEach(([item, amount]) => dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } }));
-    sealGoetia(target.id);
+    sealGoetia(suspect.id);
+    onSuccessSeal(suspect.id);
     if (isClean) {
-      addToast(`SEALING SUCCESSFUL. Target ${target.name} bound to the brass vessel.`, 'SEAL');
+      ThaumaturgicAudio.sealSuccess();
+      addToast(`SEALING SUCCESSFUL. ${suspect.name} bound to Brass Vessel!`, 'SEAL');
     } else {
+      ThaumaturgicAudio.errorBuzz();
       addToast(`RITUAL FRACTURE. Global Entropy spiked by 15%.`, 'ALERT');
-      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 15 }); 
+      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 15 });
     }
   };
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-      <div style={{ width: '500px', padding: '30px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textTerminal}`, boxShadow: `0 0 30px rgba(74, 124, 89, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal }}>
-        {phase !== 'COMPLETE' && <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.textTerminal}`, paddingBottom: '5px', color: theme.textBright }}>&gt; ROOT_ACCESS // VESSEL_SEALING_PROTOCOL</h3>}
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+      <div style={{ width: '480px', padding: '28px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, boxShadow: `0 0 30px rgba(98, 240, 128, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal }}>
+        <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '8px', color: theme.textBright }}>&gt; SOLOMONIC_VESSEL // SEALING_PROTOCOL</h3>
+
         {phase === 'AUTH' && (
           <form onSubmit={handleAuthSubmit}>
-            <p style={{ fontSize: '0.85rem', marginBottom: '10px' }}>TARGET LOCKED. INPUT TRUE NAME SIGNATURE TO AUTHORIZE CATALYST BURN:</p>
-            <input autoFocus type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="e.g. MURMUR" style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }} />
-            <button type="submit" style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: theme.textTerminal, color: 'black', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>&gt; EXECUTE</button>
-            <button type="button" onClick={onClose} style={{ marginTop: '10px', padding: '10px', width: '100%', backgroundColor: 'transparent', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer' }}>&gt; ABORT</button>
+            <p style={{ fontSize: '0.8rem', marginBottom: '10px', lineHeight: '1.5' }}>
+              HYPOTHESIS LOCKED: <strong style={{ color: theme.textBright }}>{suspect.name.toUpperCase()}</strong> ({suspect.rank} of {suspect.allegiance}).<br/>
+              <span style={{ color: theme.accentAmber }}>WARNING: If this entity is NOT the true Anchor of the current Sector, your catalysts will burn and the backlash will spike Global Entropy (+20%).</span>
+            </p>
+            <input autoFocus type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder={`TYPE "${suspect.name.toUpperCase()}" TO COMMIT`} style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }} />
+            <button type="submit" style={{ marginTop: '12px', padding: '10px', width: '100%', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>&gt; BURN CATALYSTS &amp; ENGAGE SEAL</button>
+            <button type="button" onClick={onClose} style={{ marginTop: '8px', padding: '10px', width: '100%', backgroundColor: 'transparent', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer' }}>&gt; ABORT</button>
           </form>
         )}
+
+        {phase === 'MISIDENTIFIED' && (
+          <div style={{ textAlign: 'center', padding: '15px 0' }}>
+            <h2 style={{ color: theme.accentRed, letterSpacing: '3px', margin: '0 0 10px 0' }}>! FALSE TRUE-NAME BACKLASH !</h2>
+            <p style={{ fontSize: '0.82rem', color: '#ffb3b3', lineHeight: '1.6' }}>
+              You inscribed the seal of <strong>{suspect.name}</strong>, but the entity haunting this sector laughed through the static. Your catalysts vaporized in a violent backlash.<br/><br/>
+              <strong>PENALTY:</strong> -20 Humanity | +20% Global Entropy.<br/>
+              Extract more forensic logs in the field and re-verify the 3 Signs in your Codex!
+            </p>
+            <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontFamily: theme.fontMono }}>
+              &gt; EMERGENCY DISCONNECT
+            </button>
+          </div>
+        )}
+
         {phase === 'WARDING' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>! CONNECTION VOLATILE</span>
-              <span style={{ color: timeLeft <= 5 ? theme.accentRed : theme.textBright }}>00:{timeLeft.toString().padStart(2, '0')}</span>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.85rem' }}>
+              <span style={{ color: theme.textBright, fontWeight: 'bold' }}>TRUE NAME VERIFIED! TRACE SEAL:</span>
+              <span style={{ color: timeLeft <= 5 ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>00:{timeLeft.toString().padStart(2, '0')}</span>
             </div>
-            <p style={{ fontSize: '0.85rem', alignSelf: 'flex-start', marginBottom: '20px', color: theme.textMuted }}>REQUESTING ALIGNMENT: <span style={{color: theme.textTerminal}}>[{matrix.id}]</span></p>
-            <div style={{ position: 'relative', width: '300px', height: '300px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
-              <img src={`/seals/${target.id}.png`} alt="Target Seal" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '180px', height: '180px', opacity: 0.3, filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' }} />
+            <div style={{ position: 'relative', width: '280px', height: '280px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
               <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
-                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.5" />
-                <polyline points={path.map((nodeId) => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.6" />
+                <polyline points={path.map((nodeId) => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
                 {currentPointer && path.length > 0 && path.length < matrix.sequence.length && (
                   <line x1={matrix.nodes.find(n => n.id === path[path.length - 1])!.x} y1={matrix.nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={theme.textTerminal} strokeWidth="1" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
                 )}
@@ -446,8 +366,8 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
                   const isNext = node.id === matrix.sequence[path.length] || (path.length === 0 && node.id === matrix.sequence[0]);
                   return (
                     <g key={node.id} style={{ pointerEvents: 'none' }}>
-                      <circle cx={node.x} cy={node.y} r={isNext ? "3.5" : "2"} fill={isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? theme.textBright : theme.textTerminal} strokeWidth="0.5" />
-                      {isNext && <circle cx={node.x} cy={node.y} r="5" fill="none" stroke={theme.textBright} strokeWidth="0.5" style={{ animation: 'blink 1s infinite' }} />}
+                      <circle cx={node.x} cy={node.y} r={isNext ? "3.8" : "2.2"} fill={isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? theme.textBright : theme.textTerminal} strokeWidth="0.6" />
+                      {isNext && <circle cx={node.x} cy={node.y} r="5.5" fill="none" stroke={theme.textBright} strokeWidth="0.5" style={{ animation: 'blink 1s infinite' }} />}
                     </g>
                   );
                 })}
@@ -455,27 +375,22 @@ const SealingTerminal = ({ target, sealCost, onClose, dispatch, sealGoetia, addT
             </div>
           </div>
         )}
+
         {phase === 'COMPLETE' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-            <img src={`/seals/${target.id}.png`} alt="Goetian Seal" style={{ width: '200px', height: '200px', marginBottom: '20px', filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' }} />
-            <h2 style={{ color: theme.textBright, letterSpacing: '6px', minHeight: '35px', margin: '0' }}>{typedName}</h2>
-            {showSealed && (
-              <>
-                <div style={{ color: theme.accentRed, fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '8px', marginTop: '10px', animation: 'slowPulse 2.5s ease-in-out infinite' }}>[SEALED]</div>
-                {!isCleanSeal && <p style={{ color: theme.textMuted, fontSize: '0.8rem', marginTop: '15px' }}>_CONTAINMENT FAILURE: GLOBAL ENTROPY SPIKED.</p>}
-                <button onClick={onClose} style={{ marginTop: '30px', padding: '10px 20px', width: '100%', backgroundColor: theme.bgDark, color: theme.textTerminal, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer', fontFamily: theme.fontMono }}>&gt; ACKNOWLEDGE_CONTAINMENT</button>
-              </>
-            )}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '15px 0' }}>
+            <h2 style={{ color: theme.textBright, letterSpacing: '5px', margin: '0' }}>{suspect.name.toUpperCase()}</h2>
+            <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: '4px', marginTop: '10px' }}>[SEALED IN BRASS VESSEL]</div>
+            <p style={{ fontSize: '0.8rem', color: '#a8ccaf', marginTop: '10px' }}>
+              +5% Banishment Probability toward <strong>{suspect.allegiance}</strong>. Bounty: +35 Obols awarded. A new Goetian Anchor has rotated into the sector.
+            </p>
+            {!isCleanSeal && <p style={{ color: theme.accentRed, fontSize: '0.78rem', marginTop: '8px' }}>! TIMER EXPIRED DURING TRACE: GLOBAL ENTROPY +15% !</p>}
+            <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}>&gt; ACKNOWLEDGE &amp; DEPLOY NEW CONTRACT</button>
           </div>
         )}
       </div>
     </div>
   );
 };
-
-// ============================================================================ //
-// 5. UI COMPONENTS: HORSEMAN BANISHMENT TERMINAL (ENDGAME)
-// ============================================================================ //
 
 interface BanishmentTerminalProps {
   horseman: 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH';
@@ -487,16 +402,13 @@ interface BanishmentTerminalProps {
 }
 
 const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, tetheredYokai }: BanishmentTerminalProps) => {
-  const [phase, setPhase] = useState<'WARNING' | 'LEDGER' | 'RITUAL' | 'RESOLUTION'>('WARNING');
-  const [authText, setAuthText] = useState('');
-  
+  const [phase, setPhase] = useState<'LEDGER' | 'RITUAL' | 'RESOLUTION'>('LEDGER');
   const [matrices] = useState(() => [generateSealMatrix(), generateSealMatrix(), generateSealMatrix()]);
   const [currentMatrixIdx, setCurrentMatrixIdx] = useState(0);
-  
-  // YOKAI UTILITY: GRAND RITE SUPPORT
+
   const hasTimeBuff = tetheredYokai.includes('yokai_kamaitachi');
-  const [timeLeft, setTimeLeft] = useState(60 + (hasTimeBuff ? 15 : 0)); 
-  
+  const [timeLeft, setTimeLeft] = useState(60 + (hasTimeBuff ? 15 : 0));
+
   const [path, setPath] = useState<number[]>([]);
   const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -504,14 +416,14 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
 
   const lieutenants = allGoetia.filter(g => g.allegiance === horseman);
   const sealedCount = lieutenants.filter(g => state.sealedGoetia.includes(g.id)).length;
-  const winProbability = Math.min(95, 5 + (sealedCount * 5)); 
+  const winProbability = Math.min(95, 5 + (sealedCount * 5));
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval>;
     if (phase === 'RITUAL' && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     } else if (phase === 'RITUAL' && timeLeft <= 0) {
-      executeResolution(false); 
+      executeResolution(false);
     }
     return () => clearInterval(timer);
   }, [phase, timeLeft]);
@@ -519,25 +431,29 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
   useEffect(() => {
     if (phase === 'RITUAL' && path.length === matrices[currentMatrixIdx].sequence.length) {
       if (currentMatrixIdx < 2) {
+        ThaumaturgicAudio.scryPing();
         setCurrentMatrixIdx(prev => prev + 1);
         setPath([]);
         setCurrentPointer(null);
-        addToast(`MATRIX ${currentMatrixIdx + 1} LOCKED. ADVANCING.`, 'SEAL');
+        addToast(`MATRIX ${currentMatrixIdx + 1}/3 LOCKED.`, 'SEAL');
       } else {
         const roll = Math.random() * 100;
         executeResolution(roll <= winProbability);
       }
     }
-  }, [path.length, phase, currentMatrixIdx, matrices]);
+  }, [path.length, phase, currentMatrixIdx, matrices, winProbability]);
 
   const executeResolution = (success: boolean) => {
     setIsVictory(success);
     setPhase('RESOLUTION');
     if (success) {
-      addToast(`BANISHMENT SUCCESSFUL. The Rider falls.`, 'SEAL');
+      ThaumaturgicAudio.sealSuccess();
+      dispatch({ type: 'SET_FLAG', payload: { flagId: `banished_${horseman.toLowerCase()}`, value: true } });
+      addToast(`BANISHMENT SUCCESSFUL. ${horseman} severed from reality!`, 'SEAL');
     } else {
-      addToast(`RITUAL FRACTURE. TETHER SNAPPED. GLOBAL ENTROPY CRITICAL.`, 'ALERT');
-      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 40 }); 
+      ThaumaturgicAudio.errorBuzz();
+      addToast(`RITUAL FRACTURE. GLOBAL ENTROPY +40%.`, 'ALERT');
+      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 40 });
     }
   };
 
@@ -572,7 +488,10 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
         if (nextId === undefined) return prevPath;
         const targetNode = matrices[currentMatrixIdx].nodes.find(n => n.id === nextId)!;
         const dx = coords.x - targetNode.x; const dy = coords.y - targetNode.y;
-        if (Math.sqrt(dx*dx + dy*dy) < 15) return [...prevPath, targetNode.id];
+        if (Math.sqrt(dx*dx + dy*dy) < 15) {
+          ThaumaturgicAudio.keyClick();
+          return [...prevPath, targetNode.id];
+        }
         return prevPath;
       });
     }
@@ -587,81 +506,60 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
   const overrideTheme = { bg: '#0f0202', border: '#ff3333', text: '#ff6666', bright: '#ffb3b3' };
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(5,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-      <div style={{ width: '600px', padding: '40px', backgroundColor: overrideTheme.bg, border: `2px solid ${overrideTheme.border}`, boxShadow: `0 0 50px rgba(255, 51, 51, 0.2)`, fontFamily: theme.fontMono, color: overrideTheme.text }}>
-        
-        {phase === 'WARNING' && (
-          <div style={{ textAlign: 'center' }}>
-            <h2 style={{ color: overrideTheme.bright, letterSpacing: '4px', animation: 'blink 1s infinite' }}>! CRITICAL OVERRIDE !</h2>
-            <p style={{ lineHeight: '1.6', marginTop: '20px' }}>You are attempting to initiate a Class-Omega Banishment Protocol against a localized conceptual apex. This will stress your Tether to the breaking point.</p>
-            <p style={{ marginTop: '20px', fontSize: '0.85rem' }}>TYPE <strong style={{color: overrideTheme.bright}}>INITIATE_GRAND_RITE_{horseman}</strong> TO AUTHORIZE:</p>
-            <input type="text" value={authText} onChange={e => setAuthText(e.target.value.toUpperCase())} style={{ width: '100%', padding: '15px', marginTop: '10px', backgroundColor: 'black', color: overrideTheme.bright, border: `1px solid ${overrideTheme.border}`, outline: 'none', textAlign: 'center', letterSpacing: '2px' }} />
-            <button onClick={() => { if (authText === `INITIATE_GRAND_RITE_${horseman}`) setPhase('LEDGER'); else addToast("AUTHORIZATION MISMATCH.", "ALERT"); }} style={{ width: '100%', padding: '15px', marginTop: '20px', backgroundColor: overrideTheme.border, color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '2px' }}>&gt; OVERRIDE SAFETIES</button>
-            <button onClick={onClose} style={{ width: '100%', padding: '15px', marginTop: '10px', backgroundColor: 'transparent', color: overrideTheme.text, border: `1px solid ${overrideTheme.text}`, cursor: 'pointer' }}>&gt; ABORT</button>
-          </div>
-        )}
-
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+      <div style={{ width: '560px', padding: '32px', backgroundColor: overrideTheme.bg, border: `2px solid ${overrideTheme.border}`, boxShadow: `0 0 50px rgba(255, 51, 51, 0.2)`, fontFamily: theme.fontMono, color: overrideTheme.text }}>
         {phase === 'LEDGER' && (
           <div>
-            <h2 style={{ color: overrideTheme.bright, borderBottom: `1px solid ${overrideTheme.border}`, paddingBottom: '10px' }}>&gt; TACTICAL CALCULUS</h2>
-            <p style={{ fontSize: '0.9rem', marginBottom: '20px' }}>Assessing anchor severance for: <strong style={{color: 'white'}}>{horseman}</strong></p>
-            <ul style={{ listStyleType: 'none', padding: 0, lineHeight: '2' }}>
+            <h3 style={{ color: overrideTheme.bright, borderBottom: `1px solid ${overrideTheme.border}`, paddingBottom: '8px', marginTop: 0 }}>&gt; GRAND RITE OF BANISHMENT // {horseman}</h3>
+            <p style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>Each sealed Goetia Lieutenant of {horseman} adds +5% to your Grand Rite stabilization roll (5% Base + {sealedCount} × 5%).</p>
+            <div style={{ maxHeight: '170px', overflowY: 'auto', fontSize: '0.76rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: 'black', padding: '10px', border: `1px solid ${overrideTheme.border}` }}>
               {lieutenants.map(g => {
                 const isSealed = state.sealedGoetia.includes(g.id);
                 return (
-                  <li key={g.id} style={{ color: isSealed ? '#555' : overrideTheme.text, textDecoration: isSealed ? 'line-through' : 'none', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{g.name.toUpperCase()}</span><span>{isSealed ? '[ SEVERED ]' : '[ ACTIVE_ANCHOR ]'}</span>
-                  </li>
+                  <div key={g.id} style={{ color: isSealed ? '#62f080' : overrideTheme.text }}>
+                    #{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()} {isSealed ? '[SEALED]' : '[ACTIVE]'}
+                  </div>
                 );
               })}
-            </ul>
-            <div style={{ marginTop: '30px', padding: '20px', backgroundColor: 'black', border: `1px dashed ${overrideTheme.border}`, textAlign: 'center' }}>
-              <div style={{ fontSize: '0.8rem', color: overrideTheme.text }}>CALCULATED SUCCESS PROBABILITY</div>
-              <div style={{ fontSize: '3rem', color: overrideTheme.bright, fontWeight: 'bold', textShadow: `0 0 10px ${overrideTheme.border}` }}>{winProbability}%</div>
             </div>
-            <button onClick={() => setPhase('RITUAL')} style={{ width: '100%', padding: '15px', marginTop: '30px', backgroundColor: overrideTheme.bright, color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '2px' }}>&gt; COMMENCE TRIPLE-MATRIX</button>
+            <div style={{ marginTop: '16px', padding: '14px', backgroundColor: 'black', border: `1px dashed ${overrideTheme.border}`, textAlign: 'center' }}>
+              <div style={{ fontSize: '0.72rem', color: overrideTheme.text }}>CALCULATED BANISHMENT PROBABILITY</div>
+              <div style={{ fontSize: '2.2rem', color: overrideTheme.bright, fontWeight: 'bold' }}>{winProbability}%</div>
+            </div>
+            <button onClick={() => setPhase('RITUAL')} style={{ width: '100%', padding: '14px', marginTop: '16px', backgroundColor: overrideTheme.bright, color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '2px' }}>&gt; COMMENCE TRIPLE-MATRIX ENDURANCE RITE</button>
+            <button onClick={onClose} style={{ width: '100%', padding: '10px', marginTop: '8px', backgroundColor: 'transparent', color: overrideTheme.text, border: `1px solid ${overrideTheme.text}`, cursor: 'pointer' }}>&gt; ABORT</button>
           </div>
         )}
-
         {phase === 'RITUAL' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '1.2rem', fontWeight: 'bold' }}>
-              <span style={{ color: overrideTheme.bright }}>PHASE: {currentMatrixIdx + 1}/3</span>
-              <span style={{ color: timeLeft <= 15 ? overrideTheme.bright : overrideTheme.text, animation: timeLeft <= 15 ? 'blink 0.5s infinite' : 'none' }}>T-MINUS: {timeLeft}s</span>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '1rem', fontWeight: 'bold' }}>
+              <span style={{ color: overrideTheme.bright }}>MATRIX: {currentMatrixIdx + 1}/3</span>
+              <span style={{ color: overrideTheme.bright }}>T-MINUS: {timeLeft}s</span>
             </div>
-            <div style={{ position: 'relative', width: '350px', height: '350px', border: `2px solid ${overrideTheme.border}`, backgroundColor: 'black', borderRadius: '50%' }}>
-               <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
-                  <polygon points={matrices[currentMatrixIdx].sequence.map(id => `${matrices[currentMatrixIdx].nodes.find(n => n.id === id)!.x},${matrices[currentMatrixIdx].nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={overrideTheme.border} strokeWidth="0.5" strokeDasharray="1 3" />
-                  <polyline points={path.map((nodeId) => `${matrices[currentMatrixIdx].nodes.find(n => n.id === nodeId)!.x},${matrices[currentMatrixIdx].nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={overrideTheme.bright} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none', filter: `drop-shadow(0 0 3px ${overrideTheme.bright})` }} />
-                  {currentPointer && path.length > 0 && path.length < matrices[currentMatrixIdx].sequence.length && (
-                    <line x1={matrices[currentMatrixIdx].nodes.find(n => n.id === path[path.length - 1])!.x} y1={matrices[currentMatrixIdx].nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={overrideTheme.text} strokeWidth="1" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
-                  )}
-                  {matrices[currentMatrixIdx].nodes.map((node) => {
-                    const isCompleted = path.includes(node.id);
-                    const isNext = node.id === matrices[currentMatrixIdx].sequence[path.length] || (path.length === 0 && node.id === matrices[currentMatrixIdx].sequence[0]);
-                    return <g key={node.id} style={{ pointerEvents: 'none' }}><circle cx={node.x} cy={node.y} r={isNext ? "4" : "2"} fill={isCompleted ? overrideTheme.bright : 'black'} stroke={isNext ? overrideTheme.bright : overrideTheme.border} strokeWidth="0.5" /></g>;
-                  })}
-               </svg>
+            <div style={{ position: 'relative', width: '310px', height: '310px', border: `2px solid ${overrideTheme.border}`, backgroundColor: 'black', borderRadius: '50%' }}>
+              <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
+                <polygon points={matrices[currentMatrixIdx].sequence.map(id => `${matrices[currentMatrixIdx].nodes.find(n => n.id === id)!.x},${matrices[currentMatrixIdx].nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={overrideTheme.border} strokeWidth="0.6" strokeDasharray="1 3" />
+                <polyline points={path.map((nodeId) => `${matrices[currentMatrixIdx].nodes.find(n => n.id === nodeId)!.x},${matrices[currentMatrixIdx].nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={overrideTheme.bright} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+                {matrices[currentMatrixIdx].nodes.map((node) => {
+                  const isCompleted = path.includes(node.id);
+                  const isNext = node.id === matrices[currentMatrixIdx].sequence[path.length] || (path.length === 0 && node.id === matrices[currentMatrixIdx].sequence[0]);
+                  return <g key={node.id} style={{ pointerEvents: 'none' }}><circle cx={node.x} cy={node.y} r={isNext ? "4" : "2"} fill={isCompleted ? overrideTheme.bright : 'black'} stroke={isNext ? overrideTheme.bright : overrideTheme.border} strokeWidth="0.6" /></g>;
+                })}
+              </svg>
             </div>
-            <p style={{ fontSize: '0.8rem', marginTop: '20px', color: overrideTheme.text, textAlign: 'center' }}>_MAINTAIN UNBROKEN LINE. FRACTURES WILL RESET CURRENT MATRIX.</p>
           </div>
         )}
-
         {phase === 'RESOLUTION' && (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            {isVictory ? (
-              <>
-                <h1 style={{ color: 'white', letterSpacing: '8px', fontSize: '2.5rem', margin: '0 0 20px 0' }}>CONCEPT SEVERED</h1>
-                <p style={{ color: overrideTheme.bright, lineHeight: '1.8' }}>The localized manifestation of {horseman} has collapsed inward. The oppressive weight lifts from the sector. The logic fog dissolves into mundane rain.</p>
-                <button onClick={onClose} style={{ padding: '15px 30px', marginTop: '40px', backgroundColor: 'white', color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>&gt; ACKNOWLEDGE VICTORY</button>
-              </>
-            ) : (
-              <>
-                <h1 style={{ color: overrideTheme.bright, letterSpacing: '8px', fontSize: '2.5rem', margin: '0 0 20px 0', animation: 'blink 0.5s infinite' }}>TETHER RUPTURE</h1>
-                <p style={{ color: overrideTheme.text, lineHeight: '1.8' }}>The banishment failed. The residual energy backlashes through your OS, burning out wards and shattering local reality. The Horseman's grip tightens.</p>
-                <button onClick={onClose} style={{ padding: '15px 30px', marginTop: '40px', backgroundColor: 'transparent', color: overrideTheme.border, border: `1px solid ${overrideTheme.border}`, cursor: 'pointer' }}>&gt; INITIATE EMERGENCY REBOOT</button>
-              </>
-            )}
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <h1 style={{ color: isVictory ? 'white' : overrideTheme.bright, letterSpacing: '6px', fontSize: '2rem', margin: '0 0 15px 0' }}>
+              {isVictory ? 'HORSEMAN BANISHED' : 'TETHER RUPTURE'}
+            </h1>
+            <p style={{ color: overrideTheme.text, lineHeight: '1.6', fontSize: '0.9rem' }}>
+              {isVictory
+                ? `The conceptual apex of ${horseman} has been permanently severed from mundane reality.`
+                : `The Grand Rite fractured (${winProbability}% roll failed or timed out). Global Entropy spiked by +40%. Seal more Lieutenants before retrying!`}
+            </p>
+            <button onClick={onClose} style={{ padding: '12px 24px', marginTop: '25px', backgroundColor: 'white', color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>&gt; RETURN TO OS</button>
           </div>
         )}
       </div>
@@ -670,540 +568,1279 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
 };
 
 // ============================================================================ //
-// 6. MAIN APPLICATION COMPONENT
+// 6. MAIN 4-VIEWPORT OS COMPONENT
 // ============================================================================ //
-
 export default function App() {
-  const { state, dispatch, draftContract, resetGame, identifyGoetia, sealGoetia, startInvestigation, loadGame, travelTo } = useEngine();
-  const [currentTab, setCurrentTab] = useState<'CURRENT_NODE' | 'MAP' | 'CODEX' | 'KAGE_NO_SHO' | 'JOURNAL' | 'INVENTORY'>('CURRENT_NODE');
-  const [selectedGoetiaId, setSelectedGoetiaId] = useState<string | null>(null);
-  const [activeSealTarget, setActiveSealTarget] = useState<string | null>(null);
-  const [activeBanishmentTarget, setActiveBanishmentTarget] = useState<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH' | null>(null); 
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const { state, dispatch, draftContract, resetGame, sealGoetia, startInvestigation, loadGame, travelTo } = useEngine();
+
+  // Viewport & Map Layer State
+  const [viewport, setViewport] = useState<ViewportMode>('FIELD_OPS');
+  const [mapViewMode, setMapViewMode] = useState<'SUB_GRID' | 'GEO_TRACKER'>('SUB_GRID');
+  const [audioEnabled, setAudioEnabled] = useState(true);
+
+  // Procedural Sector Contracts Dictionary (Keyed by Sector ID)
+  const [contracts, setContracts] = useState<Record<string, SectorContract>>({});
+
+  // Codex Deduction State (Manual Phenomenon Toggles & Selected Suspect)
+  const [deducedSigns, setDeducedSigns] = useState<string[]>([]);
+  const [codexHorsemanFilter, setCodexHorsemanFilter] = useState<'ALL' | 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH'>('ALL');
+  const [selectedSuspectId, setSelectedSuspectId] = useState<string>('01_bael');
+
+  // Sealing & Banishment Modals
+  const [activeSealSuspectId, setActiveSealSuspectId] = useState<string | null>(null);
+  const [activeBanishmentTarget, setActiveBanishmentTarget] = useState<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH' | null>(null);
+
+  // CLI & Toasts
+  const [terminalLines, setTerminalLines] = useState<TerminalEntry[]>([]);
+  const [cliInput, setCliInput] = useState('');
   const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
-  
-  // App-level UI states
-  const [bootComplete, setBootComplete] = useState(false);
-  const [showForge, setShowForge] = useState(false);
-  
-  // Check for save data at the top level
-  const savedData = localStorage.getItem('thaumaturgic_os_save_v1');
-  const hasSave = !!savedData;
 
-  const injectNarrative = (text: string) => text ? text.replace(/\{playerName\}/g, state.playerName).replace(/\{agencyName\}/g, state.agencyName) : "";
+  // Canvas Refs
+  const mapCanvasRef = useRef<HTMLCanvasElement>(null);
+  const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const visualFxRef = useRef<{
+    sonarRings: { x: number; y: number; r: number; alpha: number }[];
+    angle: number;
+    wavePhase: number;
+  }>({ sonarRings: [], angle: 0, wavePhase: 0 });
+
+  const formatLabel = (str: string) => str.replace(/_/g, ' ').toUpperCase();
+
   const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' | 'SEAL' = 'ALERT') => {
-    // Math.random() ensures unique IDs even when 5 actions fire in 1 millisecond
-    const id = Date.now() + Math.random(); 
+    const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
-    
-    // Increased read time to 5.5 seconds
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5500);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4500);
   };
 
-  const removeToast = (id: number) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  };
-  const formatNode = (nodeId: string) => nodeId.replace(/_/g, ' ').toUpperCase();
-
-// --- DYNAMIC NARRATIVE ROUTER ---
-  const getCurrentNodeData = () => {
-    if (state.currentNode === 'caterham_churchyard') return caterhamChurchyard;
-    if (state.currentNode === 'safehouse') return safehouse; 
-    
-    // --- ASYLUM LOOP ROUTING ---
-    if (state.currentNode === 'caterham_asylum') return caterham_asylum_gates; // Map entry point
-    if (state.currentNode === 'asylum_records_room') return asylum_records_room;
-    if (state.currentNode === 'asylum_basement_rupture') return asylum_basement_rupture;
-    
-    // Fallback for unfinished map nodes
-    return {
-      title: MAP_NODES.find(n => n.id === state.currentNode)?.label || "UNKNOWN SECTOR",
-      text: "You have entered a new sector. The Thaumaturgic OS is currently compiling localized esoteric data. Stand by for further environmental analysis...",
-      choices: [{ id: 'scout', label: 'SCOUT THE PERIMETER (TIME PASSES)', actions: [{ type: 'ADVANCE_TIME', payload: 2 }] as GameAction[] }]
-    };
+  const appendLog = (html: string, type: TerminalEntry['type'] = 'normal') => {
+    setTerminalLines(prev => [...prev, { id: Date.now() + Math.random(), html, type }]);
   };
 
-  const activeNodeData = getCurrentNodeData();
-  const availableChoices = activeNodeData.choices as NarrativeChoice[];
+  // Initialize starting kit & procedural sector contracts when investigation begins
+  useEffect(() => {
+    if (state.gameStage === 'ACTIVE' && Object.keys(contracts).length === 0) {
+      const initialContracts: Record<string, SectorContract> = {};
+      MACRO_SECTORS.filter(s => s.id !== 'safehouse').forEach(sec => {
+        initialContracts[sec.id] = generateSectorContract(sec.id, sec.label, state.sealedGoetia);
+      });
+      setContracts(initialContracts);
 
-  // --- DEV TOGGLE INTERCEPT ---
-  if (showForge) {
-    return (
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, backgroundColor: theme.bgDark, overflowY: 'auto' }}>
-        <button 
-          onClick={() => setShowForge(false)} 
-          style={{ position: 'fixed', top: 20, right: 20, zIndex: 100000, padding: '10px 20px', background: theme.accentRed, color: 'white', fontWeight: 'bold', cursor: 'pointer', border: 'none', fontFamily: theme.fontMono, letterSpacing: '1px' }}
-        >
-          [X] CLOSE NARRATIVE FORGE
-        </button>
-        <NarrativeForge />
-      </div>
-    );
-  }
+      // Give new operatives starter salvage & Obols so the loop is immediately tactile
+      if (Object.keys(state.inventory).length === 0) {
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 45 } });
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 2 } });
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'cursed_earth', amount: 2 } });
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'alchemical_distillate', amount: 2 } });
+        dispatch({ type: 'SET_FLAG', payload: { flagId: 'kitsune_mask_found', value: true } });
+        dispatch({ type: 'SET_FLAG', payload: { flagId: 'tengu_feather_found', value: true } });
+      }
 
-  // --- START SCREEN & BOOT ROUTING ---
-  if (state.gameStage === 'START_SCREEN') {
-    if (!bootComplete) {
-      return <BootSequence onComplete={() => setBootComplete(true)} hasSave={hasSave} />;
+      appendLog(
+        `<div style="border-left:2px solid #62f080;padding-left:10px;margin:4px 0;">` +
+        `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.09 ONLINE — OPERATION DIRECTIVE</div>` +
+        `<div style="color:#a8ccaf;font-size:0.78rem;line-height:1.5;">` +
+        `1. <strong>[F1] FIELD_OPS:</strong> Click room nodes on the Sub-Grid map. Use <code>PROBE</code> to detect ambushes, <code>BREACH</code> to enter rooms, and <code>EXTRACT</code> to gather raw forensic logs &amp; salvage.<br/>` +
+        `2. <strong>[F2] GOETIAN_CODEX:</strong> Read your extracted forensic logs and manually toggle the matching Phenomenon filters to deduce which of the 72 Goetia is anchoring this sector.<br/>` +
+        `3. <strong>[F3] KAGE_NO_SHO:</strong> Bind up to 2 Yokai intermediaries and trigger their active field powers.<br/>` +
+        `4. <strong>[F4] SAFEHOUSE_ALTAR:</strong> Transmute raw salvage (Scrap Metal, Cursed Earth, Distillate) into the exact catalysts required to seal your deduced Goetia.` +
+        `</div></div>`,
+        'info'
+      );
     }
-    return (
-      <div style={{ position: 'relative' }}>
-        <StartScreen onStart={startInvestigation} onLoad={loadGame} />
-        {/* DEV LAUNCHER BUTTON */}
-        <button 
-          onClick={() => setShowForge(true)} 
-          style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'transparent', color: theme.textMuted, border: 'none', cursor: 'pointer', fontFamily: theme.fontMono }}
-        >
-          [DEV: LAUNCH FORGE]
-        </button>
-      </div>
+  }, [state.gameStage, contracts, state.sealedGoetia, state.inventory, dispatch]);
+
+  // Auto-scroll CLI
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [terminalLines]);
+
+  // Keyboard shortcuts F1 - F4
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F1') { e.preventDefault(); setViewport('FIELD_OPS'); }
+      if (e.key === 'F2') { e.preventDefault(); setViewport('CODEX'); }
+      if (e.key === 'F3') { e.preventDefault(); setViewport('KAGE_NO_SHO'); }
+      if (e.key === 'F4') { e.preventDefault(); setViewport('SAFEHOUSE_ALTAR'); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const currentContract = contracts[state.currentNode];
+  const currentSubNode = currentContract?.subNodes.find(n => n.id === currentContract.activeSubNodeId);
+  const selectedSubNode = currentContract?.subNodes.find(n => n.id === currentContract.selectedSubNodeId);
+
+  // --- SUB-GRID FIELD ACTIONS (PROBE, BREACH, EXTRACT, WARD) ---
+  const handleProbeSubNode = (targetNode?: SubGridNode) => {
+    if (!currentContract || !currentSubNode) return;
+    const node = targetNode || selectedSubNode;
+    if (!node) return;
+
+    if (node.status !== 'LOCKED') {
+      appendLog(`[i] Room <strong>${node.label}</strong> is already ${node.status}.`, 'system');
+      return;
+    }
+    if (!currentSubNode.connections.includes(node.id)) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[-] Cannot probe <strong>${node.label}</strong>—not adjacent to your current room (${currentSubNode.label}).`, 'error');
+      return;
+    }
+
+    // Sensor / Bound Yokai discount: if any Yokai is bound, Probing costs 2 Humanity instead of 5
+    const humCost = state.tetheredYokai.length > 0 ? 2 : 5;
+    if (state.humanity <= humCost) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[-] Insufficient Tether Stability (Humanity) to cast Auspex Probe.`, 'error');
+      return;
+    }
+
+    ThaumaturgicAudio.scryPing();
+    dispatch({ type: 'MODIFY_HUMANITY', payload: -humCost });
+    visualFxRef.current.sonarRings.push({ x: node.x, y: node.y, r: 6, alpha: 1.0 });
+
+    const updatedNodes = currentContract.subNodes.map(n =>
+      n.id === node.id ? { ...n, status: 'PROBED' as const } : n
     );
+    setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, subNodes: updatedNodes } }));
+
+    const sigDesc =
+      node.nodeType === 'ANOMALY' ? '<span style="color:#62f080;">[ESOTERIC ANOMALY + SALVAGE]</span>' :
+      node.nodeType === 'SHRINE' ? '<span style="color:#00f3ff;">[DORMANT KAMI SHRINE]</span>' :
+      node.nodeType === 'AMBUSH' ? '<span style="color:#ff2a55;">[WARNING: MALLEUS INQUISITION HOUND PATROL!]</span>' :
+      node.nodeType === 'ANCHOR' ? '<span style="color:#ffb800;">[GOETIAN CONDUIT ANCHOR]</span>' : '[MUNDANE ROOM]';
+
+    appendLog(`[📡 AUSPEX PROBE] <strong>${node.label}</strong> (-${humCost} Humanity): Detected ${sigDesc}`, 'info');
+  };
+
+  const handleBreachSubNode = (targetNode?: SubGridNode) => {
+    if (!currentContract || !currentSubNode) return;
+    const node = targetNode || selectedSubNode;
+    if (!node) return;
+
+    const currentHeat = state.sectorEntropy[state.currentNode] || 0;
+    if (currentHeat >= 100) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT). Burn Obols to Ward or retreat to Safehouse!`, 'error');
+      return;
+    }
+
+    if (node.id === currentSubNode.id) {
+      appendLog(`[i] Already positioned inside <strong>${node.label}</strong>.`, 'system');
+      return;
+    }
+    if (!currentSubNode.connections.includes(node.id)) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[-] <strong>${node.label}</strong> is not connected to ${currentSubNode.label}. Move through adjacent rooms.`, 'error');
+      return;
+    }
+
+    ThaumaturgicAudio.senseSweep();
+    visualFxRef.current.sonarRings.push({ x: node.x, y: node.y, r: 8, alpha: 1.0 });
+
+    const wasLocked = node.status === 'LOCKED' || node.status === 'PROBED';
+    let heatGain = wasLocked ? node.wardLevel * 8 : 2;
+
+    // Ambush penalty if breaching an Ambush node!
+    if (wasLocked && node.nodeType === 'AMBUSH') {
+      heatGain += 18;
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -12 });
+      appendLog(`[!] INQUISITION AMBUSH in <strong>${node.label}</strong>! Hounds lashed your tether (-12 Humanity, +${heatGain}% Heat)!`, 'error');
+      addToast(`Inquisition Ambush! -12 Humanity`, 'ALERT');
+    } else {
+      appendLog(`[⚡ BREACH] Moved into <strong>${node.label}</strong> (+${heatGain}% Local Heat).`, 'info');
+    }
+
+    dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: heatGain } });
+
+    const updatedNodes = currentContract.subNodes.map(n =>
+      n.id === node.id && (n.status === 'LOCKED' || n.status === 'PROBED') ? { ...n, status: 'BREACHED' as const } : n
+    );
+
+    setContracts(prev => ({
+      ...prev,
+      [currentContract.sectorId]: {
+        ...currentContract,
+        activeSubNodeId: node.id,
+        selectedSubNodeId: node.id,
+        subNodes: updatedNodes
+      }
+    }));
+  };
+
+  const handleExtractSubNode = () => {
+    if (!currentContract || !currentSubNode) return;
+    if (currentSubNode.status === 'EXTRACTED') {
+      appendLog(`[i] <strong>${currentSubNode.label}</strong> has already been swept clean.`, 'system');
+      return;
+    }
+
+    ThaumaturgicAudio.sealSuccess();
+    const updatedLogs = [...currentContract.discoveredLogs];
+
+    // 1. Forensic Phenomenon Report (Raw observation without spoiling the tag!)
+    if (currentSubNode.forensicText) {
+      const logEntry = {
+        id: `${currentSubNode.id}_log`,
+        nodeLabel: currentSubNode.label,
+        text: currentSubNode.forensicText
+      };
+      updatedLogs.push(logEntry);
+      appendLog(
+        `<div style="background:rgba(98,240,128,0.07);border-left:3px solid #62f080;padding:8px 10px;margin:4px 0;">` +
+        `<div style="color:#62f080;font-weight:bold;">[🔍 FORENSIC ANOMALY RECORDED AT ${currentSubNode.label}]</div>` +
+        `<div style="color:#ffffff;margin-top:4px;">"${currentSubNode.forensicText}"</div>` +
+        `<div style="color:#ffb800;font-size:0.72rem;margin-top:4px;">-&gt; Open <strong>[F2] GOETIAN_CODEX</strong> to cross-reference this phenomenon!</div>` +
+        `</div>`,
+        'success'
+      );
+      addToast(`Forensic Log Recorded! Check [F2] Codex.`, 'INTEL');
+    }
+
+    // 2. Kami Shrine Discovery (Unlocks Yokai in Kage-no-Sho)
+    if (currentSubNode.nodeType === 'SHRINE' && currentSubNode.shrineYokaiId) {
+      const yokai = allYokai.find(y => y.id === currentSubNode.shrineYokaiId);
+      if (yokai && yokai.unlockFlag) {
+        dispatch({ type: 'SET_FLAG', payload: { flagId: yokai.unlockFlag, value: true } });
+        appendLog(`[⛩️ KAMI SHRINE AWAKENED] Discovered spirit relic for <strong style="color:#00f3ff;">${yokai.nameEn}</strong>! Available for binding in <strong>[F3] KAGE_NO_SHO</strong>.`, 'success');
+        addToast(`Yokai Discovered: ${yokai.nameEn}`, 'SEAL');
+      }
+    }
+
+    // 3. Raw Salvage & Obols Drop
+    if (currentSubNode.salvageDrop) {
+      const { itemId, amount, obols } = currentSubNode.salvageDrop;
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
+      dispatch({ type: 'ADVANCE_TIME', payload: 2 });
+      appendLog(`[📦 SALVAGE HARVESTED] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>. (Time +2 hrs)`, 'info');
+    }
+
+    const updatedNodes = currentContract.subNodes.map(n =>
+      n.id === currentSubNode.id ? { ...n, status: 'EXTRACTED' as const } : n
+    );
+
+    setContracts(prev => ({
+      ...prev,
+      [currentContract.sectorId]: {
+        ...currentContract,
+        subNodes: updatedNodes,
+        discoveredLogs: updatedLogs
+      }
+    }));
+  };
+
+  // Active Yokai Field Invocation
+  const handleInvokeYokaiPower = (yokaiId: string) => {
+    ThaumaturgicAudio.scryPing();
+    if (yokaiId === 'yokai_kitsune' || yokaiId === 'yokai_noppera') {
+      if ((state.inventory.obols || 0) < 10) {
+        addToast(`Requires 10 Obols as tribute.`, 'ALERT');
+        return;
+      }
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -10 } });
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -25 } });
+      appendLog(`[👹 YOKAI INVOCATION] Illusory shroud deployed (-10 Obols). Local Sector Heat reduced by -25%!`, 'success');
+      addToast(`Sector Heat -25%`, 'SEAL');
+    } else {
+      // Reveal all nodes on current sub-grid for 8 Humanity
+      if (!currentContract) return;
+      if (state.humanity <= 10) {
+        addToast(`Requires 10 Humanity to invoke Astral Sight.`, 'ALERT');
+        return;
+      }
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -8 });
+      const revealedNodes = currentContract.subNodes.map(n =>
+        n.status === 'LOCKED' ? { ...n, status: 'PROBED' as const } : n
+      );
+      setContracts(prev => ({
+        ...prev,
+        [currentContract.sectorId]: { ...currentContract, subNodes: revealedNodes }
+      }));
+      appendLog(`[👹 YOKAI INVOCATION] Astral Sight swept the entire sector (-8 Humanity). All room signatures revealed!`, 'success');
+      addToast(`All Sub-Grid Nodes Revealed!`, 'INTEL');
+    }
+  };
+
+  // --- CANVAS RENDERING LOOP (SUB-GRID OR MACRO GEO-TRACKER) ---
+  useEffect(() => {
+    if (state.gameStage !== 'ACTIVE' || viewport !== 'FIELD_OPS') return;
+    let animId: number;
+
+    const renderLoop = () => {
+      const fx = visualFxRef.current;
+      fx.angle += 0.025;
+      const currentHeat = state.sectorEntropy[state.currentNode] || 0;
+      fx.wavePhase += 0.14 + (currentHeat / 220);
+
+      const canvas = mapCanvasRef.current;
+      if (canvas) {
+        const rect = canvas.parentElement?.getBoundingClientRect();
+        if (rect && (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height))) {
+          canvas.width = Math.floor(rect.width);
+          canvas.height = Math.floor(rect.height);
+        }
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const w = canvas.width;
+          const h = canvas.height;
+          ctx.clearRect(0, 0, w, h);
+
+          // Tactical Grid
+          ctx.strokeStyle = 'rgba(74, 124, 89, 0.08)';
+          ctx.lineWidth = 1;
+          for (let x = 0; x < w; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+          for (let y = 0; y < h; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+          // Expanding Sonar Rings
+          for (let i = fx.sonarRings.length - 1; i >= 0; i--) {
+            const sr = fx.sonarRings[i];
+            sr.r += 4;
+            sr.alpha -= 0.02;
+            if (sr.alpha <= 0) { fx.sonarRings.splice(i, 1); continue; }
+            ctx.beginPath();
+            ctx.arc(sr.x * w, sr.y * h, sr.r, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(98, 240, 128, ${sr.alpha})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+
+          if (mapViewMode === 'SUB_GRID' && currentContract) {
+            // DRAW LOCAL SECTOR SUB-GRID (6 ROOMS)
+            currentContract.subNodes.forEach(node => {
+              node.connections.forEach(tid => {
+                const target = currentContract.subNodes.find(n => n.id === tid);
+                if (!target) return;
+                ctx.beginPath();
+                ctx.moveTo(node.x * w, node.y * h);
+                ctx.lineTo(target.x * w, target.y * h);
+                ctx.strokeStyle = node.status !== 'LOCKED' && target.status !== 'LOCKED' ? 'rgba(98, 240, 128, 0.4)' : 'rgba(74, 124, 89, 0.22)';
+                ctx.lineWidth = 1.6;
+                ctx.stroke();
+              });
+            });
+
+            currentContract.subNodes.forEach(node => {
+              const nx = node.x * w;
+              const ny = node.y * h;
+              const isCurrent = node.id === currentContract.activeSubNodeId;
+              const isSelected = node.id === currentContract.selectedSubNodeId;
+
+              let color = '#ff2a55'; // LOCKED
+              if (node.status === 'PROBED') {
+                color = node.nodeType === 'AMBUSH' ? '#ff2a55' : node.nodeType === 'SHRINE' ? '#00f3ff' : '#ffb800';
+              } else if (node.status === 'BREACHED') {
+                color = '#ffb800';
+              } else if (node.status === 'EXTRACTED') {
+                color = '#62f080';
+              }
+
+              // Rotating Hex Shield
+              ctx.save();
+              ctx.translate(nx, ny);
+              ctx.rotate(isCurrent ? fx.angle : -fx.angle * 0.5);
+              ctx.beginPath();
+              const r = isCurrent ? 20 : 15;
+              for (let i = 0; i < 6; i++) {
+                const a = (i * Math.PI) / 3;
+                if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+                else ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+              }
+              ctx.closePath();
+              ctx.strokeStyle = isSelected ? '#ffffff' : color;
+              ctx.lineWidth = isSelected ? 2.2 : 1.4;
+              ctx.stroke();
+              ctx.restore();
+
+              // Core Dot
+              ctx.beginPath();
+              ctx.arc(nx, ny, 5, 0, Math.PI * 2);
+              ctx.fillStyle = isCurrent ? '#62f080' : '#050706';
+              ctx.fill();
+              ctx.strokeStyle = color;
+              ctx.lineWidth = 2;
+              ctx.stroke();
+
+              // Room Label & Status
+              ctx.font = 'bold 10px "Courier New", monospace';
+              ctx.textAlign = 'center';
+              ctx.fillStyle = isSelected ? '#ffffff' : '#a8ccaf';
+              ctx.fillText(node.label, nx, ny + 29);
+
+              let subBadge = `[${node.status}]`;
+              if (node.status === 'PROBED') {
+                subBadge = node.nodeType === 'AMBUSH' ? '[! AMBUSH !]' : node.nodeType === 'SHRINE' ? '[SHRINE]' : node.nodeType === 'ANCHOR' ? '[ANCHOR]' : '[ANOMALY]';
+              }
+              ctx.font = '9px "Courier New", monospace';
+              ctx.fillStyle = color;
+              ctx.fillText(subBadge, nx, ny + 40);
+            });
+          } else {
+            // DRAW MACRO GEO-TRACKER (5 SECTORS)
+            MACRO_SECTORS.forEach(node => {
+              node.connections.forEach(tid => {
+                const target = MACRO_SECTORS.find(n => n.id === tid);
+                if (!target) return;
+                ctx.beginPath();
+                ctx.moveTo(node.x * w, node.y * h);
+                ctx.lineTo(target.x * w, target.y * h);
+                ctx.strokeStyle = 'rgba(74, 124, 89, 0.35)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+              });
+            });
+
+            MACRO_SECTORS.forEach(node => {
+              const nx = node.x * w;
+              const ny = node.y * h;
+              const isCurrent = node.id === state.currentNode;
+              const heat = state.sectorEntropy[node.id] || 0;
+              const color = heat >= 75 ? '#ff2a55' : heat >= 35 ? '#ffb800' : '#62f080';
+
+              ctx.beginPath();
+              ctx.arc(nx, ny, isCurrent ? 14 : 10, 0, Math.PI * 2);
+              ctx.fillStyle = '#050706';
+              ctx.fill();
+              ctx.strokeStyle = isCurrent ? '#ffffff' : color;
+              ctx.lineWidth = 2;
+              ctx.stroke();
+
+              ctx.font = 'bold 10px "Courier New", monospace';
+              ctx.textAlign = 'center';
+              ctx.fillStyle = isCurrent ? '#62f080' : '#a8ccaf';
+              ctx.fillText(node.label, nx, ny + 26);
+              ctx.font = '9px "Courier New", monospace';
+              ctx.fillStyle = color;
+              ctx.fillText(node.id === 'safehouse' ? '[SAFE ZONE]' : `HEAT: ${heat}%`, nx, ny + 37);
+            });
+          }
+        }
+      }
+
+      // Render Waveform
+      const waveCanvas = waveformCanvasRef.current;
+      if (waveCanvas) {
+        const ctx = waveCanvas.getContext('2d');
+        if (ctx) {
+          const w = waveCanvas.width;
+          const h = waveCanvas.height;
+          ctx.clearRect(0, 0, w, h);
+          const amp = Math.min(h / 2 - 2, 3 + (currentHeat / 10));
+          ctx.beginPath();
+          ctx.strokeStyle = currentHeat >= 75 ? '#ff2a55' : currentHeat >= 35 ? '#ffb800' : '#62f080';
+          ctx.lineWidth = 1.5;
+          for (let x = 0; x < w; x++) {
+            const y = h / 2 + Math.sin(x * 0.22 + fx.wavePhase) * amp * Math.sin(x * 0.05);
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+
+      animId = requestAnimationFrame(renderLoop);
+    };
+
+    animId = requestAnimationFrame(renderLoop);
+    return () => cancelAnimationFrame(animId);
+  }, [state.gameStage, viewport, mapViewMode, currentContract, state.currentNode, state.sectorEntropy]);
+
+  // Handle Canvas Clicks (Sub-Grid Room Selection or Macro Sector Travel)
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = mapCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    if (mapViewMode === 'SUB_GRID' && currentContract) {
+      for (const node of currentContract.subNodes) {
+        const nx = node.x * canvas.width;
+        const ny = node.y * canvas.height;
+        if (Math.hypot(mx - nx, my - ny) <= 28) {
+          ThaumaturgicAudio.keyClick();
+          setContracts(prev => ({
+            ...prev,
+            [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: node.id }
+          }));
+          visualFxRef.current.sonarRings.push({ x: node.x, y: node.y, r: 6, alpha: 0.9 });
+          break;
+        }
+      }
+    } else {
+      for (const sec of MACRO_SECTORS) {
+        const nx = sec.x * canvas.width;
+        const ny = sec.y * canvas.height;
+        if (Math.hypot(mx - nx, my - ny) <= 28) {
+          ThaumaturgicAudio.scryPing();
+          if (sec.id === 'safehouse') {
+            travelTo('safehouse');
+            setViewport('SAFEHOUSE_ALTAR');
+          } else {
+            travelTo(sec.id);
+            setMapViewMode('SUB_GRID');
+            appendLog(`[*] ROUTED TETHER TO SECTOR: <strong style="color:#62f080;">${sec.label}</strong>.`, 'info');
+          }
+          break;
+        }
+      }
+    }
+  };
+
+  if (state.gameStage === 'START_SCREEN') {
+    return <StartScreen onStart={startInvestigation} onLoad={loadGame} />;
   }
+
+  const currentHeat = state.sectorEntropy[state.currentNode] || 0;
+  const countByHorseman = (h: 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH') =>
+    allGoetia.filter(g => g.allegiance === h && state.sealedGoetia.includes(g.id)).length;
+
+  // All Forensic Logs collected across all active sector contracts
+  const allCollectedLogs = Object.values(contracts).flatMap(c =>
+    c.discoveredLogs.map(l => ({ ...l, sectorLabel: c.sectorLabel }))
+  );
+
+  // Filtered Goetia in [F2] CODEX based on manual Phenomenon toggles & Horseman filter
+  const filteredCodexGoetia = allGoetia.filter(g => {
+    if (codexHorsemanFilter !== 'ALL' && g.allegiance !== codexHorsemanFilter) return false;
+    if (deducedSigns.length === 0) return true;
+    return deducedSigns.every(tag => g.requiredIntel.includes(tag));
+  });
+
+  const selectedSuspect = allGoetia.find(g => g.id === selectedSuspectId) || allGoetia[0];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono, overflow: 'hidden', userSelect: 'none' }}>
       <style>{`
-        @keyframes blink { 50% { opacity: 0; } } 
-        @keyframes slowPulse { 0%, 100% { opacity: 0.6; transform: scale(0.98); } 50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 15px ${theme.accentRed}; } }
+        @keyframes blink { 50% { opacity: 0; } }
         @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .crt-scanlines {
+          pointer-events: none; position: fixed; inset: 0; z-index: 50;
+          background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), radial-gradient(circle at center, transparent 65%, rgba(0, 5, 2, 0.6) 100%);
+          background-size: 100% 3px, 100% 100%;
+        }
+        .macro-chip {
+          background: rgba(98, 240, 128, 0.07); border: 1px solid #1f3d26; color: #62f080;
+          padding: 5px 11px; font-family: inherit; font-size: 0.73rem; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+        }
+        .macro-chip:hover:not(:disabled) { background: rgba(98, 240, 128, 0.2); border-color: #62f080; }
+        .macro-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+        .macro-chip-amber { background: rgba(255, 184, 0, 0.09); border-color: rgba(255, 184, 0, 0.45); color: #ffb800; }
+        .macro-chip-danger { background: rgba(255, 42, 85, 0.12); border-color: rgba(255, 42, 85, 0.5); color: #ff2a55; }
+        .viewport-tab {
+          padding: 6px 14px; font-family: inherit; font-size: 0.76rem; font-weight: bold; letter-spacing: 1px;
+          cursor: pointer; border: 1px solid #1f3d26; background: #060907; color: #4a7c59; transition: all 0.15s;
+        }
+        .viewport-tab.active {
+          background: #62f080; color: #000000; border-color: #62f080; box-shadow: 0 0 12px rgba(98, 240, 128, 0.35);
+        }
       `}</style>
-      
-{/* ================================================================== */}
-      {/* 6.1 TOP BAR */}
+
+      <div className="crt-scanlines" />
+
       {/* ================================================================== */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 20px', backgroundColor: theme.bgPanel, borderBottom: `1px solid ${theme.borderTerminal}`, fontSize: '0.9rem', letterSpacing: '1px' }}>
-        <span>ACTIVE_NODE: <strong style={{color: theme.accentRed}}>{formatNode(state.currentNode)}</strong></span>
-        
-        <span style={{ color: theme.textTerminal }}>
-          {/* DEV LAUNCHER: MAIN CONSOLE */}
-          <button 
-            onClick={() => setShowForge(true)} 
-            style={{ background: 'transparent', color: theme.textMuted, border: `1px solid ${theme.textMuted}`, cursor: 'pointer', fontFamily: theme.fontMono, marginRight: '20px', padding: '2px 8px', fontSize: '0.8rem' }}
-          >
-            [DEV: FORGE]
+      {/* TOP TACTICAL BAR: 4-VIEWPORT SWITCHER & APOCALYPSE TELEMETRY       */}
+      {/* ================================================================== */}
+      <header style={{ height: '48px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '0 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', zIndex: 20 }}>
+        {/* 4 Dedicated OS Viewport Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}>
+            [F1] FIELD_OPS
           </button>
-          
-          AUTH_USER: <strong style={{ color: theme.textBright }}>{state.playerName.toUpperCase()}</strong> 
-          <span style={{ margin: '0 10px', color: theme.borderTerminal }}>//</span> 
-          SYNDICATE: <strong style={{ color: theme.textBright }}>{state.agencyName.toUpperCase()}</strong>
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
-        
-        {/* ================================================================== */}
-        {/* 6.2 LEFT SIDEBAR (Meters & Navigation) */}
-        {/* ================================================================== */}
-        <div style={{ width: '220px', backgroundColor: theme.bgPanel, borderRight: `1px solid ${theme.borderTerminal}`, display: 'flex', flexDirection: 'column', padding: '20px' }}>
-          
-          <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '20px' }}>
-             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
-               <img src={state.playerPortrait} alt="Operative" style={{ width: '100px', height: '100px', objectFit: 'cover', objectPosition: 'top', borderRadius: '50%', border: `2px solid ${theme.textBright}`, boxShadow: `0 0 15px rgba(98, 240, 128, 0.2)` }} />
-             </div>
-             <div style={{ fontSize: '0.8rem', color: theme.textMuted }}>OP_DESIGNATION</div>
-             <div style={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', color: theme.textBright }}>{state.playerName}</div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '20px', marginBottom: '20px' }}>
-            <NavBtn active={currentTab === 'CURRENT_NODE'} onClick={() => setCurrentTab('CURRENT_NODE')}>ACTIVE_SECTOR</NavBtn>
-            <NavBtn active={currentTab === 'MAP'} onClick={() => setCurrentTab('MAP')}>GEO_TRACKER</NavBtn>
-            <NavBtn active={currentTab === 'KAGE_NO_SHO'} onClick={() => setCurrentTab('KAGE_NO_SHO')}>KAGE_NO_SHO</NavBtn>
-            <NavBtn active={currentTab === 'CODEX'} onClick={() => setCurrentTab('CODEX')}>GOETIAN_CODEX</NavBtn>
-            <NavBtn active={currentTab === 'INVENTORY'} onClick={() => setCurrentTab('INVENTORY')}>LOCAL_STORAGE</NavBtn>
-            <NavBtn active={currentTab === 'JOURNAL'} onClick={() => setCurrentTab('JOURNAL')}>FIELD_LOG</NavBtn>
-          </div>
-
-          <div style={{ flexGrow: 1 }}></div>
-          
-          {/* THE METERS */}
-          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-            <span style={{ fontSize: '0.8rem', letterSpacing: '2px', color: theme.textMuted }}>GLOBAL ENTROPY</span>
-            <div style={{ height: '8px', backgroundColor: theme.bgDark, border: `1px solid ${theme.borderTerminal}`, marginTop: '5px' }}>
-              <div style={{ width: `${state.globalEntropy || 0}%`, height: '100%', backgroundColor: '#b8860b', transition: 'width 0.5s' }}></div>
-            </div>
-            <div style={{ fontSize: '0.75rem', marginTop: '5px', color: theme.textMuted }}>{state.globalEntropy || 0}%</div>
-          </div>
-
-          <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-            <span style={{ fontSize: '0.8rem', letterSpacing: '2px', color: theme.textMuted }}>LOCAL SECTOR HEAT</span>
-            <div style={{ height: '8px', backgroundColor: theme.bgDark, border: `1px solid ${theme.borderTerminal}`, marginTop: '5px' }}>
-              <div style={{ width: `${state.sectorEntropy[state.currentNode] || 0}%`, height: '100%', backgroundColor: theme.accentRed, transition: 'width 0.5s' }}></div>
-            </div>
-            <div style={{ fontSize: '0.75rem', marginTop: '5px', color: theme.textMuted }}>{state.sectorEntropy[state.currentNode] || 0}%</div>
-          </div>
-
-          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <span style={{ fontSize: '0.8rem', letterSpacing: '2px', color: theme.textMuted }}>HUMANITY</span>
-            <div style={{ fontSize: '1.5rem', color: state.humanity < 50 ? theme.accentRed : theme.textBright }}>{state.humanity} / 100</div>
-          </div>
-
-          <div style={{ textAlign: 'center', marginBottom: '30px', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '15px' }}>
-            <span style={{ fontSize: '0.8rem', letterSpacing: '2px', color: theme.textMuted }}>OBOLS (WEALTH)</span>
-            <div style={{ fontSize: '1.5rem', color: '#ffb347' }}>{state.inventory["obols"] || 0}</div>
-          </div>
-
-          <button onClick={resetGame} style={{ padding: '10px', backgroundColor: '#3a0c0c', color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono }}>
-            &gt; TERMINATE_SESSION
+          <button className={`viewport-tab ${viewport === 'CODEX' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('CODEX'); }}>
+            [F2] GOETIAN_CODEX ({allCollectedLogs.length} LOGS)
+          </button>
+          <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}>
+            [F3] KAGE_NO_SHO ({state.tetheredYokai.length}/2)
+          </button>
+          <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}>
+            [F4] SAFEHOUSE_ALTAR
           </button>
         </div>
 
-        {/* ================================================================== */}
-        {/* 6.3 MAIN CONSOLE (Displays Map or Dual Panes) */}
-        {/* ================================================================== */}
-        <div style={{ flexGrow: 1, padding: '40px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto' }}>
-          <div style={{ width: '100%', maxWidth: '1000px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, display: 'flex', minHeight: '600px', boxShadow: `0 0 20px rgba(74, 124, 89, 0.05)`, borderRadius: '2px' }}>
-            
-            {/* --- MAP OVERRIDE (Takes full width) --- */}
-            {currentTab === 'MAP' ? (
-              <div style={{ flex: 1, padding: '40px', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', marginBottom: '20px' }}>
-                  <h2 style={{ letterSpacing: '2px', color: theme.textBright, margin: 0 }}>&gt; ESOTERIC_GEO_TRACKER</h2>
-                  <span style={{ color: theme.textMuted, fontSize: '0.8rem', animation: 'blink 2s infinite' }}>● LIVE TRACKING</span>
+        {/* Right Telemetry: 4 Horsemen Progress, Humanity, Obols */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {(['CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => {
+            const isBanished = state.flags[`banished_${h.toLowerCase()}`];
+            return (
+              <button
+                key={h}
+                onClick={() => setActiveBanishmentTarget(h)}
+                style={{ backgroundColor: isBanished ? '#132a19' : '#090d0a', border: `1px solid ${isBanished ? theme.textBright : theme.borderTerminal}`, color: isBanished ? theme.textBright : '#a8ccaf', padding: '4px 8px', fontSize: '0.7rem', cursor: 'pointer', fontFamily: theme.fontMono }}
+              >
+                {h.slice(0, 3)}: <strong>{isBanished ? 'SEVERED' : `${countByHorseman(h)}/18`}</strong>
+              </button>
+            );
+          })}
+
+          <span style={{ padding: '4px 8px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: state.humanity < 40 ? theme.accentRed : theme.textBright }}>
+            HUM: <strong>{state.humanity}%</strong>
+          </span>
+
+          <span style={{ padding: '4px 8px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentAmber, fontWeight: 'bold' }}>
+            OBOLS: {state.inventory.obols || 0}
+          </span>
+
+          <button onClick={() => { ThaumaturgicAudio.enabled = !audioEnabled; setAudioEnabled(!audioEnabled); }} style={{ padding: '4px 8px', backgroundColor: 'transparent', border: `1px solid ${theme.borderTerminal}`, color: theme.textTerminal, cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.7rem' }}>
+            {audioEnabled ? '🔊' : '🔇'}
+          </button>
+
+          <button onClick={resetGame} style={{ padding: '4px 8px', backgroundColor: '#2a0808', border: `1px solid ${theme.accentRed}`, color: theme.accentRed, cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.7rem' }}>
+            RESET
+          </button>
+        </div>
+      </header>
+
+      {/* ================================================================== */}
+      {/* VIEWPORT 1: [F1] FIELD_OPS (NIGHTFALL DUAL-PANE INFILTRATION)      */}
+      {/* ================================================================== */}
+      {viewport === 'FIELD_OPS' && (
+        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '8px', padding: '8px' }}>
+
+          {/* LEFT PANE: HEAT TELEMETRY, SUB-GRID / GEO-TRACKER MAP, YOKAI BAR */}
+          <section style={{ width: '50%', display: 'flex', flexDirection: 'column', gap: '8px', overflow: 'hidden' }}>
+
+            {/* 1. Heat & Entropy Waveform Bar */}
+            <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '10px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '6px' }}>
+                <span style={{ color: theme.textBright, fontWeight: 'bold' }}>
+                  SECTOR: {currentContract?.sectorLabel || formatLabel(state.currentNode)} // ROOM: {currentSubNode?.label || 'SAFEHOUSE'}
+                </span>
+                <span style={{ color: currentHeat >= 75 ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
+                  LOCAL HEAT: {currentHeat}% | GLOBAL ENTROPY: {state.globalEntropy}%
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ flex: 1, height: '10px', backgroundColor: '#020302', border: `1px solid ${theme.borderTerminal}`, padding: '1px' }}>
+                  <div style={{ width: `${currentHeat}%`, height: '100%', backgroundColor: currentHeat >= 75 ? theme.accentRed : currentHeat >= 35 ? theme.accentAmber : theme.textBright, transition: 'width 0.25s' }} />
                 </div>
-                
-                <div style={{ flexGrow: 1, backgroundColor: '#030503', border: `1px solid ${theme.borderTerminal}`, position: 'relative', overflow: 'hidden', backgroundImage: `linear-gradient(${theme.borderTerminal} 1px, transparent 1px), linear-gradient(90deg, ${theme.borderTerminal} 1px, transparent 1px)`, backgroundSize: '40px 40px', backgroundPosition: '-1px -1px' }}>
-                  <svg viewBox="0 10 100 80" style={{ width: '100%', height: '100%', position: 'absolute' }}>
-                    {MAP_NODES.map(node => 
-                      node.connections.map(targetId => {
-                        const target = MAP_NODES.find(n => n.id === targetId);
-                        if (!target) return null;
-                        return <line key={`${node.id}-${target.id}`} x1={node.x} y1={node.y} x2={target.x} y2={target.y} stroke={theme.borderTerminal} strokeWidth="0.5" strokeDasharray="2 2" />;
-                      })
-                    )}
-                    {MAP_NODES.map(node => {
-                      const isCurrent = state.currentNode === node.id;
-                      const isAdjacent = MAP_NODES.find(n => n.id === state.currentNode)?.connections.includes(node.id);
+                <canvas ref={waveformCanvasRef} width={96} height={22} style={{ backgroundColor: '#020302', border: `1px solid ${theme.borderTerminal}`, flexShrink: 0 }} />
+              </div>
+            </div>
+
+            {/* 2. Interactive Sub-Grid / Geo-Tracker Canvas */}
+            <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'absolute', top: 8, left: 10, right: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, fontSize: '0.72rem' }}>
+                <div style={{ backgroundColor: 'rgba(5,7,6,0.85)', padding: '4px 8px', border: `1px solid ${theme.borderTerminal}` }}>
+                  <span style={{ color: theme.textMuted }}>VIEW: </span>
+                  <strong style={{ color: theme.textBright }}>{mapViewMode === 'SUB_GRID' ? 'LOCAL 6-NODE SUB-GRID' : 'REGIONAL GEO-TRACKER'}</strong>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button onClick={() => setMapViewMode('SUB_GRID')} className={`macro-chip ${mapViewMode === 'SUB_GRID' ? 'macro-chip-amber' : ''}`}>LOCAL SUB-GRID</button>
+                  <button onClick={() => setMapViewMode('GEO_TRACKER')} className={`macro-chip ${mapViewMode === 'GEO_TRACKER' ? 'macro-chip-amber' : ''}`}>SECTOR MAP (TRAVEL)</button>
+                </div>
+              </div>
+
+              <canvas ref={mapCanvasRef} onClick={handleCanvasClick} style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair' }} />
+
+              {/* Bottom Map Action Bar for Selected Room Node */}
+              {mapViewMode === 'SUB_GRID' && selectedSubNode && (
+                <div style={{ position: 'absolute', bottom: 8, left: 10, right: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(5,7,6,0.92)', border: `1px solid ${theme.borderTerminal}`, padding: '8px 12px', zIndex: 10, fontSize: '0.74rem' }}>
+                  <div>
+                    <span style={{ color: theme.textMuted }}>TARGET ROOM: </span>
+                    <strong style={{ color: theme.textBright }}>{selectedSubNode.label}</strong>
+                    <span style={{ marginLeft: '8px', color: theme.accentAmber }}>[{selectedSubNode.status}]</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => handleProbeSubNode(selectedSubNode)}
+                      disabled={selectedSubNode.status !== 'LOCKED'}
+                      className="macro-chip"
+                      title="Scan adjacent room for Ambushes or Anomalies before entering"
+                    >
+                      1. PROBE (-{state.tetheredYokai.length > 0 ? 2 : 5} HUM)
+                    </button>
+                    <button
+                      onClick={() => handleBreachSubNode(selectedSubNode)}
+                      disabled={selectedSubNode.id === currentSubNode?.id}
+                      className="macro-chip macro-chip-amber"
+                      title="Breach room ward and move operative inside"
+                    >
+                      2. BREACH &amp; ENTER
+                    </button>
+                    <button
+                      onClick={handleExtractSubNode}
+                      disabled={selectedSubNode.id !== currentSubNode?.id || currentSubNode?.status === 'EXTRACTED'}
+                      className="macro-chip macro-chip-danger"
+                      title="Extract forensic anomaly log & harvest raw salvage"
+                    >
+                      3. EXTRACT SIGN / LOOT
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Active Yokai & Salvage Summary Strip */}
+            <div style={{ height: '105px', flexShrink: 0, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '10px', display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '0.74rem' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: theme.textBright, fontWeight: 'bold', marginBottom: '6px' }}>ACTIVE SHIKIGAMI TETHER ({state.tetheredYokai.length}/2)</div>
+                {state.tetheredYokai.length === 0 ? (
+                  <div style={{ color: theme.textMuted }}>No Yokai bound. Open <strong style={{ color: theme.textBright }}>[F3] KAGE_NO_SHO</strong> to bind spirits.</div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {state.tetheredYokai.map(yid => {
+                      const y = allYokai.find(item => item.id === yid);
                       return (
-                        <g 
-                          key={node.id} 
-                          onClick={() => {
-                            if (isAdjacent) {
-                              travelTo(node.id);
-                              addToast(`Routing to ${node.label}... Time passes.`, 'ALERT');
-                              setCurrentTab('CURRENT_NODE');
-                            }
-                          }}
-                          style={{ cursor: isAdjacent ? 'pointer' : 'default', transition: 'all 0.3s' }}
-                        >
-                          {isCurrent && <circle cx={node.x} cy={node.y} r="6" fill="none" stroke={theme.textBright} strokeWidth="0.5" style={{ animation: 'slowPulse 2s infinite' }} />}
-                          <circle cx={node.x} cy={node.y} r={isCurrent ? "2.5" : "2"} fill={isCurrent ? theme.textBright : isAdjacent ? theme.textTerminal : theme.bgDark} stroke={isAdjacent || isCurrent ? theme.textBright : theme.borderTerminal} strokeWidth="0.5" />
-                          <text x={node.x} y={node.y - 4} fill={isCurrent ? theme.textBright : isAdjacent ? theme.textTerminal : theme.textMuted} fontSize="3" fontFamily={theme.fontMono} textAnchor="middle" letterSpacing="0.5" style={{ pointerEvents: 'none', textShadow: isCurrent ? `0 0 5px ${theme.bgDark}` : 'none' }}>
-                            {node.label}
-                          </text>
-                        </g>
+                        <div key={yid} style={{ flex: 1, padding: '6px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: theme.textBright, fontWeight: 'bold' }}>{y?.nameEn}</span>
+                          <button onClick={() => handleInvokeYokaiPower(yid)} className="macro-chip macro-chip-amber">INVOKE</button>
+                        </div>
                       );
                     })}
-                  </svg>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ width: '250px', borderLeft: `1px dashed ${theme.borderTerminal}`, paddingLeft: '12px' }}>
+                <div style={{ color: theme.accentAmber, fontWeight: 'bold', marginBottom: '4px' }}>RAW SALVAGE IN STORAGE</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Scrap Metal:</span> <strong style={{ color: theme.textBright }}>{state.inventory.scrap_metal || 0}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Cursed Earth:</span> <strong style={{ color: theme.textBright }}>{state.inventory.cursed_earth || 0}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Alch. Distillate:</span> <strong style={{ color: theme.textBright }}>{state.inventory.alchemical_distillate || 0}</strong></div>
+              </div>
+            </div>
+
+          </section>
+
+          {/* RIGHT PANE: FIELD FORENSIC CLI & DIRECTIVE CONTROLS */}
+          <section style={{ width: '50%', display: 'flex', flexDirection: 'column', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, overflow: 'hidden' }}>
+            <div style={{ height: '32px', backgroundColor: '#040805', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.73rem', flexShrink: 0 }}>
+              <span><strong style={{ color: theme.textBright }}>● FIELD TELEMETRY</strong> // {currentContract?.sectorLabel} ({currentContract?.discoveredLogs.length || 0} Forensic Logs Extracted)</span>
+              <span style={{ color: theme.accentAmber }}>VESSEL: {state.sealedGoetia.length}/72 SEALED</span>
+            </div>
+
+            <div style={{ flex: 1, padding: '14px', overflowY: 'auto', fontSize: '0.81rem', lineHeight: '1.55', backgroundColor: '#030504', userSelect: 'text' }}>
+              {terminalLines.map(line => {
+                const colorMap = { normal: '#a8ccaf', info: '#62f080', system: '#4a7c59', success: '#62f080', warn: '#ffb800', error: '#ff2a55', command: '#ffffff' };
+                return <div key={line.id} style={{ color: colorMap[line.type], marginBottom: '6px' }} dangerouslySetInnerHTML={{ __html: line.html }} />;
+              })}
+              <div ref={terminalEndRef} />
+            </div>
+
+            {/* Tactical Field Macro Bar */}
+            <div style={{ backgroundColor: '#050906', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', gap: '6px', flexWrap: 'wrap', flexShrink: 0 }}>
+              <button onClick={() => handleProbeSubNode()} className="macro-chip">📡 Probe Target Room</button>
+              <button onClick={() => handleBreachSubNode()} className="macro-chip macro-chip-amber">⚡ Breach Target Room</button>
+              <button onClick={handleExtractSubNode} className="macro-chip macro-chip-danger">🔍 Extract Forensic Sign</button>
+              <button onClick={() => setViewport('CODEX')} className="macro-chip">📖 Open Codex ([F2])</button>
+              <button onClick={() => setViewport('SAFEHOUSE_ALTAR')} className="macro-chip">⚗️ Craft Catalysts ([F4])</button>
+            </div>
+
+            {/* CLI Input Bar */}
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                const cmd = cliInput.trim().toLowerCase();
+                if (!cmd) return;
+                setCliInput('');
+                appendLog(`<span style="color:#62f080;">root@operative:~#</span> ${cmd}`, 'command');
+                if (cmd === 'probe') handleProbeSubNode();
+                else if (cmd === 'breach') handleBreachSubNode();
+                else if (cmd === 'extract') handleExtractSubNode();
+                else if (cmd === 'codex') setViewport('CODEX');
+                else if (cmd === 'kage') setViewport('KAGE_NO_SHO');
+                else if (cmd === 'altar' || cmd === 'safehouse') setViewport('SAFEHOUSE_ALTAR');
+                else if (cmd === 'clear') setTerminalLines([]);
+                else appendLog(`Commands: <code>probe</code>, <code>breach</code>, <code>extract</code>, <code>codex</code>, <code>kage</code>, <code>altar</code>, <code>clear</code>.`, 'system');
+              }}
+              style={{ height: '40px', backgroundColor: '#000', borderTop: `1px solid ${theme.borderTerminal}`, padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>root@os:~#</span>
+              <input value={cliInput} onChange={e => setCliInput(e.target.value)} placeholder="Type probe, breach, extract, codex, kage, altar..." style={{ flex: 1, backgroundColor: 'transparent', color: theme.textBright, border: 'none', outline: 'none', fontFamily: theme.fontMono, fontSize: '0.8rem' }} />
+              <button type="submit" className="macro-chip">EXEC</button>
+            </form>
+          </section>
+        </main>
+      )}
+
+      {/* ================================================================== */}
+      {/* VIEWPORT 2: [F2] GOETIAN_CODEX (DEDICATED DEDUCTION MATRIX)        */}
+      {/* ================================================================== */}
+      {viewport === 'CODEX' && (
+        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '10px', padding: '10px' }}>
+
+          {/* LEFT COLUMN (34%): EXTRACTED FORENSIC LOGS & PHENOMENON CHECKLIST */}
+          <section style={{ width: '34%', display: 'flex', flexDirection: 'column', gap: '8px', overflow: 'hidden' }}>
+            {/* Extracted Field Logs */}
+            <div style={{ height: '42%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>1. EXTRACTED FIELD FORENSIC LOGS</span>
+                <span style={{ color: theme.accentAmber }}>{currentContract?.sectorLabel}</span>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.76rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {(!currentContract || currentContract.discoveredLogs.length === 0) ? (
+                  <div style={{ color: theme.textMuted, fontStyle: 'italic' }}>
+                    No forensic logs extracted in {currentContract?.sectorLabel || 'this sector'} yet. Return to [F1] FIELD_OPS, breach anomalous rooms, and click EXTRACT SIGN.
+                  </div>
+                ) : (
+                  currentContract.discoveredLogs.map((log, i) => (
+                    <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.textBright}` }}>
+                      <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '0.7rem' }}>CLUE #{i + 1} // {log.nodeLabel}</div>
+                      <div style={{ color: '#ffffff', marginTop: '3px' }}>"{log.text}"</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Phenomenon Deduction Toggles */}
+            <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px' }}>
+                <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem' }}>2. DEDUCE PHENOMENA ({deducedSigns.length}/3)</span>
+                {deducedSigns.length > 0 && (
+                  <button onClick={() => setDeducedSigns([])} className="macro-chip macro-chip-danger" style={{ padding: '2px 8px' }}>CLEAR FILTERS</button>
+                )}
+              </div>
+              <p style={{ fontSize: '0.72rem', color: '#a8ccaf', margin: '0 0 8px 0' }}>
+                Read the forensic logs above and toggle the matching esoteric phenomena below to filter the 72 Goetia suspects:
+              </p>
+              <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                {PHENOMENON_CATALOG.map(phenom => {
+                  const isChecked = deducedSigns.includes(phenom.tag);
+                  return (
+                    <button
+                      key={phenom.tag}
+                      onClick={() => {
+                        ThaumaturgicAudio.keyClick();
+                        setDeducedSigns(prev =>
+                          prev.includes(phenom.tag) ? prev.filter(t => t !== phenom.tag) : [...prev, phenom.tag]
+                        );
+                      }}
+                      style={{
+                        padding: '6px 8px',
+                        textAlign: 'left',
+                        backgroundColor: isChecked ? 'rgba(98, 240, 128, 0.2)' : '#030504',
+                        border: `1px solid ${isChecked ? theme.textBright : theme.borderTerminal}`,
+                        color: isChecked ? theme.textBright : '#a8ccaf',
+                        cursor: 'pointer',
+                        fontFamily: theme.fontMono,
+                        fontSize: '0.7rem'
+                      }}
+                    >
+                      {isChecked ? '[X] ' : '[ ] '} {phenom.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          {/* CENTER COLUMN (34%): MATCHING SUSPECT LIST (72 GOETIA) */}
+          <section style={{ width: '34%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px' }}>
+              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem' }}>3. MATCHING GOETIA ({filteredCodexGoetia.length}/72)</span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {(['ALL', 'CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => (
+                  <button
+                    key={h}
+                    onClick={() => setCodexHorsemanFilter(h)}
+                    className={`macro-chip ${codexHorsemanFilter === h ? 'macro-chip-amber' : ''}`}
+                    style={{ padding: '2px 6px', fontSize: '0.66rem' }}
+                  >
+                    {h === 'ALL' ? 'ALL' : h.slice(0, 3)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {filteredCodexGoetia.map(g => {
+                const isSealed = state.sealedGoetia.includes(g.id);
+                const isSelected = g.id === selectedSuspectId;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => { ThaumaturgicAudio.keyClick(); setSelectedSuspectId(g.id); }}
+                    style={{
+                      padding: '8px 10px',
+                      textAlign: 'left',
+                      backgroundColor: isSelected ? '#112217' : '#030504',
+                      border: `1px solid ${isSelected ? theme.textBright : theme.borderTerminal}`,
+                      color: isSealed ? theme.textMuted : theme.textBright,
+                      cursor: 'pointer',
+                      fontFamily: theme.fontMono,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div>
+                      <strong>#{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()}</strong>
+                      <div style={{ fontSize: '0.68rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance} — {g.title}</div>
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: isSealed ? theme.textBright : theme.accentAmber }}>
+                      {isSealed ? '[SEALED]' : '[INSPECT]'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* RIGHT COLUMN (32%): SUSPECT DOSSIER & SEALING COMMITMENT */}
+          <section style={{ width: '32%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflowY: 'auto' }}>
+            <div>
+              <div style={{ fontSize: '0.72rem', color: theme.accentAmber, letterSpacing: '1px' }}>
+                ARS GOETIA DOSSIER // #{selectedSuspect.manifestId.toString().padStart(2, '0')} ({selectedSuspect.allegiance})
+              </div>
+              <h2 style={{ margin: '4px 0 4px 0', color: theme.textBright, letterSpacing: '2px' }}>
+                {selectedSuspect.name.toUpperCase()}
+              </h2>
+              <div style={{ fontSize: '0.8rem', color: '#ffffff', fontWeight: 'bold', marginBottom: '12px' }}>
+                {selectedSuspect.rank} — "{selectedSuspect.title}"
+              </div>
+              <p style={{ fontSize: '0.8rem', color: '#a8ccaf', lineHeight: '1.6', padding: '10px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}` }}>
+                {selectedSuspect.description}
+              </p>
+
+              {/* Known Signs of this Goetia */}
+              <div style={{ marginTop: '16px', padding: '12px', border: `1px dashed ${theme.borderTerminal}`, backgroundColor: '#030504' }}>
+                <div style={{ fontSize: '0.76rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '8px' }}>
+                  KNOWN MANIFESTATION SIGNS:
                 </div>
-                <p style={{ fontSize: '0.75rem', color: theme.textMuted, marginTop: '15px', textAlign: 'center' }}>_CLICK ADJACENT SECTORS TO INITIATE TRAVEL PROTOCOL. TRAVEL ADVANCES TIME AND SECTOR HEAT.</p>
+                {selectedSuspect.requiredIntel.map(tag => {
+                  const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
+                  const isToggled = deducedSigns.includes(tag);
+                  return (
+                    <div key={tag} style={{ fontSize: '0.76rem', marginBottom: '6px', color: isToggled ? theme.textBright : '#a8ccaf' }}>
+                      {isToggled ? '✓ ' : '• '} <strong>{def?.label || formatLabel(tag)}</strong>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Required Binding Catalysts */}
+              <div style={{ marginTop: '16px', padding: '12px', border: `1px solid ${theme.accentRed}`, backgroundColor: '#030504' }}>
+                <div style={{ fontSize: '0.76rem', color: theme.accentRed, fontWeight: 'bold', marginBottom: '8px' }}>
+                  REQUIRED BINDING CATALYSTS:
+                </div>
+                {Object.entries(selectedSuspect.sealCost || {}).map(([item, amt]) => {
+                  const have = state.inventory[item] || 0;
+                  return (
+                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
+                      <span style={{ color: '#ffffff' }}>{formatLabel(item)} x{amt}</span>
+                      <span style={{ color: have >= amt ? theme.textBright : theme.accentRed, fontWeight: 'bold' }}>
+                        (In Storage: {have}/{amt})
+                      </span>
+                    </div>
+                  );
+                })}
+                <div style={{ fontSize: '0.7rem', color: theme.textMuted, marginTop: '6px' }}>
+                  Missing catalysts? Synthesize them from raw salvage in <strong>[F4] SAFEHOUSE_ALTAR</strong>.
+                </div>
+              </div>
+            </div>
+
+            {/* Initiate Sealing Trigger */}
+            {state.sealedGoetia.includes(selectedSuspect.id) ? (
+              <div style={{ padding: '14px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold', letterSpacing: '2px' }}>
+                [ ENTITY ALREADY SEALED IN VESSEL ]
               </div>
             ) : (
-              <>
-                {/* ========================================================== */}
-                {/* 6.3a DUAL PANE: LEFT SIDE (Info Display) */}
-                {/* ========================================================== */}
-                <div style={{ flex: 1, padding: '40px', borderRight: `1px dashed ${theme.borderTerminal}`, overflowY: 'auto', maxHeight: '75vh' }}>
-                  
-                  {currentTab === 'CURRENT_NODE' && (
-                    <>
-                      <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', textTransform: 'uppercase', letterSpacing: '2px', color: theme.textBright }}>
-                        &gt; {injectNarrative(activeNodeData.title)}
-                      </h2>
-                      <p style={{ lineHeight: '1.8', fontSize: '1.05rem', marginTop: '20px', whiteSpace: 'pre-wrap' }}>
-                        {injectNarrative(typeof activeNodeData.text === 'function' ? activeNodeData.text(state) : activeNodeData.text)}
-                      </p>
-                    </>
-                  )}
-
-                  {currentTab === 'CODEX' && (
-                    <>
-                      <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', letterSpacing: '2px', color: theme.textBright }}>&gt; GOETIAN_CODEX</h2>
-                      <p style={{ fontSize: '0.9rem', color: theme.textMuted, marginBottom: '20px' }}>Cross-reference field intel to identify commanding lieutenants.</p>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {allGoetia.filter(goetia => goetia.requiredIntel?.some((tag: string) => state.intelLog.includes(tag)) || state.identifiedGoetia.includes(goetia.id) || state.sealedGoetia.includes(goetia.id)).map(goetia => {
-                          const hasAllIntel = goetia.requiredIntel?.every((tag: string) => state.intelLog.includes(tag));
-                          const isIdentified = state.identifiedGoetia.includes(goetia.id);
-                          const isSealed = state.sealedGoetia.includes(goetia.id);
-                          let indexLabel = `UNKNOWN ENTITY (#${goetia.id.substring(0,4).toUpperCase()})`;
-                          if (isSealed) indexLabel = `[SEALED] ${goetia.name}`;
-                          else if (isIdentified) indexLabel = goetia.name;
-                          else if (hasAllIntel) indexLabel = `[!] TARGET DATA ACQUIRED`;
-                          return (
-                            <button key={goetia.id} onClick={() => setSelectedGoetiaId(goetia.id)} style={{ padding: '12px', backgroundColor: selectedGoetiaId === goetia.id ? theme.bgDark : 'transparent', color: hasAllIntel && !isIdentified ? theme.accentRed : theme.textBright, border: `1px solid ${selectedGoetiaId === goetia.id ? theme.textBright : theme.borderTerminal}`, textAlign: 'left', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                              {isSealed && <img src={`/seals/${goetia.id}.png`} alt="Goetian Seal" style={{ width: '28px', height: '28px', filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' }} />}
-                              <span>&gt; {indexLabel}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-
-                  {currentTab === 'KAGE_NO_SHO' && (
-                    <>
-                      <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; KAGE_NO_SHO</h2>
-                      <p style={{ fontSize: '0.9rem', color: theme.textMuted }}>Forge pacts through mutual exchange to bind spirits to your Tether.</p>
-                      {allYokai.filter(y => y.utilityClass === 'Shikigami' || (y.unlockFlag && state.flags[y.unlockFlag])).map(yokai => {
-                        const cost = yokai.draftCost;
-                        const canAfford = (!cost.obols || (state.inventory["obols"] || 0) >= cost.obols) && (!cost.humanity || state.humanity >= cost.humanity) && (!cost.ink || state.ink >= cost.ink) && (!cost.tributeItemId || (state.inventory[cost.tributeItemId] || 0) >= 1);
-                        const costDisplay = [cost.obols ? `${cost.obols} Obols` : '', cost.humanity ? `${cost.humanity} Humanity` : '', cost.ink ? `${cost.ink} Ink` : '', cost.tributeItemId ? `1x ${formatNode(cost.tributeItemId)}` : ''].filter(Boolean).join(' + ') || 'Free';
-                        return (
-                          <div key={yokai.id} style={{ border: `1px solid ${theme.borderTerminal}`, padding: '15px', marginTop: '20px', backgroundColor: theme.bgDark }}>
-                            <h3 style={{ margin: '0 0 10px 0', color: theme.textBright }}>{yokai.nameEn}</h3>
-                            <p style={{ fontSize: '0.9rem' }}>{yokai.gameUtility}</p>
-                            <p style={{ fontWeight: 'bold', fontSize: '0.85rem', marginTop: '10px' }}>&gt; PACT REQ: <span style={{ color: theme.accentRed }}>{costDisplay}</span></p>
-                            <button onClick={() => { if (canAfford) { draftContract(yokai.id, yokai.draftCost); addToast(`Forged pact: ${yokai.nameEn}`, 'ALERT'); } }} disabled={!canAfford} style={{ padding: '8px 15px', marginTop: '10px', width: '100%', backgroundColor: canAfford ? theme.textTerminal : '#111', color: canAfford ? 'black' : theme.textMuted, border: 'none', cursor: canAfford ? 'pointer' : 'not-allowed', fontFamily: theme.fontMono, fontWeight: 'bold' }}>
-                              {canAfford ? '> BIND TO TETHER' : '> UNMET DEMANDS'}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </>
-                  )}
-
-                  {currentTab === 'INVENTORY' && (
-                    <>
-                      <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; LOCAL_STORAGE</h2>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginTop: '20px' }}>
-                        <div onClick={() => setSelectedItemId('brass_vessel')} style={{ border: `1px solid ${selectedItemId === 'brass_vessel' ? theme.textBright : theme.borderTerminal}`, padding: '15px', textAlign: 'center', backgroundColor: theme.bgDark, cursor: 'pointer' }}>
-                          <div style={{ fontSize: '2rem', marginBottom: '10px' }}>⚱️</div>
-                          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', wordBreak: 'break-word', color: theme.textBright }}>BRASS_VESSEL</div>
-                          <div style={{ marginTop: '5px', color: theme.textMuted, fontWeight: 'bold' }}>x ∞</div>
-                        </div>
-                        {(Object.entries(state.inventory) as [string, number][]).filter(([key]) => key !== 'obols').map(([key, amount]) => (
-                          <div key={key} onClick={() => setSelectedItemId(key)} style={{ border: `1px solid ${selectedItemId === key ? theme.textBright : theme.borderTerminal}`, padding: '15px', textAlign: 'center', backgroundColor: theme.bgDark, cursor: 'pointer' }}>
-                            <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📦</div>
-                            <div style={{ fontSize: '0.7rem', fontWeight: 'bold', wordBreak: 'break-word', color: theme.textBright }}>{formatNode(key)}</div>
-                            <div style={{ marginTop: '5px', color: theme.textMuted, fontWeight: 'bold' }}>x {amount}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-
-                  {currentTab === 'JOURNAL' && (
-                    <>
-                      <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; CASE_FILES</h2>
-                      <h3 style={{ fontSize: '0.9rem', color: theme.textTerminal, marginTop: '20px' }}>[ ACTIVE_LEADS ]</h3>
-                      
-                      {/* Added safety fallbacks (state.activeLeads || []) */}
-                      {(state.activeLeads || []).filter(l => !l.resolved).length === 0 ? <p style={{color: theme.textMuted, fontSize: '0.85rem'}}>_NO ACTIVE LEADS.</p> : (
-                        <ul style={{ listStyleType: 'none', paddingLeft: '0', lineHeight: '1.8', fontSize: '0.9rem' }}>
-                          {(state.activeLeads || []).filter(l => !l.resolved).map(lead => <li key={lead.id} style={{ marginBottom: '10px', color: theme.textBright }}><strong style={{color: theme.accentGreen}}>[!]</strong> {injectNarrative(lead.text).toUpperCase()}</li>)}
-                        </ul>
-                      )}
-                      
-                      <h3 style={{ fontSize: '0.9rem', color: theme.textMuted, marginTop: '30px' }}>[ ARCHIVED_LEADS ]</h3>
-                      {(state.activeLeads || []).filter(l => l.resolved).length === 0 ? <p style={{color: theme.textMuted, fontSize: '0.85rem'}}>_NO ARCHIVED DATA.</p> : (
-                        <ul style={{ listStyleType: 'none', paddingLeft: '0', lineHeight: '1.8', fontSize: '0.85rem' }}>
-                          {(state.activeLeads || []).filter(l => l.resolved).map(lead => <li key={lead.id} style={{ marginBottom: '10px', color: theme.textMuted, textDecoration: 'line-through' }}><strong>[X]</strong> {injectNarrative(lead.text).toUpperCase()}</li>)}
-                        </ul>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {/* ========================================================== */}
-                {/* 6.3b DUAL PANE: RIGHT SIDE (Action Execution) */}
-                {/* ========================================================== */}
-                <div style={{ flex: 1, padding: '40px', overflowY: 'auto', maxHeight: '75vh' }}>
-                  
-                  {currentTab === 'CURRENT_NODE' && (
-                    <>
-                      <h3 style={{ fontSize: '0.9rem', color: theme.textMuted, marginBottom: '15px' }}>[ AVAILABLE_ACTIONS ]</h3>
-                      {(state.sectorEntropy[state.currentNode] || 0) >= 100 ? (
-                        <div style={{ padding: '30px', backgroundColor: '#2a0808', border: `1px solid ${theme.accentRed}`, textAlign: 'center', animation: 'blink 2s infinite' }}>
-                          <h3 style={{ color: theme.accentRed, letterSpacing: '4px', marginBottom: '15px' }}>! SECTOR COMPROMISED !</h3>
-                          <p style={{ color: theme.textBright, fontSize: '0.9rem', lineHeight: '1.6' }}>
-                            Logic fog density has reached critical mass. Malleus Inquisition squads are sweeping the perimeter. Further investigation is impossible. You must route to a new sector immediately.
-                          </p>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                          {availableChoices
-                            .filter((choice: NarrativeChoice) => !choice.condition || choice.condition(state))
-                            .map((choice: NarrativeChoice) => (
-                              <button 
-                                key={choice.id}
-                                onClick={() => {
-                                  choice.actions.forEach((action: GameAction) => {
-                                    dispatch(action);
-                                    if (action.type === 'GATHER_INTEL') addToast(`Log updated: ${formatNode(action.payload)}`, 'INTEL');
-                                    else if (action.type === 'MODIFY_INVENTORY') addToast(`Received ${action.payload.amount > 0 ? '+' : ''}${action.payload.amount} ${formatNode(action.payload.itemId)}`, 'ITEM');
-                                    else if (action.type === 'ADD_LEAD') addToast(`New Active Lead Added.`, 'ALERT');
-                                    else if (action.type === 'ADVANCE_TIME') addToast(`Time advances. Local heat increases.`, 'ALERT');
-                                    else if (action.type === 'MODIFY_SECTOR_ENTROPY') addToast(`Sector Heat modified by ${action.payload.amount}%.`, 'ALERT'); 
-                                    else if (action.type === 'MODIFY_HUMANITY') addToast(`Humanity modified: ${action.payload > 0 ? '+' : ''}${action.payload}`, 'ALERT');
-                                  });
-                                }}
-                                style={{ padding: '15px', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer', fontFamily: theme.fontMono, textAlign: 'left', fontSize: '1rem', transition: 'background-color 0.2s' }}
-                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#111'}
-                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = theme.bgDark}
-                              >
-                                <span style={{ color: theme.textTerminal, marginRight: '10px' }}>$</span> {injectNarrative(choice.label)}
-                              </button>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {currentTab === 'CODEX' && (
-                    <>
-                       {selectedGoetiaId ? (() => {
-                         const target = allGoetia.find(g => g.id === selectedGoetiaId)!;
-                         const hasAllIntel = target.requiredIntel?.every((tag: string) => state.intelLog.includes(tag));
-                         const isIdentified = state.identifiedGoetia.includes(target.id);
-                         const isSealed = state.sealedGoetia.includes(target.id);
-                         const sealCost = target.sealCost || {};
-                         const canAffordSeal = Object.keys(sealCost).length > 0 && (Object.entries(sealCost) as [string, number][]).every(([item, amount]) => (state.inventory[item] || 0) >= amount);
-
-                         return (
-                           <div>
-                             <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', letterSpacing: '2px', color: theme.textBright }}>&gt; {isIdentified ? target.name.toUpperCase() : "TARGET_OBSCURED"}</h2>
-                             {isIdentified ? <><p style={{ color: theme.textBright, fontWeight: 'bold', marginTop: '10px' }}>{target.title || "Classification Pending"} ({target.allegiance})</p><p style={{ lineHeight: '1.6' }}>{target.description || "No archival data available."}</p></> : <p style={{ lineHeight: '1.6', color: theme.textMuted }}>Identity hidden. Compile required intel to reveal the lieutenant's true nature.</p>}
-                             
-                             <div style={{ marginTop: '30px', padding: '15px', border: `1px dashed ${theme.borderTerminal}` }}>
-                               <h3 style={{ fontSize: '1rem', marginBottom: '15px', color: theme.textBright }}>&gt; REQUIRED_INTEL</h3>
-                               <ul style={{ listStyleType: 'none', padding: 0 }}>
-                                 {target.requiredIntel?.map((tag: string) => <li key={tag} style={{ color: state.intelLog.includes(tag) ? theme.textBright : theme.textMuted, marginBottom: '8px', fontSize: '0.85rem' }}>{state.intelLog.includes(tag) ? `[+] CONFIRMED: ${formatNode(tag)}` : `[-] MISSING_DATA_COMPONENT`}</li>) || <li style={{ color: theme.textMuted }}>_NO INTEL REQUIREMENTS DEFINED.</li>}
-                               </ul>
-                             </div>
-
-                             {hasAllIntel && !isIdentified && (
-                               <div style={{ marginTop: '40px', textAlign: 'center' }}>
-                                 <p style={{ color: theme.textBright, marginBottom: '15px' }}>_DATA SUFFICIENT. A PATTERN EMERGES.</p>
-                                 <button onClick={() => { identifyGoetia(target.id); addToast(`Target Identity Confirmed: ${target.name}`, 'ALERT'); }} style={{ padding: '15px 30px', fontSize: '1.1rem', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.textBright}`, cursor: 'pointer', fontFamily: theme.fontMono, letterSpacing: '2px' }}>&gt; IDENTIFY_ENTITY</button>
-                               </div>
-                             )}
-
-                             {isIdentified && !isSealed && Object.keys(sealCost).length > 0 && (
-                               <div style={{ marginTop: '30px', backgroundColor: theme.bgDark, padding: '20px', border: `1px solid ${theme.accentRed}` }}>
-                                 <h3 style={{ marginTop: 0, color: theme.accentRed }}>&gt; REQUIRED_CATALYSTS</h3>
-                                 <ul style={{ listStyleType: 'none', padding: 0, fontSize: '0.9rem' }}>
-                                   {(Object.entries(sealCost) as [string, number][]).map(([item, amount]) => <li key={item} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}><span>{formatNode(item)} x{amount}</span><span style={{ color: (state.inventory[item] || 0) >= amount ? theme.textBright : theme.accentRed }}>(Have: {state.inventory[item] || 0})</span></li>)}
-                                 </ul>
-                                 <button onClick={() => setActiveSealTarget(target.id)} disabled={!canAffordSeal} style={{ padding: '10px', width: '100%', marginTop: '15px', backgroundColor: canAffordSeal ? '#3a0c0c' : '#111', color: canAffordSeal ? 'white' : theme.textMuted, border: 'none', cursor: canAffordSeal ? 'pointer' : 'not-allowed', fontFamily: theme.fontMono }}>{canAffordSeal ? "> INITIATE_SEALING_PROTOCOL" : "> INSUFFICIENT_MATERIALS"}</button>
-                               </div>
-                             )}
-
-                             {isSealed && <div style={{ marginTop: '30px', textAlign: 'center', padding: '20px', color: theme.textBright, border: `1px solid ${theme.textBright}`, fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: '4px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}><img src={`/seals/${target.id}.png`} alt="Goetian Seal" style={{ width: '120px', height: '120px', marginBottom: '20px', filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' }} />[ TARGET_SEALED ]</div>}
-                           
-                             {/* --- THE BANISHMENT TRIGGER --- */}
-                             {isSealed && target.allegiance && (
-                               <button 
-                                  onClick={() => setActiveBanishmentTarget(target.allegiance as 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH')} 
-                                  style={{ width: '100%', marginTop: '20px', padding: '15px', backgroundColor: 'transparent', color: theme.accentRed, border: `1px dashed ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono, letterSpacing: '2px' }}
-                               >
-                                 &gt; INITIATE_{target.allegiance}_BANISHMENT
-                               </button>
-                             )}
-                           </div>
-                         );
-                       })() : (
-                         <div style={{ textAlign: 'center', marginTop: '100px' }}>
-                           <p style={{ color: theme.textMuted }}>_AWAITING TARGET SELECTION.</p>
-                         </div>
-                       )}
-                    </>
-                  )}
-
-                  {currentTab === 'INVENTORY' && (
-                    <>
-                      <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; ITEM_ANALYSIS</h2>
-                      {!selectedItemId ? <p style={{ color: theme.textMuted }}>_SELECT AN ITEM TO VIEW METADATA.</p> : selectedItemId === 'brass_vessel' ? (
-                        <div style={{ marginTop: '20px' }}>
-                          <h3 style={{ color: theme.textBright, fontSize: '1.2rem', marginBottom: '10px' }}>&gt; SOLOMONIC BRASS VESSEL</h3>
-                          <p style={{ color: theme.textTerminal, lineHeight: '1.6' }}>An extradimensional containment unit inscribed with cryptographic wards. Used to securely isolate Goetian signatures.</p>
-                          <div style={{ marginTop: '30px', padding: '20px', backgroundColor: theme.bgDark, border: `1px solid ${theme.borderTerminal}`, textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.9rem', color: theme.textMuted, marginBottom: '10px' }}>CONTAINMENT CAPACITY STATUS</div>
-                            <div style={{ fontSize: '2.5rem', color: theme.textBright, fontWeight: 'bold' }}>{state.sealedGoetia.length} <span style={{ fontSize: '1.5rem', color: theme.textMuted }}>/ 72</span></div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ marginTop: '20px' }}>
-                           <h3 style={{ color: theme.textBright, fontSize: '1.2rem', marginBottom: '10px', wordBreak: 'break-word' }}>&gt; {formatNode(selectedItemId)}</h3>
-                           <p style={{ color: theme.textTerminal, lineHeight: '1.6' }}>Standard issue operative material or acquired local asset. Utilized in esoteric crafting, summoning, and environmental interaction.</p>
-                           <div style={{ marginTop: '20px', padding: '15px', border: `1px dashed ${theme.borderTerminal}` }}><span style={{ color: theme.textMuted }}>CURRENT STOCK:</span> <strong style={{ color: theme.textBright, marginLeft: '10px' }}>{state.inventory[selectedItemId]}</strong></div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {currentTab === 'JOURNAL' && (
-                    <>
-                      <h2 style={{ borderBottom: `1px solid ${theme.textTerminal}`, paddingBottom: '10px', color: theme.textBright }}>&gt; COMPILED_INTEL_DATABASE</h2>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '20px' }}>
-                        <div>
-                          <h3 style={{ fontSize: '0.9rem', color: theme.textTerminal, marginBottom: '15px' }}>[ DATA_FRAGMENTS ]</h3>
-                          {state.intelLog.length === 0 ? <p style={{ color: theme.textMuted, fontSize: '0.85rem' }}>_NO INTEL ACQUIRED.</p> : <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>{state.intelLog.map((intel, idx) => <div key={idx} style={{ padding: '8px 12px', borderLeft: `2px solid ${theme.accentGreen}`, backgroundColor: theme.bgDark, color: theme.textBright, fontSize: '0.85rem' }}>&gt; {formatNode(intel)}</div>)}</div>}
-                        </div>
-                        <div>
-                          <h3 style={{ fontSize: '0.9rem', color: theme.textTerminal, marginBottom: '15px' }}>[ EVENT_REGISTRY ]</h3>
-                          {Object.keys(state.flags).length === 0 ? <p style={{ color: theme.textMuted, fontSize: '0.85rem' }}>_NO SIGNIFICANT EVENTS RECORDED.</p> : <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>{Object.entries(state.flags).map(([flag, value]) => <div key={flag} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: theme.bgDark, border: `1px solid ${theme.borderTerminal}`, fontSize: '0.85rem' }}><span style={{ color: theme.textMuted }}>{formatNode(flag)}</span><span style={{ color: value ? theme.accentGreen : theme.accentRed, fontWeight: 'bold' }}>[{value ? 'TRUE' : 'FALSE'}]</span></div>)}</div>}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </>
+              <div>
+                {(() => {
+                  const sealCost = selectedSuspect.sealCost || {};
+                  const canAfford = Object.entries(sealCost).every(([item, amt]) => (state.inventory[item] || 0) >= amt);
+                  return (
+                    <button
+                      onClick={() => setActiveSealSuspectId(selectedSuspect.id)}
+                      disabled={!canAfford}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        backgroundColor: canAfford ? theme.accentRed : '#1a1a1a',
+                        color: canAfford ? 'white' : theme.textMuted,
+                        border: 'none',
+                        cursor: canAfford ? 'pointer' : 'not-allowed',
+                        fontFamily: theme.fontMono,
+                        fontWeight: 'bold',
+                        letterSpacing: '1px',
+                        fontSize: '0.82rem'
+                      }}
+                    >
+                      {canAfford
+                        ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}`
+                        : `> SYNTHESIZE CATALYSTS IN [F4] ALTAR FIRST`}
+                    </button>
+                  );
+                })()}
+              </div>
             )}
+          </section>
+        </main>
+      )}
+
+      {/* ================================================================== */}
+      {/* VIEWPORT 3: [F3] KAGE_NO_SHO (SPIRIT COMPENDIUM & TETHER SLOTS)    */}
+      {/* ================================================================== */}
+      {viewport === 'KAGE_NO_SHO' && (
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px' }}>
+          {/* Top Bar: Active Rule-of-Two Tether Slots */}
+          <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.9rem' }}>KAGE-NO-SHO // THE BOOK OF SHADOWS (RULE OF TWO)</div>
+              <div style={{ color: '#a8ccaf', fontSize: '0.76rem', marginTop: '3px' }}>
+                You may bind up to 2 Yokai intermediaries simultaneously. Discover new Yokai by extracting Dormant Kami Shrines in the field, or purchase Esoteric Ink below.
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ color: theme.accentCyan, fontSize: '0.82rem', fontWeight: 'bold' }}>ESOTERIC INK: {state.ink || 0}</span>
+              <button
+                onClick={() => {
+                  if ((state.inventory.obols || 0) >= 10) {
+                    ThaumaturgicAudio.keyClick();
+                    dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -10 } });
+                    dispatch({ type: 'LOAD_GAME', payload: { ...state, inventory: { ...state.inventory, obols: (state.inventory.obols || 0) - 10 }, ink: (state.ink || 0) + 1 } });
+                    addToast(`Purchased +1 Esoteric Ink`, 'ITEM');
+                  } else {
+                    addToast(`Requires 10 Obols to distill Esoteric Ink.`, 'ALERT');
+                  }
+                }}
+                className="macro-chip macro-chip-amber"
+              >
+                + DISTILL ESOTERIC INK (-10 OBOLS)
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
-      
+
+          {/* Grid of All 8 Tactical Yokai */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+            {allYokai.map(yokai => {
+              const isBound = state.tetheredYokai.includes(yokai.id);
+              const cost = yokai.draftCost;
+              const canAfford = (!cost.obols || (state.inventory.obols || 0) >= cost.obols) && (!cost.humanity || state.humanity > cost.humanity) && (!cost.ink || (state.ink || 0) >= cost.ink);
+              const costStr = [cost.obols ? `${cost.obols} Obols` : '', cost.humanity ? `${cost.humanity} Humanity` : '', cost.ink ? `${cost.ink} Ink` : ''].filter(Boolean).join(' + ');
+
+              return (
+                <div key={yokai.id} style={{ backgroundColor: theme.bgPanel, border: `1px solid ${isBound ? theme.textBright : theme.borderTerminal}`, padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '1px' }}>{yokai.utilityClass.toUpperCase()}</span>
+                      {isBound && <span style={{ fontSize: '0.68rem', backgroundColor: theme.textBright, color: 'black', padding: '1px 6px', fontWeight: 'bold' }}>BOUND</span>}
+                    </div>
+                    <h3 style={{ margin: '0 0 8px 0', color: theme.textBright, fontSize: '0.95rem' }}>{yokai.nameEn}</h3>
+                    <p style={{ fontSize: '0.76rem', color: '#ffffff', lineHeight: '1.5' }}>{yokai.gameUtility}</p>
+                    <p style={{ fontSize: '0.7rem', color: theme.textMuted, fontStyle: 'italic', marginTop: '8px' }}>"{yokai.costDescription}"</p>
+                  </div>
+
+                  <div style={{ marginTop: '12px', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '10px' }}>
+                    <div style={{ fontSize: '0.74rem', color: theme.accentRed, fontWeight: 'bold', marginBottom: '8px' }}>
+                      PACT COST: {costStr}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (isBound) return;
+                        ThaumaturgicAudio.sealSuccess();
+                        draftContract(yokai.id, yokai.draftCost);
+                        addToast(`Bound ${yokai.nameEn} to Tether!`, 'SEAL');
+                      }}
+                      disabled={isBound || !canAfford}
+                      className="macro-chip"
+                      style={{ width: '100%', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}
+                    >
+                      {isBound ? 'ACTIVE ON TETHER' : canAfford ? '> FORGE PACT & BIND' : '> INSUFFICIENT TRIBUTE'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </main>
+      )}
+
       {/* ================================================================== */}
-      {/* 6.4 MODALS & TOAST OVERLAYS */}
+      {/* VIEWPORT 4: [F4] SAFEHOUSE_ALTAR (SYNTHESIS, RECOVERY & WARDING)   */}
       {/* ================================================================== */}
-      {activeSealTarget && (() => {
-        const target = allGoetia.find(g => g.id === activeSealTarget);
-        if (!target) return null;
-        return <SealingTerminal target={target} sealCost={target.sealCost || {}} onClose={() => setActiveSealTarget(null)} dispatch={dispatch} sealGoetia={sealGoetia} addToast={addToast} tetheredYokai={state.tetheredYokai} />;
+      {viewport === 'SAFEHOUSE_ALTAR' && (
+        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '10px', padding: '12px' }}>
+
+          {/* LEFT PANE (62%): ALTAR OF ALCHEMICAL SYNTHESIS */}
+          <section style={{ width: '62%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '8px', marginBottom: '10px' }}>
+              <div>
+                <h2 style={{ margin: 0, color: theme.textBright, fontSize: '1rem', letterSpacing: '2px' }}>&gt; ALTAR OF ALCHEMICAL SYNTHESIS</h2>
+                <div style={{ fontSize: '0.74rem', color: '#a8ccaf', marginTop: '2px' }}>
+                  Transmute raw field salvage into refined Solomonic catalysts required to seal your deduced Goetia.
+                  {state.tetheredYokai.includes('yokai_kameosa') && <span style={{ color: theme.accentAmber }}> [KAMEOSA ACTIVE: 0 Obol Cost, -2 Humanity per craft!]</span>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', fontSize: '0.75rem', backgroundColor: '#030504', padding: '6px 10px', border: `1px solid ${theme.borderTerminal}` }}>
+                <span>Metal: <strong style={{ color: theme.textBright }}>{state.inventory.scrap_metal || 0}</strong></span>
+                <span>Earth: <strong style={{ color: theme.textBright }}>{state.inventory.cursed_earth || 0}</strong></span>
+                <span>Distillate: <strong style={{ color: theme.textBright }}>{state.inventory.alchemical_distillate || 0}</strong></span>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {ALTAR_RECIPES.map(recipe => {
+                const isKameosa = state.tetheredYokai.includes('yokai_kameosa');
+                const effObolCost = isKameosa ? 0 : recipe.obolCost;
+                const haveRaw = state.inventory[recipe.rawMaterialId] || 0;
+                const haveObols = state.inventory.obols || 0;
+                const canCraft = haveRaw >= recipe.rawAmount && haveObols >= effObolCost && (!isKameosa || state.humanity > 2);
+                const ownedOutput = state.inventory[recipe.outputId] || 0;
+
+                return (
+                  <div key={recipe.outputId} style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ color: theme.textBright, fontSize: '0.82rem' }}>{recipe.label.toUpperCase()}</strong>
+                        <span style={{ color: theme.accentAmber, fontSize: '0.72rem' }}>OWNED: x{ownedOutput}</span>
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#a8ccaf', margin: '4px 0 8px 0' }}>{recipe.desc}</div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '6px' }}>
+                      <span style={{ fontSize: '0.7rem', color: theme.textMuted }}>
+                        Req: {recipe.rawAmount}x {formatLabel(recipe.rawMaterialId)} + {isKameosa ? '2 HUM' : `${effObolCost} Obols`}
+                      </span>
+                      <button
+                        onClick={() => {
+                          ThaumaturgicAudio.scryPing();
+                          dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: recipe.rawMaterialId, amount: -recipe.rawAmount } });
+                          if (isKameosa) dispatch({ type: 'MODIFY_HUMANITY', payload: -2 });
+                          else dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -effObolCost } });
+                          dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: recipe.outputId, amount: 1 } });
+                          addToast(`Synthesized +1 ${recipe.label}`, 'ITEM');
+                        }}
+                        disabled={!canCraft}
+                        className="macro-chip macro-chip-amber"
+                      >
+                        SYNTHESIZE
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* RIGHT PANE (38%): TETHER RECOVERY & REMOTE SECTOR WARDING */}
+          <section style={{ width: '38%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {/* Hearth Recovery */}
+            <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px' }}>
+              <h3 style={{ margin: '0 0 8px 0', color: theme.textBright, fontSize: '0.9rem' }}>&gt; SAFEHOUSE HEARTH // TETHER ALIGNMENT</h3>
+              <p style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5' }}>
+                Rest inside the brass-warded safehouse to restore +30 Humanity. Resting advances time (+4% Heat across active sectors).
+              </p>
+              <button
+                onClick={() => {
+                  ThaumaturgicAudio.sealSuccess();
+                  dispatch({ type: 'MODIFY_HUMANITY', payload: 30 });
+                  dispatch({ type: 'ADVANCE_TIME', payload: 4 });
+                  addToast(`Tether Restored (+30 Humanity). Time advanced.`, 'SEAL');
+                }}
+                disabled={state.humanity >= 100}
+                className="macro-chip"
+                style={{ width: '100%', padding: '10px', marginTop: '8px', fontWeight: 'bold' }}
+              >
+                &gt; REST &amp; REALIGN TETHER (+30 HUMANITY)
+              </button>
+            </div>
+
+            {/* Remote Sector Heat Suppression */}
+            <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ margin: '0 0 8px 0', color: theme.textBright, fontSize: '0.9rem' }}>&gt; REMOTE SECTOR WARDING // HEAT TRIAGE</h3>
+              <p style={{ fontSize: '0.75rem', color: '#a8ccaf', marginBottom: '12px' }}>
+                Burn 20 Obols to jam Malleus Inquisition direction-finders in a hot sector (-30% Local Heat).
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {MACRO_SECTORS.filter(s => s.id !== 'safehouse').map(sec => {
+                  const heat = state.sectorEntropy[sec.id] || 0;
+                  return (
+                    <div key={sec.id} style={{ padding: '10px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <strong style={{ color: theme.textBright, fontSize: '0.78rem' }}>{sec.label}</strong>
+                        <div style={{ fontSize: '0.72rem', color: heat >= 75 ? theme.accentRed : theme.accentAmber }}>HEAT: {heat}%</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          ThaumaturgicAudio.scryPing();
+                          dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -20 } });
+                          dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: sec.id, amount: -30 } });
+                          addToast(`Suppressed -30% Heat in ${sec.label}`, 'SEAL');
+                        }}
+                        disabled={heat === 0 || (state.inventory.obols || 0) < 20}
+                        className="macro-chip macro-chip-danger"
+                      >
+                        WARD (-20 OBOLS)
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        </main>
+      )}
+
+      {/* ================================================================== */}
+      {/* SEALING & BANISHMENT MODALS + TOASTS                               */}
+      {/* ================================================================== */}
+      {activeSealSuspectId && (() => {
+        const suspect = allGoetia.find(g => g.id === activeSealSuspectId);
+        if (!suspect) return null;
+        const actualAnchorId = currentContract?.targetGoetiaId || suspect.id;
+        return (
+          <SealingTerminal
+            suspect={suspect}
+            actualAnchorId={actualAnchorId}
+            sealCost={suspect.sealCost || {}}
+            onClose={() => setActiveSealSuspectId(null)}
+            onSuccessSeal={(sealedId) => {
+              // Award Obol bounty & rotate a fresh Goetia contract into the sector!
+              dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 35 } });
+              dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -40 } });
+              setDeducedSigns([]);
+              if (currentContract) {
+                const nextContract = generateSectorContract(
+                  currentContract.sectorId,
+                  currentContract.sectorLabel,
+                  [...state.sealedGoetia, sealedId]
+                );
+                setContracts(prev => ({ ...prev, [currentContract.sectorId]: nextContract }));
+              }
+            }}
+            dispatch={dispatch}
+            sealGoetia={sealGoetia}
+            addToast={addToast}
+            tetheredYokai={state.tetheredYokai}
+          />
+        );
       })()}
 
       {activeBanishmentTarget && (
-        <BanishmentTerminal horseman={activeBanishmentTarget} state={state} dispatch={dispatch} onClose={() => setActiveBanishmentTarget(null)} addToast={addToast} tetheredYokai={state.tetheredYokai} />
+        <BanishmentTerminal
+          horseman={activeBanishmentTarget}
+          state={state}
+          dispatch={dispatch}
+          onClose={() => setActiveBanishmentTarget(null)}
+          addToast={addToast}
+          tetheredYokai={state.tetheredYokai}
+        />
       )}
 
-      {/* --- TOAST NOTIFICATIONS OVERLAY --- */}
-      <div style={{ position: 'fixed', bottom: '30px', right: '30px', display: 'flex', flexDirection: 'column', gap: '10px', zIndex: 1000, pointerEvents: 'none' }}>
+      <div style={{ position: 'fixed', bottom: '50px', right: '20px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 1000, pointerEvents: 'none' }}>
         {toasts.map(toast => (
-          <div 
-            key={toast.id} 
-            style={{ 
-              pointerEvents: 'auto', // Allows clicking the dismiss button
-              animation: 'slideInRight 0.3s ease-out forwards', 
-              position: 'relative',
-              backgroundColor: theme.bgPanel, 
-              color: theme.textBright, 
-              border: `1px solid ${theme.borderTerminal}`, 
-              borderLeft: `4px solid ${toast.type === 'INTEL' ? theme.textTerminal : toast.type === 'ITEM' ? '#b8860b' : toast.type === 'SEAL' ? theme.textBright : theme.accentRed}`, 
-              padding: '15px 30px 15px 20px', // Added right padding for the X button
-              fontFamily: theme.fontMono, 
-              fontSize: '0.9rem', 
-              boxShadow: '0 4px 10px rgba(0,0,0,0.8)', 
-              maxWidth: '350px' 
+          <div
+            key={toast.id}
+            style={{
+              pointerEvents: 'auto',
+              animation: 'slideInRight 0.25s ease-out forwards',
+              backgroundColor: theme.bgPanel,
+              color: theme.textBright,
+              border: `1px solid ${theme.borderTerminal}`,
+              borderLeft: `4px solid ${toast.type === 'INTEL' ? theme.textBright : toast.type === 'ITEM' ? theme.accentAmber : theme.accentRed}`,
+              padding: '10px 16px',
+              fontFamily: theme.fontMono,
+              fontSize: '0.78rem',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.85)',
+              maxWidth: '320px'
             }}
           >
-            {/* MANUAL DISMISS BUTTON */}
-            <button 
-              onClick={() => removeToast(toast.id)} 
-              style={{ position: 'absolute', top: '5px', right: '5px', background: 'none', border: 'none', color: theme.textMuted, cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.8rem' }}
-            >
-              [X]
-            </button>
-
-            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', color: theme.textMuted, fontSize: '0.7rem', letterSpacing: '1px' }}>
-              &gt; {toast.type === 'INTEL' ? 'SYS_UPDATE: INTEL' : toast.type === 'ITEM' ? 'SYS_UPDATE: STORAGE' : toast.type === 'SEAL' ? 'PROTOCOL_SUCCESS' : 'CRITICAL_ALERT'}
-            </span>
             {toast.message}
           </div>
         ))}
       </div>
     </div>
   );
-}
-
-function NavBtn({ active, onClick, children }: { active: boolean, onClick: () => void, children: React.ReactNode }) {
-  return <button onClick={onClick} style={{ padding: '12px 15px', textAlign: 'left', backgroundColor: active ? theme.bgDark : 'transparent', color: active ? theme.textBright : theme.textMuted, border: 'none', borderLeft: active ? `4px solid ${theme.textBright}` : '4px solid transparent', cursor: 'pointer', fontFamily: theme.fontMono, letterSpacing: '1px', fontSize: '0.9rem', transition: 'all 0.2s', fontWeight: active ? 'bold' : 'normal' }}>&gt; {children}</button>;
 }
