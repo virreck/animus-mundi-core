@@ -22,7 +22,7 @@ interface TerminalEntry {
   type: 'normal' | 'info' | 'system' | 'success' | 'warn' | 'error' | 'command';
 }
 
-type ViewportMode = 'FIELD_OPS' | 'CODEX' | 'KAGE_NO_SHO' | 'SAFEHOUSE_ALTAR' | 'HORSEMEN' | 'DOSSIER';
+type ViewportMode = 'FIELD_OPS' | 'CODEX' | 'KAGE_NO_SHO' | 'SAFEHOUSE_ALTAR' | 'HORSEMEN' | 'DOSSIER' | 'MANUAL';
 type FontScale = 'SM' | 'MD' | 'LG';
 
 const FONT_ZOOM_MAP: Record<FontScale, number> = {
@@ -264,101 +264,98 @@ const getFullBodyPath = (squarePath: string) => {
 // ============================================================================ //
 // 4. INTERACTIVE FIELD MANUAL & DEMONOLOGY GRIMOIRE MODAL
 // ============================================================================ //
-const ManualModal = ({ onClose }: { onClose: () => void }) => {
+const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
   const [tab, setTab] = useState<'LORE' | 'LOOP' | 'CLI' | 'INQUISITION'>('LORE');
 
+  const subTabStyle = (active: boolean): React.CSSProperties => ({
+    padding: '8px 14px',
+    fontFamily: theme.fontMono,
+    fontSize: '0.76rem',
+    fontWeight: 'bold',
+    letterSpacing: '1px',
+    cursor: 'pointer',
+    border: `1px solid ${active ? theme.textBright : theme.borderTerminal}`,
+    backgroundColor: active ? theme.textBright : '#060907',
+    color: active ? '#000000' : '#4a7c59',
+    transition: 'all 0.15s'
+  });
+
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-      <div style={{ width: '780px', maxHeight: '85vh', backgroundColor: theme.bgPanel, border: `2px solid ${theme.textBright}`, padding: '26px', fontFamily: theme.fontMono, color: '#a8ccaf', display: 'flex', flexDirection: 'column', boxShadow: '0 0 40px rgba(98,240,128,0.2)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '10px', marginBottom: '14px' }}>
-          <div>
-            <div style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>SYNDICATE FIELD CODEX // THAUMATURGIC OS v4.09</div>
-            <h2 style={{ margin: 0, color: theme.textBright, letterSpacing: '2px' }}>OPERATIVE MANUAL &amp; SOLOMONIC LORE</h2>
-          </div>
-          <button onClick={onClose} className="macro-chip macro-chip-danger">[X] CLOSE MANUAL</button>
+    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '12px', padding: '14px', zoom: FONT_ZOOM_MAP[fontScale] }}>
+      <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: '0.72rem', color: theme.accentAmber, letterSpacing: '2px' }}>SYNDICATE FIELD CODEX // THAUMATURGIC OS v4.09</div>
+          <h2 style={{ margin: '2px 0 0 0', color: theme.textBright, letterSpacing: '2px', fontSize: '1.2rem' }}>OPERATIVE MANUAL &amp; SOLOMONIC GRIMOIRE</h2>
         </div>
-
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          <button onClick={() => setTab('LORE')} className={`viewport-tab ${tab === 'LORE' ? 'active' : ''}`}>1. SOLOMONIC DEMONOLOGY</button>
-          <button onClick={() => setTab('LOOP')} className={`viewport-tab ${tab === 'LOOP' ? 'active' : ''}`}>2. INVESTIGATION &amp; CASCADES</button>
-          <button onClick={() => setTab('CLI')} className={`viewport-tab ${tab === 'CLI' ? 'active' : ''}`}>3. TERMINAL CLI COMMANDS</button>
-          <button onClick={() => setTab('INQUISITION')} className={`viewport-tab ${tab === 'INQUISITION' ? 'active' : ''}`}>4. MALLEUS INQUISITION &amp; HEAT</button>
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.84rem', lineHeight: '1.65', paddingRight: '8px' }}>
-          {tab === 'LORE' && (
-            <div>
-              <h3 style={{ color: theme.textBright, marginTop: 0 }}>THE ESCHATON &amp; THE 72 SPIRITS OF SOLOMON</h3>
-              <p>
-                According to the 17th-century <em>Lemegeton Clavicula Salomonis</em> (The Lesser Key of Solomon), King Solomon bound <strong>72 Goetic spirits</strong>—Kings, Dukes, Princes, Marquises, Presidents, Earls, and Knights—into a single <strong>Brass Vessel</strong> using their geometric seals and planetary catalysts.
-              </p>
-              <p>
-                In the modern era, the <strong>Four Horsemen of the Apocalypse</strong> (Conquest, War, Famine, and Death) are attempting to bleed through into mundane geography across Surrey and Greater London. Because the Horsemen are vast conceptual entities, they cannot manifest directly. Instead, each Horseman uses <strong>18 Goetian Lieutenants</strong> as physical anchors to tear open local reality.
-              </p>
-              <h4 style={{ color: theme.accentAmber }}>PLANETARY METALS &amp; ALCHEMICAL BINDING</h4>
-              <p>
-                In authentic Solomonic magic, each demonic rank corresponds to a classical planet and metal: <strong>Kings</strong> (Sun / Gold Leaf), <strong>Marquises</strong> (Moon / Silver Shavings), <strong>Dukes</strong> (Venus / Copper Wire), <strong>Presidents</strong> (Mercury / Quicksilver Drops), <strong>Princes</strong> (Jupiter / Tin &amp; Sacred Sand), <strong>Earls</strong> (Mars / Cold Iron Filings), and <strong>Knights</strong> (Saturn / Lead Weights). You must synthesize the target demon's exact planetary catalysts at your <strong>[F4] SAFEHOUSE / ALTAR</strong> before you can compel it into the Brass Vessel.
-              </p>
-            </div>
-          )}
-
-          {tab === 'LOOP' && (
-            <div>
-              <h3 style={{ color: theme.textBright, marginTop: 0 }}>THE DEDUCTION LOOP &amp; HIERARCHICAL CASCADES</h3>
-              <ol style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <li>
-                  <strong style={{ color: theme.textBright }}>INFILTRATE via CLI ([F1] FIELD_OPS):</strong> You begin each sector at the <em>Perimeter Tether</em> with Room 1 locked. Use CLI commands (<code>probe 1</code>, <code>breach 1</code>, <code>extract</code>) to move through the 6-room sub-grid and extract <strong>3 Forensic Clues</strong>.
-                </li>
-                <li>
-                  <strong style={{ color: theme.textBright }}>COUNTER ROOM HAZARDS:</strong> Some rooms are afflicted with <em>Aethyric Static</em>, <em>Inquisition Wiretaps</em>, or <em>Miasma Fog</em>. You must type <code>degauss</code>, <code>bypass</code>, or <code>purify</code> in the terminal before you can safely run <code>extract</code>.
-                </li>
-                <li>
-                  <strong style={{ color: theme.textBright }}>DEDUCE IN [F2] CODEX:</strong> Read your extracted forensic reports and check off the matching 3 Phenomena in the Codex to isolate the exact Goetia anchoring the sector.
-                </li>
-                <li>
-                  <strong style={{ color: theme.accentAmber }}>RESONANCE CASCADES (FAST-TRACKING THE 72):</strong> The Ars Goetia is a feudal hierarchy. Whenever you seal a high-ranking <strong>King, Prince, or Duke</strong>, the shockwave triggers a <em>Solomonic Resonance Cascade</em> that automatically severs and binds <strong>1 to 2 lesser demons</strong> of the same Horseman's court into your Brass Vessel!
-                </li>
-              </ol>
-            </div>
-          )}
-
-          {tab === 'CLI' && (
-            <div>
-              <h3 style={{ color: theme.textBright, marginTop: 0 }}>TERMINAL DIRECTIVES (WHY THE CONSOLE MATTERS)</h3>
-              <p>All field infiltration, room hazard neutralization, and Inquisition counter-measures are executed directly through the <strong>TTY1 Terminal Console</strong> in <code>[F1] FIELD_OPS</code>:</p>
-              <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'grid', gridTemplateColumns: '180px 1fr', rowGap: '8px' }}>
-                <strong style={{ color: theme.accentAmber }}>probe [1-6]</strong><span>Scans a room node (or selected room) for Ambushes, Shrines, &amp; Hazards (-5 HUM, or -2 HUM with Yokai).</span>
-                <strong style={{ color: theme.accentAmber }}>breach [1-6]</strong><span>Shatters the room's ward and moves your operative inside (+Inquisition Heat).</span>
-                <strong style={{ color: theme.accentAmber }}>move [1-6]</strong><span>Moves between already-breached adjacent rooms.</span>
-                <strong style={{ color: theme.accentAmber }}>extract</strong><span>Extracts the forensic phenomenon log, Kami Shrine relic, and raw salvage from your current room.</span>
-                <strong style={{ color: theme.accentCyan }}>degauss</strong><span>Neutralizes <code>AETHYRIC_STATIC</code> in the current room so you can extract clues.</span>
-                <strong style={{ color: theme.accentCyan }}>bypass</strong><span>Spoofs <code>INQUISITION_WIRE</code> tripwires in the current room (-10% Heat).</span>
-                <strong style={{ color: theme.accentCyan }}>purify</strong><span>Burns away <code>MIASMA_FOG</code> bio-hazards in the current room.</span>
-                <strong style={{ color: theme.accentRed }}>spoof</strong><span>Spends 15 Obols to broadcast false telemetry to Malleus vans (-25% Sector Heat).</span>
-                <strong style={{ color: theme.accentRed }}>bribe</strong><span>Spends 25 Obols to pay off corrupt Malleus Watch constables (-45% Sector Heat; unlocks 100% Lockdowns).</span>
-              </div>
-            </div>
-          )}
-
-          {tab === 'INQUISITION' && (
-            <div>
-              <h3 style={{ color: theme.accentRed, marginTop: 0 }}>THE ORDO MALLEUS &amp; INQUISITION HEAT</h3>
-              <p>
-                You are not the only faction operating in the dark. The <strong>Ordo Malleus</strong> (a clandestine Vatican-Crown counter-thaumaturgy directorate operating out of Croydon and Lambeth) monitors ley-line spikes using mobile direction-finding vans and witch-hound packs.
-              </p>
-              <p>
-                Every ward you shatter generates <strong>Inquisition Heat (0%–100%)</strong> in that sector:
-              </p>
-              <ul>
-                <li><strong>75%–99% Heat (Triangulation Warning):</strong> Malleus strike teams begin sweeping the perimeter. The HUD flashes crimson.</li>
-                <li><strong>100% Heat (TOTAL SECTOR LOCKDOWN):</strong> Inquisition Witch-Hounds lock down the building. All <code>probe</code>, <code>breach</code>, and <code>extract</code> directives are blocked! You must run <code>spoof</code> (-15 Obols), <code>bribe</code> (-25 Obols), invoke a Stealth Yokai, or retreat to the <strong>[F4] SAFEHOUSE / ALTAR</strong> to break the lockdown.</li>
-                <li><strong>Global Entropy (0.00%):</strong> Unlike local Heat, Global Entropy measures the irreversible fraying of mundane reality. It ticks upward by <code>+0.01%</code> to <code>+0.05%</code> as time passes during travel and rest, and spikes heavily if you botch a Sealing Ritual.</li>
-              </ul>
-            </div>
-          )}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('LORE'); }} style={subTabStyle(tab === 'LORE')}>1. SOLOMONIC DEMONOLOGY</button>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('LOOP'); }} style={subTabStyle(tab === 'LOOP')}>2. INVESTIGATION &amp; CASCADES</button>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('CLI'); }} style={subTabStyle(tab === 'CLI')}>3. TERMINAL CLI COMMANDS</button>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('INQUISITION'); }} style={subTabStyle(tab === 'INQUISITION')}>4. MALLEUS INQUISITION &amp; HEAT</button>
         </div>
       </div>
-    </div>
+
+      <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '24px', overflowY: 'auto', fontSize: '0.86rem', lineHeight: '1.7', color: '#a8ccaf' }}>
+        {tab === 'LORE' && (
+          <div style={{ maxWidth: '920px' }}>
+            <h3 style={{ color: theme.textBright, marginTop: 0, letterSpacing: '1px' }}>THE ESCHATON &amp; THE 72 SPIRITS OF SOLOMON</h3>
+            <p>
+              According to the 17th-century <em>Lemegeton Clavicula Salomonis</em> (The Lesser Key of Solomon), King Solomon bound <strong>72 Goetic spirits</strong>—Kings, Dukes, Princes, Marquises, Presidents, Earls, and Knights—into a single <strong>Brass Vessel</strong> using their geometric seals and planetary catalysts.
+            </p>
+            <p>
+              In the modern era, the <strong>Four Horsemen of the Apocalypse</strong> (Conquest, War, Famine, and Death) are attempting to bleed through into mundane geography across Surrey and Greater London. Because the Horsemen are vast conceptual entities, they cannot manifest directly. Instead, each Horseman uses <strong>18 Goetian Lieutenants</strong> as physical anchors to tear open local reality.
+            </p>
+            <h4 style={{ color: theme.accentAmber, marginTop: '20px' }}>PLANETARY METALS &amp; ALCHEMICAL BINDING</h4>
+            <p>
+              In authentic Solomonic magic, each demonic rank corresponds to a classical planet and metal: <strong>Kings</strong> (Sun / Gold Leaf), <strong>Marquises</strong> (Moon / Silver Shavings), <strong>Dukes</strong> (Venus / Copper Wire), <strong>Presidents</strong> (Mercury / Quicksilver Drops), <strong>Princes</strong> (Jupiter / Sacred Sand), <strong>Earls</strong> (Mars / Cold Iron Filings), and <strong>Knights</strong> (Saturn / Lead Weights). You must synthesize the target demon's exact planetary catalysts at your <strong>[F4] SAFEHOUSE / ALTAR</strong> before compelling it into the Brass Vessel.
+            </p>
+          </div>
+        )}
+
+        {tab === 'LOOP' && (
+          <div style={{ maxWidth: '920px' }}>
+            <h3 style={{ color: theme.textBright, marginTop: 0, letterSpacing: '1px' }}>THE DEDUCTION LOOP &amp; HIERARCHICAL CASCADES</h3>
+            <ol style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <li><strong style={{ color: theme.textBright }}>INFILTRATE via CLI ([F1] FIELD_OPS):</strong> You begin each sector at the <em>Perimeter Tether</em> with Room 1 locked. Use CLI commands (<code>probe 1</code>, <code>breach 1</code>, <code>extract</code>) to move through the 6-room sub-grid and extract <strong>3 Forensic Clues</strong>.</li>
+              <li><strong style={{ color: theme.textBright }}>COUNTER ROOM HAZARDS:</strong> Some rooms are afflicted with <em>Aethyric Static</em>, <em>Inquisition Wiretaps</em>, or <em>Miasma Fog</em>. You must type <code>degauss</code>, <code>bypass</code>, or <code>purify</code> in the terminal before you can safely run <code>extract</code>.</li>
+              <li><strong style={{ color: theme.textBright }}>DEDUCE IN [F2] CODEX:</strong> Read your extracted forensic reports and check off the matching 3 Phenomena in the Codex to isolate the exact Goetia anchoring the sector.</li>
+              <li><strong style={{ color: theme.accentAmber }}>RESONANCE CASCADES (FAST-TRACKING THE 72):</strong> Whenever you seal a high-ranking <strong>King, Prince, or Duke</strong>, the shockwave triggers a <em>Solomonic Resonance Cascade</em> that automatically severs and binds <strong>1 to 2 lesser demons</strong> of the same Horseman's court into your Brass Vessel!</li>
+            </ol>
+          </div>
+        )}
+
+        {tab === 'CLI' && (
+          <div style={{ maxWidth: '920px' }}>
+            <h3 style={{ color: theme.textBright, marginTop: 0, letterSpacing: '1px' }}>TERMINAL DIRECTIVES (TTY1 CONSOLE SYNTAX)</h3>
+            <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'grid', gridTemplateColumns: '200px 1fr', rowGap: '10px' }}>
+              <strong style={{ color: theme.accentAmber }}>probe [1-6]</strong><span>Scans a room node for Ambushes, Shrines, &amp; Hazards (-5 HUM, or -2 HUM with Yokai).</span>
+              <strong style={{ color: theme.accentAmber }}>breach [1-6]</strong><span>Shatters the room's ward and moves your operative inside (+Inquisition Heat).</span>
+              <strong style={{ color: theme.accentAmber }}>move [1-6]</strong><span>Moves between already-breached adjacent rooms.</span>
+              <strong style={{ color: theme.accentAmber }}>extract</strong><span>Extracts the forensic phenomenon log, Kami Shrine relic, &amp; salvage from your current room.</span>
+              <strong style={{ color: theme.accentCyan }}>degauss</strong><span>Neutralizes <code>AETHYRIC_STATIC</code> in the current room so you can extract clues.</span>
+              <strong style={{ color: theme.accentCyan }}>bypass</strong><span>Spoofs <code>INQUISITION_WIRE</code> tripwires in the current room (-10% Heat).</span>
+              <strong style={{ color: theme.accentCyan }}>purify</strong><span>Burns away <code>MIASMA_FOG</code> bio-hazards in the current room.</span>
+              <strong style={{ color: theme.accentRed }}>spoof</strong><span>Spends 15 Obols to broadcast false telemetry to Malleus vans (-25% Sector Heat).</span>
+              <strong style={{ color: theme.accentRed }}>bribe</strong><span>Spends 25 Obols to pay off corrupt Malleus Watch constables (-45% Sector Heat; lifts 100% Lockdowns).</span>
+            </div>
+          </div>
+        )}
+
+        {tab === 'INQUISITION' && (
+          <div style={{ maxWidth: '920px' }}>
+            <h3 style={{ color: theme.accentRed, marginTop: 0, letterSpacing: '1px' }}>THE ORDO MALLEUS &amp; INQUISITION HEAT</h3>
+            <p>
+              The <strong>Ordo Malleus</strong> (a clandestine Vatican-Crown counter-thaumaturgy directorate operating out of Croydon and Lambeth) monitors ley-line spikes using mobile direction-finding vans and witch-hound packs.
+            </p>
+            <ul style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <li><strong>75%–99% Heat (Triangulation Warning):</strong> Malleus strike teams begin sweeping the perimeter. The HUD flashes crimson.</li>
+              <li><strong>100% Heat (TOTAL SECTOR LOCKDOWN):</strong> Inquisition Witch-Hounds lock down the building. All <code>probe</code>, <code>breach</code>, and <code>extract</code> directives are blocked until you run <code>spoof</code> (-15 Obols), <code>bribe</code> (-25 Obols), invoke a Stealth Yokai, or retreat to <strong>[F4] SAFEHOUSE / ALTAR</strong>.</li>
+              <li><strong>Global Entropy (0.00%):</strong> Measures the irreversible fraying of mundane reality. Ticks upward by <code>+0.01%</code> to <code>+0.05%</code> during travel and rest, and spikes if you botch a Sealing Ritual.</li>
+            </ul>
+          </div>
+        )}
+      </div>
+    </main>
   );
 };
 
@@ -1125,6 +1122,7 @@ export default function App() {
       if (e.key === 'F4') { e.preventDefault(); setViewport('SAFEHOUSE_ALTAR'); }
       if (e.key === 'F5') { e.preventDefault(); setViewport('HORSEMEN'); }
       if (e.key === 'F6') { e.preventDefault(); setViewport('DOSSIER'); }
+      if (e.key === 'F7') { e.preventDefault(); setViewport('MANUAL'); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -1556,8 +1554,8 @@ export default function App() {
       setViewport('HORSEMEN');
     } else if (cmd === 'dossier') {
       setViewport('DOSSIER');
-    } else if (cmd === 'manual') {
-      setShowManual(true);
+    } else if (cmd === 'manual') { 
+      setViewport('MANUAL'); 
     } else if (cmd === 'clear' || cmd === 'cls') {
       setTerminalLines([]);
     } else {
@@ -1869,7 +1867,17 @@ export default function App() {
   if (state.gameStage === 'START_SCREEN') {
     return (
       <>
-        {showManual && <ManualModal onClose={() => setShowManual(false)} />}
+        {showManual && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: theme.bgDark, zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '10px 16px', backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>SYNDICATE FIELD MANUAL // PRE-DEPLOYMENT BRIEFING</span>
+              <button onClick={() => setShowManual(false)} style={{ padding: '5px 12px', backgroundColor: '#2a0808', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.74rem' }}>
+                [X] RETURN TO LOGIN
+              </button>
+            </div>
+            <ManualViewport fontScale={fontScale} />
+          </div>
+        )}
         <StartScreen onStart={startInvestigation} onLoad={loadGame} onOpenManual={() => setShowManual(true)} />
       </>
     );
@@ -1924,7 +1932,7 @@ export default function App() {
       `}</style>
 
       <div className="crt-scanlines" />
-      {showManual && <ManualModal onClose={() => setShowManual(false)} />}
+      
 
       {/* ================================================================== */}
       {/* TOP TACTICAL BAR: 6-VIEWPORT SWITCHER, TEXT SIZE, MANUAL & LOGOUT  */}
@@ -1952,6 +1960,9 @@ export default function App() {
           </button>
           <button className={`viewport-tab ${viewport === 'DOSSIER' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('DOSSIER'); }}>
             [F6] DOSSIER
+          </button>
+          <button className={`viewport-tab ${viewport === 'MANUAL' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('MANUAL'); }}>
+            [F7] MANUAL
           </button>
         </div>
 
@@ -2848,6 +2859,11 @@ export default function App() {
           </section>
         </main>
       )}
+
+      {/* ================================================================== */}
+      {/* VIEWPORT 7: [F7] MANUAL (OPERATIVE GUIDE & SOLOMONIC LORE)         */}
+      {/* ================================================================== */}
+      {viewport === 'MANUAL' && <ManualViewport fontScale={fontScale} />}
 
       {/* ================================================================== */}
       {/* SEALING & BANISHMENT MODALS + RESONANCE CASCADES + TOASTS          */}
