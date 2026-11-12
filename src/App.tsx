@@ -210,6 +210,10 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
   const [path, setPath] = useState<number[]>([]);
   const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Restored cinematic typewriter states
+  const [typedName, setTypedName] = useState('');
+  const [showSealed, setShowSealed] = useState(false);
   const [isCleanSeal, setIsCleanSeal] = useState(true);
 
   useEffect(() => {
@@ -221,6 +225,29 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
     }
     return () => clearInterval(timer);
   }, [phase, timeLeft]);
+
+  // Restored slow 300ms letter-by-letter typing & 1200ms dramatic pause before [SEALED]
+  useEffect(() => {
+    if (phase === 'COMPLETE') {
+      const fullName = suspect.name.toUpperCase();
+      let i = 0;
+      setTypedName('');
+      setShowSealed(false);
+      const interval = setInterval(() => {
+        setTypedName(fullName.substring(0, i + 1));
+        ThaumaturgicAudio.keyClick();
+        i++;
+        if (i >= fullName.length) {
+          clearInterval(interval);
+          setTimeout(() => {
+            ThaumaturgicAudio.sealSuccess();
+            setShowSealed(true);
+          }, 1200);
+        }
+      }, 300);
+      return () => clearInterval(interval);
+    }
+  }, [phase, suspect.name]);
 
   useEffect(() => {
     if (phase === 'WARDING' && path.length === matrix.sequence.length) executeFinalSeal(true);
@@ -287,7 +314,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount: -amount } })
     );
 
-    // Check if the player's deduction matches the actual Goetia haunting this sector!
+    // Check if the player's deduction matches the actual Goetia haunting this sector
     if (suspect.id !== actualAnchorId) {
       ThaumaturgicAudio.errorBuzz();
       dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 20 });
@@ -308,8 +335,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
     sealGoetia(suspect.id);
     onSuccessSeal(suspect.id);
     if (isClean) {
-      ThaumaturgicAudio.sealSuccess();
-      addToast(`SEALING SUCCESSFUL. ${suspect.name} bound to Brass Vessel!`, 'SEAL');
+      addToast(`SEALING SUCCESSFUL. Target ${suspect.name} bound to the brass vessel.`, 'SEAL');
     } else {
       ThaumaturgicAudio.errorBuzz();
       addToast(`RITUAL FRACTURE. Global Entropy spiked by 15%.`, 'ALERT');
@@ -319,8 +345,12 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-      <div style={{ width: '480px', padding: '28px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, boxShadow: `0 0 30px rgba(98, 240, 128, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal }}>
-        <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '8px', color: theme.textBright }}>&gt; SOLOMONIC_VESSEL // SEALING_PROTOCOL</h3>
+      <div style={{ width: '500px', padding: '30px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, boxShadow: `0 0 30px rgba(98, 240, 128, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal }}>
+        {phase !== 'COMPLETE' && (
+          <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '8px', color: theme.textBright }}>
+            &gt; ROOT_ACCESS // VESSEL_SEALING_PROTOCOL
+          </h3>
+        )}
 
         {phase === 'AUTH' && (
           <form onSubmit={handleAuthSubmit}>
@@ -338,7 +368,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
           <div style={{ textAlign: 'center', padding: '15px 0' }}>
             <h2 style={{ color: theme.accentRed, letterSpacing: '3px', margin: '0 0 10px 0' }}>! FALSE TRUE-NAME BACKLASH !</h2>
             <p style={{ fontSize: '0.82rem', color: '#ffb3b3', lineHeight: '1.6' }}>
-              You inscribed the seal of <strong>{suspect.name}</strong>, but the entity haunting this sector laughed through the static. Your catalysts vaporized in a violent backlash.<br/><br/>
+              You inscribed the seal of <strong>{suspect.name}</strong>, but the entity haunting this sector rejected the binding. Your catalysts vaporized in a violent backlash.<br/><br/>
               <strong>PENALTY:</strong> -20 Humanity | +20% Global Entropy.<br/>
               Extract more forensic logs in the field and re-verify the 3 Signs in your Codex!
             </p>
@@ -351,13 +381,32 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
         {phase === 'WARDING' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.85rem' }}>
-              <span style={{ color: theme.textBright, fontWeight: 'bold' }}>TRUE NAME VERIFIED! TRACE SEAL:</span>
-              <span style={{ color: timeLeft <= 5 ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>00:{timeLeft.toString().padStart(2, '0')}</span>
+              <span style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>! CONNECTION VOLATILE</span>
+              <span style={{ color: timeLeft <= 5 ? theme.accentRed : theme.textBright, fontWeight: 'bold' }}>00:{timeLeft.toString().padStart(2, '0')}</span>
             </div>
-            <div style={{ position: 'relative', width: '280px', height: '280px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
+            <p style={{ fontSize: '0.78rem', alignSelf: 'flex-start', marginBottom: '16px', color: theme.textMuted }}>
+              REQUESTING ALIGNMENT: <span style={{ color: theme.textTerminal }}>[{matrix.id}]</span>
+            </p>
+            <div style={{ position: 'relative', width: '300px', height: '300px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
+              {/* RESTORED BACKGROUND SIGIL ART */}
+              <img
+                src={`/seals/${suspect.id}.png`}
+                alt="Target Seal"
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '180px',
+                  height: '180px',
+                  opacity: 0.3,
+                  pointerEvents: 'none',
+                  filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
+                }}
+              />
               <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
-                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.6" />
-                <polyline points={path.map((nodeId) => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.5" />
+                <polyline points={path.map((nodeId) => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
                 {currentPointer && path.length > 0 && path.length < matrix.sequence.length && (
                   <line x1={matrix.nodes.find(n => n.id === path[path.length - 1])!.x} y1={matrix.nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={theme.textTerminal} strokeWidth="1" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
                 )}
@@ -366,8 +415,8 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
                   const isNext = node.id === matrix.sequence[path.length] || (path.length === 0 && node.id === matrix.sequence[0]);
                   return (
                     <g key={node.id} style={{ pointerEvents: 'none' }}>
-                      <circle cx={node.x} cy={node.y} r={isNext ? "3.8" : "2.2"} fill={isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? theme.textBright : theme.textTerminal} strokeWidth="0.6" />
-                      {isNext && <circle cx={node.x} cy={node.y} r="5.5" fill="none" stroke={theme.textBright} strokeWidth="0.5" style={{ animation: 'blink 1s infinite' }} />}
+                      <circle cx={node.x} cy={node.y} r={isNext ? "3.5" : "2"} fill={isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? theme.textBright : theme.textTerminal} strokeWidth="0.5" />
+                      {isNext && <circle cx={node.x} cy={node.y} r="5" fill="none" stroke={theme.textBright} strokeWidth="0.5" style={{ animation: 'blink 1s infinite' }} />}
                     </g>
                   );
                 })}
@@ -377,14 +426,42 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
         )}
 
         {phase === 'COMPLETE' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '15px 0' }}>
-            <h2 style={{ color: theme.textBright, letterSpacing: '5px', margin: '0' }}>{suspect.name.toUpperCase()}</h2>
-            <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: '4px', marginTop: '10px' }}>[SEALED IN BRASS VESSEL]</div>
-            <p style={{ fontSize: '0.8rem', color: '#a8ccaf', marginTop: '10px' }}>
-              +5% Banishment Probability toward <strong>{suspect.allegiance}</strong>. Bounty: +35 Obols awarded. A new Goetian Anchor has rotated into the sector.
-            </p>
-            {!isCleanSeal && <p style={{ color: theme.accentRed, fontSize: '0.78rem', marginTop: '8px' }}>! TIMER EXPIRED DURING TRACE: GLOBAL ENTROPY +15% !</p>}
-            <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}>&gt; ACKNOWLEDGE &amp; DEPLOY NEW CONTRACT</button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            {/* RESTORED FULL SIGIL ART & SLOW CINEMATIC REVEAL */}
+            <img
+              src={`/seals/${suspect.id}.png`}
+              alt="Goetian Seal"
+              style={{
+                width: '200px',
+                height: '200px',
+                marginBottom: '20px',
+                filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
+              }}
+            />
+            <h2 style={{ color: theme.textBright, letterSpacing: '6px', minHeight: '35px', margin: '0' }}>
+              {typedName}
+            </h2>
+            {showSealed && (
+              <>
+                <div style={{ color: theme.accentRed, fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '8px', marginTop: '10px', animation: 'slowPulse 2.5s ease-in-out infinite' }}>
+                  [SEALED]
+                </div>
+                <p style={{ fontSize: '0.78rem', color: '#a8ccaf', marginTop: '12px' }}>
+                  +5% Banishment Probability toward <strong>{suspect.allegiance}</strong> | +35 Obols Bounty
+                </p>
+                {!isCleanSeal && (
+                  <p style={{ color: theme.textMuted, fontSize: '0.8rem', marginTop: '10px' }}>
+                    _CONTAINMENT FAILURE: GLOBAL ENTROPY SPIKED (+15%).
+                  </p>
+                )}
+                <button
+                  onClick={onClose}
+                  style={{ marginTop: '25px', padding: '10px 20px', width: '100%', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.textBright}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}
+                >
+                  &gt; ACKNOWLEDGE_CONTAINMENT
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1113,6 +1190,8 @@ export default function App() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono, overflow: 'hidden', userSelect: 'none' }}>
       <style>{`
         @keyframes blink { 50% { opacity: 0; } }
+        @keyframes slowPulse { 0%, 100% { opacity: 0.6; transform: scale(0.98); } 50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 15px #ff2a55; } }
+        @keyframes blink { 50% { opacity: 0; } }
         @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .crt-scanlines {
           pointer-events: none; position: fixed; inset: 0; z-index: 50;
@@ -1133,6 +1212,24 @@ export default function App() {
         }
         .viewport-tab.active {
           background: #62f080; color: #000000; border-color: #62f080; box-shadow: 0 0 12px rgba(98, 240, 128, 0.35);
+        }
+        @keyframes sigilGlitch {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) blur(2.5px);
+          }
+          25% {
+            transform: translate(-3px, 1px) skewX(6deg);
+            filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(130%) blur(1.5px) drop-shadow(4px 0 #ff2a55);
+          }
+          50% {
+            transform: translate(2px, -2px) scale(1.03);
+            filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(70%) blur(3.5px);
+          }
+          75% {
+            transform: translate(-2px, -1px) skewX(-6deg);
+            filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(120%) blur(2px) drop-shadow(-4px 0 #00f3ff);
+          }
         }
       `}</style>
 
@@ -1157,6 +1254,105 @@ export default function App() {
             [F4] SAFEHOUSE_ALTAR
           </button>
         </div>
+
+        {/* SOLOMONIC SEAL TELEMETRY BOX (GLITCHED UNSEALED vs. STAMPED SEALED) */}
+              {(() => {
+                const isTargetSealed = state.sealedGoetia.includes(selectedSuspect.id);
+                return (
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '150px',
+                      height: '150px',
+                      margin: '0 auto 14px auto',
+                      backgroundColor: '#030504',
+                      border: `1px solid ${isTargetSealed ? theme.accentRed : theme.borderTerminal}`,
+                      borderRadius: '4px',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      overflow: 'hidden',
+                      boxShadow: isTargetSealed
+                        ? 'inset 0 0 20px rgba(255, 42, 85, 0.2)'
+                        : 'inset 0 0 15px rgba(98, 240, 128, 0.08)'
+                    }}
+                  >
+                    {/* The Sigil Image */}
+                    <img
+                      src={`/seals/${selectedSuspect.id}.png`}
+                      alt={`${selectedSuspect.name} Seal`}
+                      style={{
+                        width: '120px',
+                        height: '120px',
+                        opacity: isTargetSealed ? 0.85 : 0.22,
+                        filter: isTargetSealed
+                          ? 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
+                          : undefined,
+                        animation: isTargetSealed ? 'none' : 'sigilGlitch 2.2s infinite steps(2)',
+                        pointerEvents: 'none'
+                      }}
+                    />
+
+                    {/* UNSEALED STATE: Scanline Noise & Encrypted Watermark */}
+                    {!isTargetSealed && (
+                      <>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0px, rgba(0,0,0,0.55) 2px, transparent 2px, transparent 4px)',
+                            pointerEvents: 'none'
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            backgroundColor: 'rgba(5, 7, 6, 0.88)',
+                            border: `1px dashed ${theme.borderTerminal}`,
+                            padding: '3px 8px',
+                            fontSize: '0.62rem',
+                            color: theme.accentAmber,
+                            letterSpacing: '1px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          [ SIGIL_OBSCURED ]
+                        </div>
+                      </>
+                    )}
+
+                    {/* SEALED STATE: Red Cross-Out 'X' & Angled [SEALED] Stamp */}
+                    {isTargetSealed && (
+                      <>
+                        <svg
+                          viewBox="0 0 100 100"
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                        >
+                          <line x1="12" y1="12" x2="88" y2="88" stroke={theme.accentRed} strokeWidth="3.5" strokeOpacity="0.85" />
+                          <line x1="88" y1="12" x2="12" y2="88" stroke={theme.accentRed} strokeWidth="3.5" strokeOpacity="0.85" />
+                        </svg>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            transform: 'rotate(-14deg)',
+                            border: `2px solid ${theme.accentRed}`,
+                            backgroundColor: 'rgba(15, 2, 2, 0.92)',
+                            color: theme.accentRed,
+                            padding: '3px 10px',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold',
+                            letterSpacing: '3px',
+                            boxShadow: '0 0 12px rgba(255, 42, 85, 0.6)',
+                            textShadow: '0 0 6px rgba(255, 42, 85, 0.8)'
+                          }}
+                        >
+                          [SEALED]
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
         {/* Right Telemetry: 4 Horsemen Progress, Humanity, Obols */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
