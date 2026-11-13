@@ -4,7 +4,7 @@
 *Built with React 18, TypeScript, Vite, HTML5 Canvas, and a 100% Procedural Web Audio Synth Engine.*
 
 <div align="center">
-  <img src="/public/title_art.jpg" alt="Animus Mundi: Seals of the 4" width="720px" />
+  <img src="/public/title_art.png" alt="Animus Mundi: Seals of the 4" width="720px" />
 </div>
 
 ---
