@@ -2,12 +2,11 @@
 import { allGoetia } from '../content/goetia';
 import { allYokai } from '../content/yokai';
 
-export type ForensicChannel = 'AUDIO_FLUX' | 'THERMAL_TRACE' | 'MATTER_SAMPLE' | 'ASTRAL_ECHO';
+export type ForensicChannel = 'AUDIO' | 'MATTER' | 'ASTRAL';
 
 export interface PhenomenonDef {
   tag: string;
   label: string;
-  category: 'AUDITORY' | 'PHYSICAL' | 'THERMAL' | 'COGNITIVE';
   channel: ForensicChannel;
   rawSignalSymptom: string;
   forensicReports: string[];
@@ -17,301 +16,291 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
   {
     tag: 'hoarse_voice',
     label: 'Hoarse Vocalizations',
-    category: 'AUDITORY',
-    channel: 'AUDIO_FLUX',
-    rawSignalSymptom: 'Sub-audible 85Hz carrier wave vibrating through the ventilation brickwork.',
+    channel: 'AUDIO',
+    rawSignalSymptom: 'Sub-audible 85Hz vocal rasp vibrating through the ventilation brickwork.',
     forensicReports: [
-      'VOX SPECTROGRAM: Directional mics isolated a rasping, gravelly cadence speaking over the static—like vocal cords dragged across crushed glass.',
-      'VOX INTERCEPT: Isolated a harsh, guttural command echoing from empty rooms before the ward ruptured.',
-      'VOX DECODE: Sub-harmonic rasp detected at 85Hz reciting inverted Solomonic Psalms from inside the sealed duct.'
+      'VOX LOG: Directional mics isolated a gravelly, rasping voice reciting inverted Solomonic Psalms from inside the sealed duct.',
+      'VOX LOG: Audio sweep captured a harsh, guttural command echoing from empty walls.'
     ]
   },
   {
     tag: 'amphibian_tracks',
     label: 'Amphibian Mucus / Tracks',
-    category: 'PHYSICAL',
-    channel: 'MATTER_SAMPLE',
-    rawSignalSymptom: 'Viscous, cold-blooded organic residue coating the damp masonry.',
+    channel: 'MATTER',
+    rawSignalSymptom: 'Viscous, cold-blooded slime and webbed tracks coating the damp masonry.',
     forensicReports: [
-      'REAGENT ASSAY: Wide, webbed impressions coat the damp masonry, trailing a batrachian alkaloid slime that resists acid.',
-      'REAGENT ASSAY: Heavy, three-toed amphibious stride patterns lead directly from the drainage culvert into the sanctum.',
-      'REAGENT ASSAY: Translucent batrachian spawn and marsh-alkaloid mucus coat the brass door handles.'
+      'ASSAY LOG: Three-toed amphibious tracks and batrachian alkaloid mucus trail directly toward the inner sanctum.',
+      'ASSAY LOG: Translucent amphibian spawn and cold marsh-slime coat the brass door handles.'
     ]
   },
   {
     tag: 'sudden_invisibility',
-    label: 'Optical / Light Refraction',
-    category: 'COGNITIVE',
-    channel: 'THERMAL_TRACE',
-    rawSignalSymptom: 'Visible flashlight beams are bending 45 degrees around an unseen mass in the room center.',
+    label: 'Optical Light Refraction',
+    channel: 'ASTRAL',
+    rawSignalSymptom: 'Flashlight beams bend 45 degrees around an unseen silhouette in the room center.',
     forensicReports: [
-      'LIDAR PHOTOMETRICS: Security feeds show violent physical displacement of dust, yet the entity bends all visible light around its mass.',
-      'LIDAR PHOTOMETRICS: Laser pulses bounce off a dense, moving silhouette in the corridor, while the naked eye sees only empty air.',
-      'LIDAR PHOTOMETRICS: Complete photon absorption pocket recorded in the corner alcove; laser grid warps 45 degrees off-axis.'
+      'AUSPEX LOG: Complete photon refraction pocket recorded; an unseen mass displaces dust while bending visible light.',
+      'AUSPEX LOG: Thermal-optical sweep reveals a dense humanoid silhouette invisible to the naked eye.'
     ]
   },
   {
     tag: 'earthquake_tremors',
     label: 'Localized Seismic Tremors',
-    category: 'PHYSICAL',
-    channel: 'AUDIO_FLUX',
-    rawSignalSymptom: 'Rhythmic 14Hz infrasound tremor resonating through the load-bearing concrete.',
+    channel: 'AUDIO',
+    rawSignalSymptom: 'Rhythmic 14Hz infrasound hammering vibrating through the load-bearing concrete.',
     forensicReports: [
-      'VOX GEOPHONE: Micro-tremors at 14Hz are shattering load-bearing pillars in a 50-meter radius while surrounding streets remain dead still.',
-      'VOX GEOPHONE: Deep foundation cracks radiate outward from the room, accompanied by a rhythmic, subterranean grinding.',
-      'VOX GEOPHONE: Tectonic hammering directly beneath the floorboards, synchronized to a slow heartbeat.'
+      'VOX LOG: Subterranean 14Hz acoustic tremors are fracturing concrete pillars while surrounding streets remain dead still.',
+      'VOX LOG: Geophone mics isolated a slow, rhythmic tectonic pounding directly beneath the floorboards.'
     ]
   },
   {
     tag: 'lost_languages',
     label: 'Xenoglossia / Dead Scripts',
-    category: 'COGNITIVE',
-    channel: 'ASTRAL_ECHO',
-    rawSignalSymptom: 'Unidentified pre-Babylonian glyphs and phonetic sigils bleeding through the wall plaster.',
+    channel: 'ASTRAL',
+    rawSignalSymptom: 'Shifting pre-Babylonian Aramaic and Enochian glyphs bleeding through the wall plaster.',
     forensicReports: [
-      'ENOCHIAN LENS: Delirious witnesses are speaking fluent pre-Babylonian Aramaic and inscribing phonetic Enochian syntax onto the walls.',
-      'ENOCHIAN LENS: Printed manifests in the room have spontaneously rewritten themselves into archaic cuneiform dialects.',
-      'ENOCHIAN LENS: Chalk markings on the lintel match the Celestial Alphabet of Agrippa and the Lesser Key.'
+      'AUSPEX LOG: Chalk markings on the lintel match the Celestial Alphabet of Agrippa and pre-Babylonian Aramaic.',
+      'AUSPEX LOG: Printed manifests in the chamber have spontaneously rewritten themselves into archaic cuneiform.'
     ]
   },
   {
     tag: 'avian_screeches',
     label: 'Avian / Raptor Shrieks',
-    category: 'AUDITORY',
-    channel: 'AUDIO_FLUX',
-    rawSignalSymptom: 'High-decibel ultrasonic screeching saturating the upper acoustic band.',
+    channel: 'AUDIO',
+    rawSignalSymptom: 'High-decibel predatory bird shrieks saturating the upper acoustic band.',
     forensicReports: [
-      'VOX SPECTROGRAM: High-decibel, predatory bird shrieks saturate the upper frequencies, accompanied by shed black pinfeathers.',
-      'VOX SPECTROGRAM: The rafters vibrate with regurgitated bone pellets and the deafening acoustic clamor of unseen wings.',
-      'VOX SPECTROGRAM: Corvid and strigiform calls overlap in a mathematical polyrhythm from inside the sealed chimney.'
+      'VOX LOG: Deafening raptor shrieks echo from the rafters alongside shed black pinfeathers and bone pellets.',
+      'VOX LOG: Ultrasonic spectrogram isolated layered corvid and owl calls inside the sealed chimney.'
     ]
   },
   {
     tag: 'cryptic_whispers',
     label: 'Sub-Audible Whispers',
-    category: 'AUDITORY',
-    channel: 'AUDIO_FLUX',
-    rawSignalSymptom: 'Polyphonic white-noise murmur bleeding across dead copper intercom lines.',
+    channel: 'AUDIO',
+    rawSignalSymptom: 'Polyphonic white-noise whispers bleeding across unpowered copper intercom lines.',
     forensicReports: [
-      'VOX EVP CAPTURE: White-noise filters uncovered layered voices whispering private operative memories never spoken aloud.',
-      'VOX EVP CAPTURE: A persistent, sibilant murmur bleeds through the stonework, reciting events from three days in the future.',
-      'VOX EVP CAPTURE: Fifty distinct voices whispering in unison over unpowered copper telephone wires.'
+      'VOX LOG: EVP filters uncovered fifty overlapping voices whispering operative memories never spoken aloud.',
+      'VOX LOG: Sibilant whispers bleed through dead telephone lines, reciting events from three days in the future.'
     ]
   },
   {
     tag: 'star_alignment',
     label: 'Astrolabe / Celestial Drift',
-    category: 'COGNITIVE',
-    channel: 'ASTRAL_ECHO',
-    rawSignalSymptom: 'Compasses spin toward an impossible medieval star projection on the ceiling.',
+    channel: 'ASTRAL',
+    rawSignalSymptom: 'Compasses spin wildly toward an impossible 14th-century star projection on the ceiling.',
     forensicReports: [
-      'ENOCHIAN LENS: Looking up through the breached roof reveals a night sky locked to a winter constellation from 1347 AD.',
-      'ENOCHIAN LENS: Burn marks on the floorboards map an exact 1:1 projection of the Pleiades star cluster.',
-      'ENOCHIAN LENS: Local magnetic north is rotating toward a fixed celestial point 30 degrees below the horizon.'
+      'AUSPEX LOG: Burn marks on the floor map an exact 1:1 projection of the Pleiades cluster from 1347 AD.',
+      'AUSPEX LOG: Local magnetic north is locked onto a celestial point 30 degrees below the horizon.'
     ]
   },
   {
     tag: 'mind_fog',
     label: 'Cognitive Amnesia / Fog',
-    category: 'COGNITIVE',
-    channel: 'ASTRAL_ECHO',
-    rawSignalSymptom: 'Heavy conceptual static inducing immediate short-term memory loops and Déjà vu.',
+    channel: 'ASTRAL',
+    rawSignalSymptom: 'Heavy conceptual static inducing short-term memory loops and acute disorientation.',
     forensicReports: [
-      'ENOCHIAN LENS: First responders wandered in circles for four hours, unable to recognize their own names or weapons.',
-      'ENOCHIAN LENS: Heavy conceptual static blankets the room, inducing immediate short-term memory loops and fugue states.',
-      'ENOCHIAN LENS: Operatives report losing 20 minutes of subjective time upon crossing the threshold.'
+      'AUSPEX LOG: First responders wandered in circles for hours, unable to recall their own names or orders.',
+      'AUSPEX LOG: Dense cognitive static blankets the threshold, erasing short-term memory on contact.'
     ]
   },
   {
     tag: 'necrotic_stasis',
     label: 'Necrotic Tissue Stasis',
-    category: 'THERMAL',
-    channel: 'THERMAL_TRACE',
-    rawSignalSymptom: 'Ambient room temperature has plunged to -18°C with crystalline gray hoarfrost.',
+    channel: 'ASTRAL',
+    rawSignalSymptom: 'Ambient temperature plunged to -18°C with crystalline gray hoarfrost halting decay.',
     forensicReports: [
-      'LIDAR THERMOGRAPHY: Organic matter in the room refuses to decay normally, locked in a freezing, gray rigor mortis devoid of bacteria.',
-      'LIDAR THERMOGRAPHY: Ambient temperature plunges to -18°C; cellular activity in nearby flora has halted in crystalline stasis.',
-      'LIDAR THERMOGRAPHY: Black hoarfrost coats the walls; exhaled breath freezes into gray, ash-like crystals.'
+      'AUSPEX LOG: Ambient temperature dropped to -18°C; organic matter is locked in bacterial-free necrotic stasis.',
+      'AUSPEX LOG: Black hoarfrost coats the walls; cellular decay has halted completely inside the room.'
     ]
   },
   {
     tag: 'corpse_theft',
     label: 'Exhumation / Cadaver Theft',
-    category: 'PHYSICAL',
-    channel: 'MATTER_SAMPLE',
+    channel: 'MATTER',
     rawSignalSymptom: 'Formaldehyde residue, bone dust, and wrenched sarcophagus seals across the floor.',
     forensicReports: [
-      'REAGENT ASSAY: Heavy stone sarcophagi and morgue drawers have been wrenched open; every cadaver has been systematically harvested.',
-      'REAGENT ASSAY: Drag marks and formaldehyde trails lead from the emptied vaults toward the sector anchor.',
-      'REAGENT ASSAY: Seventeen anatomical specimens vanished from locked cold-storage without a single broken seal.'
+      'ASSAY LOG: Heavy stone sarcophagi have been wrenched open from the inside; cadavers systematically harvested.',
+      'ASSAY LOG: Drag marks and chemical formaldehyde trails lead directly toward the sector anchor.'
     ]
   },
   {
     tag: 'plague_vectors',
     label: 'Pathogenic / Pestilent Spores',
-    category: 'PHYSICAL',
-    channel: 'MATTER_SAMPLE',
-    rawSignalSymptom: 'Black, oily fungal pustules and airborne spores coating the ventilation grates.',
+    channel: 'MATTER',
+    rawSignalSymptom: 'Black, oily fungal pustules and airborne necrotic spores coating the vents.',
     forensicReports: [
-      'REAGENT ASSAY: Black, oily pustules and airborne fungal spores coat the ventilation shafts, rotting organic rations in seconds.',
-      'REAGENT ASSAY: Swarms of bloated flies and sudden gangrenous lesions have incapacitated the local garrison.',
-      'REAGENT ASSAY: Unidentified necrotic mold is digesting leather, wood, and cloth across the room.'
+      'ASSAY LOG: Airborne necrotic mold spores coat the ventilation grates, rotting organic rations in seconds.',
+      'ASSAY LOG: Bloated flies and black fungal pustules have contaminated the chamber.'
     ]
   },
   {
     tag: 'metal_transmutation',
     label: 'Alchemical Transmutation',
-    category: 'PHYSICAL',
-    channel: 'MATTER_SAMPLE',
+    channel: 'MATTER',
     rawSignalSymptom: 'Brass fixtures and copper pipes are weeping liquid quicksilver and soft lead.',
     forensicReports: [
-      'REAGENT ASSAY: Brass shell casings and copper pipes have spontaneously transmuted into brittle, impure veins of lead and gold.',
-      'REAGENT ASSAY: The molecular lattice of the vault door has been alchemically rearranged into soft, malleable tin.',
-      'REAGENT ASSAY: Iron grates have turned into porous, weeping amalgamations of bismuth and quicksilver.'
+      'ASSAY LOG: Brass shell casings and copper pipes have spontaneously transmuted into brittle veins of lead.',
+      'ASSAY LOG: Iron grates have turned into porous, weeping amalgamations of bismuth and quicksilver.'
     ]
   },
   {
     tag: 'blood_frenzy',
     label: 'Hematophagic / Martial Frenzy',
-    category: 'COGNITIVE',
-    channel: 'MATTER_SAMPLE',
+    channel: 'MATTER',
     rawSignalSymptom: 'Arterial spray and hyper-elevated adrenal pheromones saturating the floorboards.',
     forensicReports: [
-      'REAGENT ASSAY: Civilians and officers tore at each other with bare hands; adrenaline and cortisol levels in blood samples are lethal.',
-      'REAGENT ASSAY: Survivors exhibit unblinking, hyper-aggressive berserker rage triggered by the sight of arterial red.',
-      'REAGENT ASSAY: Fingernail gouges and arterial spray cover the wainscoting from a spontaneous, unprovoked melee.'
+      'ASSAY LOG: Blood samples show lethal adrenal and cortisol spikes—witnesses tore at each other bare-handed.',
+      'ASSAY LOG: Fingernail gouges and arterial spray cover the wainscoting from a spontaneous berserker melee.'
     ]
   },
   {
     tag: 'weapon_decay',
     label: 'Rapid Ferrous Oxidation',
-    category: 'PHYSICAL',
-    channel: 'MATTER_SAMPLE',
+    channel: 'MATTER',
     rawSignalSymptom: 'Tempered steel locks and iron bars have dissolved into piles of flaky red rust.',
     forensicReports: [
-      'REAGENT ASSAY: Tempered steel locks and Inquisition sidearms have oxidized into flaky red rust dust within minutes of exposure.',
-      'REAGENT ASSAY: Every iron bar along the perimeter has corroded through as if submerged in acid for a century.',
-      'REAGENT ASSAY: Gunpowder in sealed brass cartridges has turned into inert, damp gray paste.'
+      'ASSAY LOG: Tempered steel locks and sidearms oxidized into flaky red rust within minutes of exposure.',
+      'ASSAY LOG: Gunpowder in sealed brass cartridges has turned into inert, damp gray paste.'
     ]
   },
   {
     tag: 'illusory_terrain',
     label: 'Non-Euclidean Spatial Shift',
-    category: 'COGNITIVE',
-    channel: 'THERMAL_TRACE',
-    rawSignalSymptom: 'Depth-sensors report the hallway is 140m long inside a 25m building footprint.',
+    channel: 'ASTRAL',
+    rawSignalSymptom: 'Rangefinders measure a 140-meter hallway inside a 25-meter building footprint.',
     forensicReports: [
-      'LIDAR TOPOGRAPHY: Internal hallway measures 140 meters long from the inside, despite the building exterior measuring only 25 meters.',
-      'LIDAR TOPOGRAPHY: Doorways loop back into themselves; compasses spin wildly amidst shimmering mirage walls.',
-      'LIDAR TOPOGRAPHY: Stairwells descend three floors below the known bedrock table into an impossible courtyard.'
+      'AUSPEX LOG: Internal hallway measures 140m long despite the exterior walls spanning only 25m.',
+      'AUSPEX LOG: Doorways loop back into themselves amidst shimmering spatial mirage corridors.'
     ]
   },
   {
     tag: 'wolf_howls',
     label: 'Canine / Lupine Howls',
-    category: 'AUDITORY',
-    channel: 'AUDIO_FLUX',
-    rawSignalSymptom: 'Deep, predatory lupine howls vibrating in the sub-bass spectrum.',
+    channel: 'AUDIO',
+    rawSignalSymptom: 'Deep, predatory lupine howls vibrating through the sub-bass spectrum.',
     forensicReports: [
-      'VOX SPECTROGRAM: Deep, resonant wolf howls vibrate through the sub-bass spectrum, accompanied by massive claw gouges in the oak doors.',
-      'VOX SPECTROGRAM: Coarse, singed lupine fur and predatory jaw marks were recovered from the mauled Malleus hound.',
-      'VOX SPECTROGRAM: Pacing quadruped paw-prints circle the room perimeter, each print the size of a dinner plate.'
+      'VOX LOG: Resonant wolf howls vibrate through the sub-bass band alongside massive claw gouges in oak doors.',
+      'VOX LOG: Spectrogram isolated predatory lupine howls circling the room perimeter.'
     ]
   },
   {
     tag: 'thermal_scorching',
     label: 'Pyroclastic Scorching',
-    category: 'THERMAL',
-    channel: 'THERMAL_TRACE',
-    rawSignalSymptom: 'Vitrified brick and flash-melted glass radiating 1,200°C residual heat signatures.',
+    channel: 'ASTRAL',
+    rawSignalSymptom: 'Vitrified brick and flash-melted glass radiating 1,200°C residual thermal signatures.',
     forensicReports: [
-      'LIDAR THERMOGRAPHY: Vitrified brick and flash-melted glass indicate a localized temperature spike exceeding 1,200°C with zero smoke.',
-      'LIDAR THERMOGRAPHY: Ashen handprints and sulfur-crusted char marks sear the ceiling directly above the conduit.',
-      'LIDAR THERMOGRAPHY: Brass fixtures have melted into droplets while paper ledgers inches away remain unburnt.'
+      'AUSPEX LOG: Vitrified brick indicates a localized 1,200°C thermal spike with zero smoke or fuel source.',
+      'AUSPEX LOG: Brass fixtures melted into droplets while paper ledgers inches away remained unburnt.'
     ]
   },
   {
     tag: 'serpent_scales',
     label: 'Ophidian Scales / Venom',
-    category: 'PHYSICAL',
-    channel: 'MATTER_SAMPLE',
-    rawSignalSymptom: 'Iridescent reptilian scales and crystallized hemotoxic venom on the stone.',
+    channel: 'MATTER',
+    rawSignalSymptom: 'Iridescent reptilian scales and crystallized hemotoxic venom coating the stone.',
     forensicReports: [
-      'REAGENT ASSAY: Iridescent, palm-sized reptilian scales and neurotoxic venom residue coat the threshold.',
-      'REAGENT ASSAY: Sinuous, heavy coiling tracks have crushed the floorboards, smelling sharply of ozone and vipers.',
-      'REAGENT ASSAY: Hemotoxic venom crystallized across the altar stone, matching no known terrestrial pit viper.'
+      'ASSAY LOG: Palm-sized iridescent serpent scales and neurotoxic venom residue coat the threshold.',
+      'ASSAY LOG: Heavy coiling tracks crushed the floorboards, reeking of ozone and pit-viper venom.'
     ]
   },
   {
     tag: 'temporal_distortion',
     label: 'Chronometric Drift',
-    category: 'COGNITIVE',
-    channel: 'ASTRAL_ECHO',
-    rawSignalSymptom: 'Quartz clocks in the room are running backward; dust motes hang frozen in mid-air.',
+    channel: 'ASTRAL',
+    rawSignalSymptom: 'Quartz clocks are running backward while dust motes hang frozen in mid-air.',
     forensicReports: [
-      'ENOCHIAN LENS: Quartz wristwatches on dead guards are running backward; dust motes hang suspended in mid-air.',
-      'ENOCHIAN LENS: Your OS clock desynchronized by 47 hours the moment the probe crossed the room threshold.',
-      'ENOCHIAN LENS: Half-life decay inside the room is oscillating between 10x acceleration and total temporal freeze.'
+      'AUSPEX LOG: Wristwatches in the chamber run backward; OS telemetry desynchronized by 47 hours.',
+      'AUSPEX LOG: Radioactive half-life decay inside the room oscillates between 10x speed and total freeze.'
     ]
   },
   {
     tag: 'astral_projection',
     label: 'Ectoplasmic / Astral Tether',
-    category: 'COGNITIVE',
-    channel: 'ASTRAL_ECHO',
+    channel: 'ASTRAL',
     rawSignalSymptom: 'Luminous silver threads of residual ectoplasm hanging suspended in the air.',
     forensicReports: [
-      'ENOCHIAN LENS: Luminous silver threads of residual ectoplasm hang in the air, left by consciousnesses ripped from their bodies.',
-      'ENOCHIAN LENS: Comatose subjects in the ward claim their minds are floating thirty feet above the building.',
-      'ENOCHIAN LENS: Mirrors in the room reflect the astral doubles of operatives three seconds before they enter.'
+      'AUSPEX LOG: Luminous silver threads of ectoplasm hang in the air where consciousnesses were ripped loose.',
+      'AUSPEX LOG: Mirrors in the room reflect operative silhouettes three seconds before they cross the door.'
     ]
   },
   {
     tag: 'sulfur_stench',
     label: 'Brimstone / Sulfuric Miasma',
-    category: 'THERMAL',
-    channel: 'THERMAL_TRACE',
-    rawSignalSymptom: 'Superheated yellow crystalline sulfur deposits venting from uncracked granite.',
+    channel: 'MATTER',
+    rawSignalSymptom: 'Yellow crystalline sulfur deposits and volcanic brimstone venting from solid granite.',
     forensicReports: [
-      'LIDAR GAS-SCAN: Lethal parts-per-million of hydrogen sulfide and volcanic brimstone choke the lower corridors.',
-      'LIDAR GAS-SCAN: Yellow crystalline sulfur deposits have condensed across every cold surface.',
-      'LIDAR GAS-SCAN: Fumarole-grade sulfur dioxide is venting from solid, uncracked granite.'
+      'ASSAY LOG: Fumarole-grade hydrogen sulfide and yellow brimstone crystals coat every cold surface.',
+      'ASSAY LOG: Volcanic sulfur dioxide is venting directly out of uncracked granite masonry.'
     ]
   },
   {
     tag: 'water_corruption',
     label: 'Brackish / Abyssal Brine',
-    category: 'PHYSICAL',
-    channel: 'MATTER_SAMPLE',
-    rawSignalSymptom: 'Pelagic black kelp and freezing abyssal saltwater oozing from dry-wall plumbing.',
+    channel: 'MATTER',
+    rawSignalSymptom: 'Pelagic black kelp and freezing abyssal saltwater oozing from dry plumbing.',
     forensicReports: [
-      'REAGENT ASSAY: Tap water and rain puddles have turned into thick, freezing abyssal seawater teeming with dead deep-sea microbes.',
-      'REAGENT ASSAY: Barnacles and black kelp are growing rapidly out of the dry-wall plumbing.',
-      'REAGENT ASSAY: The air in the room carries the crushing, salty chemical profile of a pelagic trench.'
+      'ASSAY LOG: Tap water turned into freezing abyssal seawater teeming with dead deep-sea microbes.',
+      'ASSAY LOG: Barnacles and black kelp are growing rapidly out of dry-wall copper pipes.'
     ]
   },
   {
     tag: 'tempest_winds',
     label: 'Barometric Cyclone / Gale',
-    category: 'THERMAL',
-    channel: 'THERMAL_TRACE',
-    rawSignalSymptom: 'Severe barometric pressure drop with a 90-knot vortex spinning inside the room.',
+    channel: 'AUDIO',
+    rawSignalSymptom: 'Roaring 90-knot indoor wind tunnel howling inside a windowless subterranean room.',
     forensicReports: [
-      'LIDAR BAROMETRICS: Indoor air pressure dropped to hurricane levels; localized gale-force gusts shattered every window outward.',
-      'LIDAR BAROMETRICS: Static electricity arcs across the room amidst a roaring, unnatural wind tunnel.',
-      'LIDAR BAROMETRICS: Cyclonic vortex spinning at 90 knots in the center of a windowless subterranean vault.'
+      'VOX LOG: Acoustic sensors recorded a 90-knot cyclonic gale roaring inside a sealed subterranean vault.',
+      'VOX LOG: Barometric pressure collapsed to hurricane levels, blowing every window frame outward.'
     ]
   }
 ];
 
-export type RoomHazardType =
-  | 'NONE'
-  | 'AETHYRIC_STATIC'
-  | 'INQUISITION_WIRE'
-  | 'MIASMA_FOG'
-  | 'FERROUS_LOCK'
-  | 'BLOOD_WARD'
-  | 'CHRONO_LOOP';
+// Guarantees every single one of the 72 Goetia has a 100% unique 3-phenomenon fingerprint
+const UNIQUE_SIGNS_CACHE: Record<string, string[]> = {};
+
+export function getUniqueGoetiaSigns(goetiaId: string): string[] {
+  if (Object.keys(UNIQUE_SIGNS_CACHE).length === 0) {
+    const usedSignatures = new Set<string>();
+    const allTags = PHENOMENON_CATALOG.map(p => p.tag);
+
+    const allegiancePools: Record<string, string[]> = {
+      CONQUEST: ['mind_fog', 'star_alignment', 'astral_projection', 'sudden_invisibility', 'lost_languages', 'temporal_distortion'],
+      WAR: ['blood_frenzy', 'thermal_scorching', 'weapon_decay', 'earthquake_tremors', 'wolf_howls', 'sulfur_stench'],
+      FAMINE: ['plague_vectors', 'metal_transmutation', 'water_corruption', 'amphibian_tracks', 'avian_screeches', 'hoarse_voice'],
+      DEATH: ['necrotic_stasis', 'corpse_theft', 'cryptic_whispers', 'serpent_scales', 'illusory_terrain', 'mind_fog']
+    };
+
+    allGoetia.forEach(g => {
+      const base = g.requiredIntel && g.requiredIntel.length >= 3
+        ? [...g.requiredIntel.slice(0, 3)]
+        : ['hoarse_voice', 'weapon_decay', 'corpse_theft'];
+
+      const sigKey = (arr: string[]) => [...arr].sort().join('|');
+
+      if (!usedSignatures.has(sigKey(base))) {
+        usedSignatures.add(sigKey(base));
+        UNIQUE_SIGNS_CACHE[g.id] = base;
+      } else {
+        const candidatePool = [...(allegiancePools[g.allegiance] || []), ...allTags];
+        let resolved = base;
+        for (const cand of candidatePool) {
+          if (cand === base[0] || cand === base[1]) continue;
+          const attempt = [base[0], base[1], cand];
+          if (!usedSignatures.has(sigKey(attempt))) {
+            resolved = attempt;
+            break;
+          }
+        }
+        usedSignatures.add(sigKey(resolved));
+        UNIQUE_SIGNS_CACHE[g.id] = resolved;
+      }
+    });
+  }
+  return UNIQUE_SIGNS_CACHE[goetiaId] || ['hoarse_voice', 'weapon_decay', 'corpse_theft'];
+}
+
+// Streamlined 4 Room Traps (Clear Symptoms -> Intuitive Counter-Commands)
+export type RoomHazardType = 'NONE' | 'STATIC' | 'WIRE' | 'MIASMA' | 'HEX';
 
 export const HAZARD_MANIFEST: Record<Exclude<RoomHazardType, 'NONE'>, {
   label: string;
@@ -319,41 +308,29 @@ export const HAZARD_MANIFEST: Record<Exclude<RoomHazardType, 'NONE'>, {
   counterCmd: string;
   clearMsg: string;
 }> = {
-  AETHYRIC_STATIC: {
-    label: 'Aethyric White-Noise Static',
-    symptom: 'Electromagnetic screech is blinding local sensors and scrambling telemetry packets.',
+  STATIC: {
+    label: 'Aethyric Static Field',
+    symptom: 'Electromagnetic static screech is scrambling forensic instruments.',
     counterCmd: 'degauss',
-    clearMsg: 'Coils degaussed. Electromagnetic carrier wave stabilized.'
+    clearMsg: 'Coils degaussed. Electromagnetic interference cleared.'
   },
-  INQUISITION_WIRE: {
-    label: 'Ordo Malleus Laser Tripwire',
-    symptom: 'Encrypted Vatican-Crown laser tripwires and acoustic relays hum across the threshold.',
+  WIRE: {
+    label: 'Malleus Laser Tripwire',
+    symptom: 'Encrypted Inquisition laser tripwires span the doorway threshold.',
     counterCmd: 'bypass',
-    clearMsg: 'Malleus carrier frequency spoofed (-10% Inquisition Heat). Tripwires disarmed.'
+    clearMsg: 'Tripwire frequency spoofed (-10% Inquisition Heat). Doorway safe.'
   },
-  MIASMA_FOG: {
-    label: 'Pestilent Miasma Vapor',
-    symptom: 'Choking, spore-laden abyssal vapor blankets the floor, corroding exposed lenses.',
-    counterCmd: 'purify',
-    clearMsg: 'Thermal incense flare ignited. Miasma particulates incinerated.'
+  MIASMA: {
+    label: 'Toxic Brimstone Miasma',
+    symptom: 'Choking, spore-laden sulfur vapor blankets the chamber floor.',
+    counterCmd: 'purge',
+    clearMsg: 'Thermal flare ignited. Toxic miasma purged.'
   },
-  FERROUS_LOCK: {
-    label: 'Magnetized Ferrous Lattice',
-    symptom: 'Crushing magnetic flux is pinning metallic gear and distorting iron filings in the room.',
-    counterCmd: 'demag',
-    clearMsg: 'Reverse-polarity pulse emitted. Magnetic flux lattice collapsed.'
-  },
-  BLOOD_WARD: {
-    label: 'Coagulated Goetic Blood-Ward',
-    symptom: 'A pulsing vein of arterial sigils seals the inner sanctum, feeding on ambient vitality.',
-    counterCmd: 'lance',
-    clearMsg: 'Cold-iron lance pulse severed the arterial sigil circuit.'
-  },
-  CHRONO_LOOP: {
-    label: 'Localized Chronometric Eddy',
-    symptom: 'Time inside the chamber is stuttering in a 4-second recursive loop, resetting probes.',
-    counterCmd: 'anchor',
-    clearMsg: 'Saturnian lead-clock anchor deployed. Local timeline synchronized.'
+  HEX: {
+    label: 'Goetic Blood-Hex Ward',
+    symptom: 'Pulsing crimson sigils seal the room architecture against intrusion.',
+    counterCmd: 'dispel',
+    clearMsg: 'Cold-iron pulse shattered the Goetic Blood-Hex.'
   }
 };
 
@@ -365,9 +342,10 @@ export interface SubGridNode {
   y: number;
   connections: string[];
   wardLevel: number;
-  status: 'LOCKED' | 'PROBED' | 'BREACHED' | 'EXTRACTED';
-  nodeType: 'ENTRY' | 'ANOMALY' | 'SALVAGE' | 'SHRINE' | 'AMBUSH' | 'ANCHOR';
+  status: 'LOCKED' | 'SCANNED' | 'ENTERED' | 'CLEARED';
+  nodeType: 'ANOMALY' | 'SHRINE' | 'PATROL' | 'ANCHOR';
   hazard: RoomHazardType;
+  patrolActive?: boolean;
   signalChannel?: ForensicChannel;
   rawSignalSymptom?: string;
   signTag?: string;
@@ -444,9 +422,8 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
     { x: 0.85, y: 0.50 }
   ];
 
-  const requiredTags = target.requiredIntel && target.requiredIntel.length >= 3
-    ? target.requiredIntel
-    : ['hoarse_voice', 'weapon_decay', 'corpse_theft'];
+  // Uses the 100% unique 3-phenomenon fingerprint for this demon
+  const requiredTags = getUniqueGoetiaSigns(target.id);
 
   const randomYokai = allYokai[Math.floor(Math.random() * allYokai.length)];
   const rawMaterials: ('scrap_metal' | 'cursed_earth' | 'alchemical_distillate')[] = ['scrap_metal', 'cursed_earth', 'alchemical_distillate'];
@@ -455,9 +432,9 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
     const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
     if (!def) {
       return {
-        channel: 'ASTRAL_ECHO' as ForensicChannel,
-        symptom: 'Unidentified conceptual distortion vibrating in the room.',
-        report: `FORENSIC LOG: Anomalous resonance signature [${tag}] isolated.`
+        channel: 'ASTRAL' as ForensicChannel,
+        symptom: 'Unidentified spatial distortion vibrating in the room.',
+        report: `AUSPEX LOG: Anomalous resonance signature [${tag}] isolated.`
       };
     }
     return {
@@ -471,8 +448,8 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
   const p1 = getPhenomMeta(requiredTags[1]);
   const p2 = getPhenomMeta(requiredTags[2]);
 
-  const hazards: RoomHazardType[] = ['AETHYRIC_STATIC', 'INQUISITION_WIRE', 'MIASMA_FOG', 'FERROUS_LOCK', 'BLOOD_WARD', 'CHRONO_LOOP'];
-  const randomHazard = () => hazards[Math.floor(Math.random() * hazards.length)];
+  const traps: RoomHazardType[] = ['STATIC', 'WIRE', 'MIASMA', 'HEX'];
+  const randomTrap = () => traps[Math.floor(Math.random() * traps.length)];
 
   const subNodes: SubGridNode[] = [
     {
@@ -502,7 +479,7 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
       wardLevel: 1,
       status: 'LOCKED',
       nodeType: 'ANOMALY',
-      hazard: randomHazard(),
+      hazard: randomTrap(),
       signalChannel: p1.channel,
       rawSignalSymptom: p1.symptom,
       signTag: requiredTags[1],
@@ -532,8 +509,9 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
       connections: [`${sectorId}_n1`, `${sectorId}_n2`, `${sectorId}_n5`],
       wardLevel: 2,
       status: 'LOCKED',
-      nodeType: 'AMBUSH',
-      hazard: 'INQUISITION_WIRE',
+      nodeType: 'PATROL',
+      hazard: 'NONE', // Mutually exclusive with room traps so you can always decoy or disarm cleanly!
+      patrolActive: true,
       salvageDrop: { itemId: rawMaterials[2], amount: 3, obols: 22 }
     },
     {
@@ -546,7 +524,7 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
       wardLevel: 2,
       status: 'LOCKED',
       nodeType: 'ANOMALY',
-      hazard: randomHazard(),
+      hazard: randomTrap(),
       signalChannel: p2.channel,
       rawSignalSymptom: p2.symptom,
       signTag: requiredTags[2],
@@ -563,11 +541,11 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
       wardLevel: 3,
       status: 'LOCKED',
       nodeType: 'ANCHOR',
-      hazard: randomHazard(),
+      hazard: randomTrap(),
       signalChannel: p2.channel,
       rawSignalSymptom: p2.symptom,
       signTag: requiredTags[2],
-      forensicText: `CONDUIT EPICENTER: ${p2.report}`,
+      forensicText: `CONDUIT ANCHOR [${target.allegiance} COURT]: ${p2.report}`,
       salvageDrop: { itemId: 'cursed_earth', amount: 3, obols: 28 }
     }
   ];
