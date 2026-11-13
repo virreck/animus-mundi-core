@@ -8,14 +8,13 @@ import type { GameState } from './engine/state';
 import {
   PHENOMENON_CATALOG,
   ALTAR_RECIPES,
+  HAZARD_MANIFEST,
   generateSectorContract,
   type SectorContract,
-  type SubGridNode
+  type SubGridNode,
+  type ForensicChannel
 } from './engine/sectorGenerator';
 
-// ============================================================================ //
-// 1. TYPES, THEME & 16-SECTOR CAMPAIGN TOPOLOGY
-// ============================================================================ //
 interface TerminalEntry {
   id: number;
   html: string;
@@ -24,12 +23,10 @@ interface TerminalEntry {
 
 type ViewportMode = 'FIELD_OPS' | 'CODEX' | 'KAGE_NO_SHO' | 'SAFEHOUSE_ALTAR' | 'HORSEMEN' | 'DOSSIER' | 'MANUAL';
 type FontScale = 'SM' | 'MD' | 'LG';
+type ControlMode = 'PALETTE' | 'CLI';
+type PaletteCategory = 'INFILTRATE' | 'FORENSICS' | 'HAZARDS' | 'INQUISITION';
 
-const FONT_ZOOM_MAP: Record<FontScale, number> = {
-  SM: 1,
-  MD: 1.12,
-  LG: 1.24
-};
+const FONT_ZOOM_MAP: Record<FontScale, number> = { SM: 1, MD: 1.1, LG: 1.2 };
 
 const theme = {
   bgDark: '#050706',
@@ -113,14 +110,96 @@ const HORSEMAN_LORE: Record<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH', {
   }
 };
 
-// Custom Vector Sigils for the 4 Horsemen
+// Reworked Kage-no-Sho Shikigami Daemons (Replaces Legacy Story Text)
+const YOKAI_DAEMON_SPECS: Record<string, {
+  codeName: string;
+  classTag: string;
+  passiveHook: string;
+  activeLabel: string;
+  maxCharges: number;
+  activeDesc: string;
+  loreNote: string;
+}> = {
+  yokai_kitsune: {
+    codeName: 'KITSUNE.SYS // SPECTRAL PROXY',
+    classTag: 'COUNTER-SURVEILLANCE',
+    passiveHook: 'PASSIVE HOOK: Reduces Auspex Probe Humanity drain from -5% to -2%.',
+    activeLabel: 'FOXFIRE SHROUD',
+    maxCharges: 2,
+    activeDesc: 'Injects phantom MAC addresses into Ordo Malleus trackers, venting -30% Inquisition Heat.',
+    loreNote: 'Nine-tailed fox spirit bound into a coaxial packet-spoofing talisman.'
+  },
+  yokai_tengu: {
+    codeName: 'TENGU.DMN // AERIAL LIDAR',
+    classTag: 'RECONNAISSANCE',
+    passiveHook: 'PASSIVE HOOK: Reveals room connection topologies & reduces Probe cost to -2% HUM.',
+    activeLabel: 'GALE SWEEP',
+    maxCharges: 2,
+    activeDesc: 'Spends 5% Humanity to radar-sweep the entire sub-grid, unlocking all room node types.',
+    loreNote: 'Mountain crow-tengu bound to high-frequency microwave telemetry relays.'
+  },
+  yokai_baku: {
+    codeName: 'BAKU.EXE // COGNITIVE SCRUBBER',
+    classTag: 'NEURO-STABILIZER',
+    passiveHook: 'PASSIVE HOOK: Buffers synaptic feedback when encountering room hazards.',
+    activeLabel: 'DEVOUR NIGHTMARE',
+    maxCharges: 2,
+    activeDesc: 'Consumes local paranoia waves, converting -15% Inquisition Heat into +20% Humanity.',
+    loreNote: 'Dream-devouring chimera spirit wired directly into the operative biometric headset.'
+  },
+  yokai_zashiki: {
+    codeName: 'ZASHIKI.BOT // TREASURY LEDGER',
+    classTag: 'LOGISTICS & ARBITRAGE',
+    passiveHook: 'PASSIVE HOOK: Optimizes salvage routing across syndicate dead-drops.',
+    activeLabel: 'FORTUNE BOON',
+    maxCharges: 1,
+    activeDesc: 'Single-use: Liquidates dormant syndicate caches for +35 Obols & +1 Scrap Metal.',
+    loreNote: 'Parlor-dwelling guardian spirit that manipulates subterranean bullion ledgers.'
+  },
+  yokai_kameosa: {
+    codeName: 'KAMEOSA.ALC // CRUCIBLE VAT',
+    classTag: 'ALCHEMICAL SYNTHESIS',
+    passiveHook: 'PASSIVE HOOK: Safehouse Altar recipes cost 0 Obols (substituting -2% Humanity per craft).',
+    activeLabel: 'FERMENT MATTER',
+    maxCharges: 3,
+    activeDesc: 'Spends 8% Humanity to synthesize +1 Scrap Metal, +1 Cursed Earth, & +1 Distillate.',
+    loreNote: 'Inexhaustible sake-jar tsukumogami retrofitted for rapid planetary catalyst distillation.'
+  },
+  yokai_kamaitachi: {
+    codeName: 'KAMAITACHI.VEX // VORTEX BREACHER',
+    classTag: 'TACTICAL INFILTRATION',
+    passiveHook: 'PASSIVE HOOK: Grants +5s on Goetian Sealing Rites and +15s on Grand Banishments.',
+    activeLabel: 'WIND SICKLE',
+    maxCharges: 2,
+    activeDesc: 'Silently breaches the selected adjacent room with 0% Heat, disarming Ambushes & Hazards.',
+    loreNote: 'Whirlwind weasel triad that slices through warded iron and laser tripwires before sensors register.'
+  },
+  yokai_amabie: {
+    codeName: 'AMABIE.iso // REALITY ANCHOR',
+    classTag: 'ENTROPY MITIGATION',
+    passiveHook: 'PASSIVE HOOK: Dampens micro-entropy drift during regional transit.',
+    activeLabel: 'PROPHETIC WARD',
+    maxCharges: 1,
+    activeDesc: 'Single-use: Spends 10 Obols to broadcast a stabilizing woodblock seal (-2.50% Global Entropy).',
+    loreNote: 'Pelagic prophetic mermaid spirit whose geometric likeness repairs fraying reality.'
+  },
+  yokai_noppera: {
+    codeName: 'NOPPERA.MSK // IDENTITY SPOOFER',
+    classTag: 'DECEPTION & STEALTH',
+    passiveHook: 'PASSIVE HOOK: Masks biometric signature from Malleus facial-recognition cameras.',
+    activeLabel: 'FACELESS DECOY',
+    maxCharges: 2,
+    activeDesc: 'Neutralizes all Ambush nodes in the current sector and drops Inquisition Heat by -15%.',
+    loreNote: 'Faceless phantom daemon that loops blank CCTV frames across Inquisition precincts.'
+  }
+};
+
 const HorsemanSigilSvg = ({ horseman, color, size = 64 }: { horseman: 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH'; color: string; size?: number }) => (
   <svg viewBox="0 0 100 100" style={{ width: size, height: size, flexShrink: 0, filter: `drop-shadow(0 0 6px ${color})` }}>
     <circle cx="50" cy="50" r="46" fill="none" stroke={color} strokeWidth="1.5" strokeDasharray="4 2" />
     <circle cx="50" cy="50" r="38" fill="none" stroke={color} strokeWidth="0.8" opacity="0.6" />
     {horseman === 'CONQUEST' && (
       <g stroke={color} strokeWidth="2.2" fill="none">
-        {/* Crown + Drawn Bow & Arrow */}
         <polygon points="28,42 36,24 50,35 64,24 72,42" />
         <path d="M 24,68 Q 50,42 76,68" />
         <line x1="24" y1="68" x2="76" y2="68" strokeWidth="1" />
@@ -130,7 +209,6 @@ const HorsemanSigilSvg = ({ horseman, color, size = 64 }: { horseman: 'CONQUEST'
     )}
     {horseman === 'WAR' && (
       <g stroke={color} strokeWidth="2.2" fill="none">
-        {/* Crossed Greatsword & Flaming Octagram */}
         <polygon points="50,14 62,38 86,50 62,62 50,86 38,62 14,50 38,38" strokeWidth="1.2" />
         <line x1="50" y1="12" x2="50" y2="88" strokeWidth="3" />
         <line x1="32" y1="32" x2="68" y2="32" strokeWidth="2.8" />
@@ -140,7 +218,6 @@ const HorsemanSigilSvg = ({ horseman, color, size = 64 }: { horseman: 'CONQUEST'
     )}
     {horseman === 'FAMINE' && (
       <g stroke={color} strokeWidth="2.2" fill="none">
-        {/* Alchemical Balance Scales */}
         <line x1="50" y1="18" x2="50" y2="82" />
         <line x1="36" y1="82" x2="64" y2="82" />
         <line x1="22" y1="38" x2="78" y2="38" />
@@ -151,7 +228,6 @@ const HorsemanSigilSvg = ({ horseman, color, size = 64 }: { horseman: 'CONQUEST'
     )}
     {horseman === 'DEATH' && (
       <g stroke={color} strokeWidth="2.2" fill="none">
-        {/* Scythe & Necrotic Hourglass */}
         <polygon points="34,24 66,24 34,76 66,76" />
         <path d="M 24,80 L 68,20 Q 86,26 78,48 Q 66,34 58,34" />
         <circle cx="50" cy="50" r="6" />
@@ -160,19 +236,8 @@ const HorsemanSigilSvg = ({ horseman, color, size = 64 }: { horseman: 'CONQUEST'
   </svg>
 );
 
-const YOKAI_INVOCATIONS: Record<string, { label: string; maxCharges: number; desc: string }> = {
-  yokai_kitsune: { label: 'FOXFIRE SHROUD', maxCharges: 2, desc: 'Vent -30% Inquisition Heat.' },
-  yokai_tengu: { label: 'GALE SWEEP', maxCharges: 2, desc: 'Spend 5 HUM to reveal all room nodes in sector.' },
-  yokai_baku: { label: 'DEVOUR NIGHTMARE', maxCharges: 2, desc: 'Convert -15% Inquisition Heat into +20 Humanity.' },
-  yokai_zashiki: { label: 'FORTUNE BOON', maxCharges: 1, desc: 'Single-use: Gain +35 Obols & +1 Scrap Metal (Consumes Pact).' },
-  yokai_kameosa: { label: 'FERMENT MATTER', maxCharges: 3, desc: 'Spend 8 HUM to generate +1 Metal, +1 Earth, +1 Distillate.' },
-  yokai_kamaitachi: { label: 'WIND SICKLE', maxCharges: 2, desc: 'Breach selected room with 0% Heat & disarm Ambush/Hazards.' },
-  yokai_amabie: { label: 'PROPHETIC WARD', maxCharges: 1, desc: 'Single-use: Spend 10 Obols to purge -2.50% Global Entropy.' },
-  yokai_noppera: { label: 'FACELESS DECOY', maxCharges: 2, desc: 'Disarm sector Ambush nodes & reduce Inquisition Heat by -15%.' }
-};
-
 // ============================================================================ //
-// 2. PROCEDURAL WEB AUDIO API SYNTHESIZER
+// PROCEDURAL WEB AUDIO SYNTHESIZER (WITH TYPEWRITER & HEAVY STAMP IMPACT)
 // ============================================================================ //
 const ThaumaturgicAudio = {
   ctx: null as AudioContext | null,
@@ -205,6 +270,95 @@ const ThaumaturgicAudio = {
     } catch { /* ignore */ }
   },
   keyClick() { this.playTone(820 + Math.random() * 240, 'triangle', 0.025, 0.025); },
+  // Mechanical Solenoid Typewriter Strike (White Noise Burst + Bandpass + Metallic Ping)
+  typewriterClack() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const bufferSize = Math.floor(this.ctx.sampleRate * 0.035);
+      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.28));
+      }
+      const whiteNoise = this.ctx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1950 + Math.random() * 450, now);
+      filter.Q.setValueAtTime(2.8, now);
+
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.24, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+
+      whiteNoise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(this.ctx.destination);
+      whiteNoise.start(now);
+
+      // Solenoid hammer metallic transient
+      this.playTone(1350 + Math.random() * 250, 'square', 0.022, 0.055, 320);
+    } catch { /* ignore */ }
+  },
+  // Heavy Brass Stamp Impact when [SEALED] Slams Down
+  heavyStampImpact() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+
+      // 1. Sub-bass chest thud (155Hz -> 26Hz)
+      const subOsc = this.ctx.createOscillator();
+      const subGain = this.ctx.createGain();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(155, now);
+      subOsc.frequency.exponentialRampToValueAtTime(26, now + 0.45);
+      subGain.gain.setValueAtTime(0.38, now);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+      subOsc.connect(subGain);
+      subGain.connect(this.ctx.destination);
+      subOsc.start(now);
+      subOsc.stop(now + 0.48);
+
+      // 2. Metallic anvil crunch
+      const crunchOsc = this.ctx.createOscillator();
+      const crunchGain = this.ctx.createGain();
+      crunchOsc.type = 'sawtooth';
+      crunchOsc.frequency.setValueAtTime(220, now);
+      crunchOsc.frequency.exponentialRampToValueAtTime(42, now + 0.25);
+      crunchGain.gain.setValueAtTime(0.18, now);
+      crunchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+      crunchOsc.connect(crunchGain);
+      crunchGain.connect(this.ctx.destination);
+      crunchOsc.start(now);
+      crunchOsc.stop(now + 0.26);
+
+      // 3. Low-passed impact noise burst
+      const bufLen = Math.floor(this.ctx.sampleRate * 0.28);
+      const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufLen; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufLen * 0.22));
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buf;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(680, now);
+      const nGain = this.ctx.createGain();
+      nGain.gain.setValueAtTime(0.28, now);
+      nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      noise.connect(lp);
+      lp.connect(nGain);
+      nGain.connect(this.ctx.destination);
+      noise.start(now);
+    } catch { /* ignore */ }
+  },
   scryPing() {
     this.playTone(1120, 'sine', 0.32, 0.08, 560);
     setTimeout(() => this.playTone(1490, 'sine', 0.22, 0.05), 110);
@@ -218,9 +372,6 @@ const ThaumaturgicAudio = {
   errorBuzz() { this.playTone(135, 'sawtooth', 0.24, 0.09, 80); }
 };
 
-// ============================================================================ //
-// 3. PROCEDURAL SEAL GEOMETRY GENERATOR
-// ============================================================================ //
 function generateSealMatrix() {
   const geometries = [
     { n: 5, s: 2, name: "PENTAGRAM" }, { n: 7, s: 2, name: "HEPTAGRAM_OBTUSE" },
@@ -262,95 +413,124 @@ const getFullBodyPath = (squarePath: string) => {
 };
 
 // ============================================================================ //
-// 4. INTERACTIVE FIELD MANUAL & DEMONOLOGY GRIMOIRE MODAL
+// [F7] MANUAL VIEWPORT (WITH SYMPTOM-TO-COMMAND REFERENCE TABLES)
 // ============================================================================ //
 const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
-  const [tab, setTab] = useState<'LORE' | 'LOOP' | 'CLI' | 'INQUISITION'>('LORE');
+  const [tab, setTab] = useState<'LORE' | 'FORENSICS' | 'HAZARDS' | 'INQUISITION'>('FORENSICS');
 
   const subTabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '8px 14px',
+    padding: '8px 12px',
     fontFamily: theme.fontMono,
-    fontSize: '0.76rem',
+    fontSize: '0.74rem',
     fontWeight: 'bold',
     letterSpacing: '1px',
     cursor: 'pointer',
     border: `1px solid ${active ? theme.textBright : theme.borderTerminal}`,
     backgroundColor: active ? theme.textBright : '#060907',
-    color: active ? '#000000' : '#4a7c59',
-    transition: 'all 0.15s'
+    color: active ? '#000000' : '#4a7c59'
   });
 
   return (
-    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '12px', padding: '14px', zoom: FONT_ZOOM_MAP[fontScale] }}>
-      <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
+      <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <div style={{ fontSize: '0.72rem', color: theme.accentAmber, letterSpacing: '2px' }}>SYNDICATE FIELD CODEX // THAUMATURGIC OS v4.09</div>
-          <h2 style={{ margin: '2px 0 0 0', color: theme.textBright, letterSpacing: '2px', fontSize: '1.2rem' }}>OPERATIVE MANUAL &amp; SOLOMONIC GRIMOIRE</h2>
+          <div style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>SYNDICATE FIELD CODEX // THAUMATURGIC OS v4.10</div>
+          <h2 style={{ margin: '2px 0 0 0', color: theme.textBright, letterSpacing: '2px', fontSize: '1.15rem' }}>OPERATIVE FIELD MANUAL &amp; PROTOCOL INDEX</h2>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('LORE'); }} style={subTabStyle(tab === 'LORE')}>1. SOLOMONIC DEMONOLOGY</button>
-          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('LOOP'); }} style={subTabStyle(tab === 'LOOP')}>2. INVESTIGATION &amp; CASCADES</button>
-          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('CLI'); }} style={subTabStyle(tab === 'CLI')}>3. TERMINAL CLI COMMANDS</button>
-          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('INQUISITION'); }} style={subTabStyle(tab === 'INQUISITION')}>4. MALLEUS INQUISITION &amp; HEAT</button>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('FORENSICS'); }} style={subTabStyle(tab === 'FORENSICS')}>1. FORENSIC INSTRUMENTS</button>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('HAZARDS'); }} style={subTabStyle(tab === 'HAZARDS')}>2. HAZARD COUNTER-PROTOCOLS</button>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('LORE'); }} style={subTabStyle(tab === 'LORE')}>3. SOLOMONIC DEMONOLOGY</button>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('INQUISITION'); }} style={subTabStyle(tab === 'INQUISITION')}>4. ORDO MALLEUS &amp; HEAT</button>
         </div>
       </div>
 
-      <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '24px', overflowY: 'auto', fontSize: '0.86rem', lineHeight: '1.7', color: '#a8ccaf' }}>
-        {tab === 'LORE' && (
-          <div style={{ maxWidth: '920px' }}>
-            <h3 style={{ color: theme.textBright, marginTop: 0, letterSpacing: '1px' }}>THE ESCHATON &amp; THE 72 SPIRITS OF SOLOMON</h3>
+      <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '20px', overflowY: 'auto', fontSize: '0.84rem', lineHeight: '1.65', color: '#a8ccaf' }}>
+        {tab === 'FORENSICS' && (
+          <div style={{ maxWidth: '940px' }}>
+            <h3 style={{ color: theme.textBright, marginTop: 0 }}>ACTIVE FORENSIC TRIANGULATION (DECODING RAW SIGNALS)</h3>
             <p>
-              According to the 17th-century <em>Lemegeton Clavicula Salomonis</em> (The Lesser Key of Solomon), King Solomon bound <strong>72 Goetic spirits</strong>—Kings, Dukes, Princes, Marquises, Presidents, Earls, and Knights—into a single <strong>Brass Vessel</strong> using their geometric seals and planetary catalysts.
+              Breaching a room no longer hands you a decoded clue automatically. Instead, rooms with esoteric anomalies emit a <strong>Raw Environmental Symptom</strong> across one of four signal channels. Read the symptom in the <strong>Live Room Telemetry Bar</strong> and execute the matching forensic tool via CLI or the Command Palette:
             </p>
-            <p>
-              In the modern era, the <strong>Four Horsemen of the Apocalypse</strong> (Conquest, War, Famine, and Death) are attempting to bleed through into mundane geography across Surrey and Greater London. Because the Horsemen are vast conceptual entities, they cannot manifest directly. Instead, each Horseman uses <strong>18 Goetian Lieutenants</strong> as physical anchors to tear open local reality.
-            </p>
-            <h4 style={{ color: theme.accentAmber, marginTop: '20px' }}>PLANETARY METALS &amp; ALCHEMICAL BINDING</h4>
-            <p>
-              In authentic Solomonic magic, each demonic rank corresponds to a classical planet and metal: <strong>Kings</strong> (Sun / Gold Leaf), <strong>Marquises</strong> (Moon / Silver Shavings), <strong>Dukes</strong> (Venus / Copper Wire), <strong>Presidents</strong> (Mercury / Quicksilver Drops), <strong>Princes</strong> (Jupiter / Sacred Sand), <strong>Earls</strong> (Mars / Cold Iron Filings), and <strong>Knights</strong> (Saturn / Lead Weights). You must synthesize the target demon's exact planetary catalysts at your <strong>[F4] SAFEHOUSE / ALTAR</strong> before compelling it into the Brass Vessel.
-            </p>
-          </div>
-        )}
+            <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'grid', gridTemplateColumns: '150px 170px 1fr', rowGap: '10px', columnGap: '12px', marginTop: '12px' }}>
+              <strong style={{ color: theme.accentAmber }}>vox</strong>
+              <span style={{ color: theme.textBright }}>[AUDIO_FLUX]</span>
+              <span>Isolates acoustic anomalies: sub-audible whispers, hoarse vocalizations, lupine howls, raptor shrieks, and 14Hz seismic infrasound.</span>
 
-        {tab === 'LOOP' && (
-          <div style={{ maxWidth: '920px' }}>
-            <h3 style={{ color: theme.textBright, marginTop: 0, letterSpacing: '1px' }}>THE DEDUCTION LOOP &amp; HIERARCHICAL CASCADES</h3>
-            <ol style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <li><strong style={{ color: theme.textBright }}>INFILTRATE via CLI ([F1] FIELD_OPS):</strong> You begin each sector at the <em>Perimeter Tether</em> with Room 1 locked. Use CLI commands (<code>probe 1</code>, <code>breach 1</code>, <code>extract</code>) to move through the 6-room sub-grid and extract <strong>3 Forensic Clues</strong>.</li>
-              <li><strong style={{ color: theme.textBright }}>COUNTER ROOM HAZARDS:</strong> Some rooms are afflicted with <em>Aethyric Static</em>, <em>Inquisition Wiretaps</em>, or <em>Miasma Fog</em>. You must type <code>degauss</code>, <code>bypass</code>, or <code>purify</code> in the terminal before you can safely run <code>extract</code>.</li>
-              <li><strong style={{ color: theme.textBright }}>DEDUCE IN [F2] CODEX:</strong> Read your extracted forensic reports and check off the matching 3 Phenomena in the Codex to isolate the exact Goetia anchoring the sector.</li>
-              <li><strong style={{ color: theme.accentAmber }}>RESONANCE CASCADES (FAST-TRACKING THE 72):</strong> Whenever you seal a high-ranking <strong>King, Prince, or Duke</strong>, the shockwave triggers a <em>Solomonic Resonance Cascade</em> that automatically severs and binds <strong>1 to 2 lesser demons</strong> of the same Horseman's court into your Brass Vessel!</li>
-            </ol>
-          </div>
-        )}
+              <strong style={{ color: theme.accentAmber }}>lidar</strong>
+              <span style={{ color: theme.textBright }}>[THERMAL_TRACE]</span>
+              <span>Maps thermal, barometric, and spatial anomalies: light refraction, -18°C cryo-stasis, 1,200°C scorching, non-Euclidean hallways, and cyclones.</span>
 
-        {tab === 'CLI' && (
-          <div style={{ maxWidth: '920px' }}>
-            <h3 style={{ color: theme.textBright, marginTop: 0, letterSpacing: '1px' }}>TERMINAL DIRECTIVES (TTY1 CONSOLE SYNTAX)</h3>
-            <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'grid', gridTemplateColumns: '200px 1fr', rowGap: '10px' }}>
-              <strong style={{ color: theme.accentAmber }}>probe [1-6]</strong><span>Scans a room node for Ambushes, Shrines, &amp; Hazards (-5 HUM, or -2 HUM with Yokai).</span>
-              <strong style={{ color: theme.accentAmber }}>breach [1-6]</strong><span>Shatters the room's ward and moves your operative inside (+Inquisition Heat).</span>
-              <strong style={{ color: theme.accentAmber }}>move [1-6]</strong><span>Moves between already-breached adjacent rooms.</span>
-              <strong style={{ color: theme.accentAmber }}>extract</strong><span>Extracts the forensic phenomenon log, Kami Shrine relic, &amp; salvage from your current room.</span>
-              <strong style={{ color: theme.accentCyan }}>degauss</strong><span>Neutralizes <code>AETHYRIC_STATIC</code> in the current room so you can extract clues.</span>
-              <strong style={{ color: theme.accentCyan }}>bypass</strong><span>Spoofs <code>INQUISITION_WIRE</code> tripwires in the current room (-10% Heat).</span>
-              <strong style={{ color: theme.accentCyan }}>purify</strong><span>Burns away <code>MIASMA_FOG</code> bio-hazards in the current room.</span>
-              <strong style={{ color: theme.accentRed }}>spoof</strong><span>Spends 15 Obols to broadcast false telemetry to Malleus vans (-25% Sector Heat).</span>
-              <strong style={{ color: theme.accentRed }}>bribe</strong><span>Spends 25 Obols to pay off corrupt Malleus Watch constables (-45% Sector Heat; lifts 100% Lockdowns).</span>
+              <strong style={{ color: theme.accentAmber }}>reagent</strong>
+              <span style={{ color: theme.textBright }}>[MATTER_SAMPLE]</span>
+              <span>Assays physical &amp; biological matter: amphibian mucus, rust oxidation, transmuted metals, plague spores, arterial spray, and abyssal brine.</span>
+
+              <strong style={{ color: theme.accentAmber }}>lens</strong>
+              <span style={{ color: theme.textBright }}>[ASTRAL_ECHO]</span>
+              <span>Translates cognitive &amp; chronometric anomalies: dead Aramaic/Enochian scripts, medieval star drift, mind fog, and backward clocks.</span>
+
+              <strong style={{ color: theme.accentCyan }}>extract</strong>
+              <span style={{ color: '#a8ccaf' }}>[SALVAGE / SHRINE]</span>
+              <span>Harvests raw salvage &amp; awakens dormant Kami Shrines in rooms without undecoded signals.</span>
             </div>
           </div>
         )}
 
-        {tab === 'INQUISITION' && (
-          <div style={{ maxWidth: '920px' }}>
-            <h3 style={{ color: theme.accentRed, marginTop: 0, letterSpacing: '1px' }}>THE ORDO MALLEUS &amp; INQUISITION HEAT</h3>
+        {tab === 'HAZARDS' && (
+          <div style={{ maxWidth: '940px' }}>
+            <h3 style={{ color: theme.accentCyan, marginTop: 0 }}>ROOM HAZARD SYMPTOMS &amp; COUNTER-PROTOCOLS</h3>
             <p>
-              The <strong>Ordo Malleus</strong> (a clandestine Vatican-Crown counter-thaumaturgy directorate operating out of Croydon and Lambeth) monitors ley-line spikes using mobile direction-finding vans and witch-hound packs.
+              Field rooms frequently contain lethal esoteric or Inquisition traps. <strong>The terminal will only report the physical symptom—it will not tell you which command to type.</strong> Running a forensic scan before neutralizing a room hazard triggers a painful backlash (-6% Humanity, +10% Heat):
             </p>
-            <ul style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <li><strong>75%–99% Heat (Triangulation Warning):</strong> Malleus strike teams begin sweeping the perimeter. The HUD flashes crimson.</li>
-              <li><strong>100% Heat (TOTAL SECTOR LOCKDOWN):</strong> Inquisition Witch-Hounds lock down the building. All <code>probe</code>, <code>breach</code>, and <code>extract</code> directives are blocked until you run <code>spoof</code> (-15 Obols), <code>bribe</code> (-25 Obols), invoke a Stealth Yokai, or retreat to <strong>[F4] SAFEHOUSE / ALTAR</strong>.</li>
-              <li><strong>Global Entropy (0.00%):</strong> Measures the irreversible fraying of mundane reality. Ticks upward by <code>+0.01%</code> to <code>+0.05%</code> during travel and rest, and spikes if you botch a Sealing Ritual.</li>
+            <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'grid', gridTemplateColumns: '150px 220px 1fr', rowGap: '10px', columnGap: '12px', marginTop: '12px' }}>
+              <strong style={{ color: theme.accentCyan }}>degauss</strong>
+              <span style={{ color: theme.accentAmber }}>Aethyric Static</span>
+              <span>Symptom: Electromagnetic white-noise screech blinding local sensors and scrambling telemetry.</span>
+
+              <strong style={{ color: theme.accentCyan }}>bypass</strong>
+              <span style={{ color: theme.accentAmber }}>Inquisition Wiretap</span>
+              <span>Symptom: Encrypted Vatican-Crown laser tripwires and acoustic relays humming across the threshold (-10% Heat when bypassed).</span>
+
+              <strong style={{ color: theme.accentCyan }}>purify</strong>
+              <span style={{ color: theme.accentAmber }}>Pestilent Miasma Fog</span>
+              <span>Symptom: Choking, spore-laden abyssal vapor blanketing the floor and corroding exposed lenses.</span>
+
+              <strong style={{ color: theme.accentCyan }}>demag</strong>
+              <span style={{ color: theme.accentAmber }}>Ferrous Magnetic Lock</span>
+              <span>Symptom: Crushing magnetic flux pinning metallic gear and distorting iron filings in the room.</span>
+
+              <strong style={{ color: theme.accentCyan }}>lance</strong>
+              <span style={{ color: theme.accentAmber }}>Goetic Blood-Ward</span>
+              <span>Symptom: Pulsing vein of arterial sigils sealing the sanctum and draining ambient vitality.</span>
+
+              <strong style={{ color: theme.accentCyan }}>anchor</strong>
+              <span style={{ color: theme.accentAmber }}>Chronometric Loop</span>
+              <span>Symptom: Time inside the chamber stuttering in a 4-second recursive loop, resetting probes.</span>
+            </div>
+          </div>
+        )}
+
+        {tab === 'LORE' && (
+          <div style={{ maxWidth: '940px' }}>
+            <h3 style={{ color: theme.textBright, marginTop: 0 }}>THE 72 SPIRITS OF SOLOMON &amp; RESONANCE CASCADES</h3>
+            <p>
+              In the 17th-century <em>Lemegeton Clavicula Salomonis</em>, King Solomon bound <strong>72 Goetic spirits</strong> into a single Brass Vessel using their geometric seals and planetary metals: <strong>Kings</strong> (Gold Leaf), <strong>Marquises</strong> (Silver Shavings), <strong>Dukes</strong> (Copper Wire), <strong>Presidents</strong> (Quicksilver Drops), <strong>Princes</strong> (Sacred Sand), <strong>Earls</strong> (Cold Iron Filings), and <strong>Knights</strong> (Lead Weights).
+            </p>
+            <p>
+              Each of the <strong>Four Horsemen</strong> (Conquest, War, Famine, Death) uses 18 Goetian Lieutenants to anchor itself into London and Surrey. Whenever you seal a high-ranking <strong>King, Prince, or Duke</strong>, the shockwave triggers a <em>Solomonic Resonance Cascade</em> that automatically severs and binds <strong>1 to 2 lesser demons</strong> of that Horseman's court into your Brass Vessel.
+            </p>
+          </div>
+        )}
+
+        {tab === 'INQUISITION' && (
+          <div style={{ maxWidth: '940px' }}>
+            <h3 style={{ color: theme.accentRed, marginTop: 0 }}>THE ORDO MALLEUS &amp; 100% HEAT LOCKDOWNS</h3>
+            <p>
+              The <strong>Ordo Malleus</strong> monitors ley-line spikes using mobile direction-finding vans and witch-hound packs. Every room breach raises <strong>Inquisition Heat (0%–100%)</strong>:
+            </p>
+            <ul>
+              <li><strong>75%–99% Heat:</strong> Malleus strike teams sweep the perimeter. The HUD flashes crimson.</li>
+              <li><strong>100% Heat (TOTAL SECTOR LOCKDOWN):</strong> All room infiltration and forensic commands are locked out! Execute <code>spoof</code> (-15 Obols for -25% Heat) or <code>bribe</code> (-25 Obols for -45% Heat) to lift the cordon.</li>
             </ul>
           </div>
         )}
@@ -360,9 +540,9 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
 };
 
 // ============================================================================ //
-// 5. START SCREEN WITH OPERATIVE PORTRAIT SELECTION, SAVE WIPE & TITLE ART
+// START SCREEN WITH UNCROPPED BANNER & GLOBAL MARGIN RESET
 // ============================================================================ //
-const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: string, agency: string) => void; onLoad: () => void; onOpenManual: () => void }) => {
+const StartScreen = ({ onStart, onLoad, onOpenManual }: { onStart: (name: string, portrait: string, agency: string) => void; onLoad: () => void; onOpenManual: () => void }) => {
   const [name, setName] = useState('');
   const [agency, setAgency] = useState('');
   const [portrait, setPortrait] = useState('/portraits/thaumaturge_m1.png');
@@ -393,23 +573,23 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100vw', height: '100vh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono, margin: 0, padding: 0, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100vw', height: '100dvh', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono, margin: 0, padding: '8px', overflow: 'hidden' }}>
       {showConfirm && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ display: 'flex', width: '820px', backgroundColor: theme.bgPanel, border: `2px solid ${theme.textBright}`, boxShadow: `0 0 40px rgba(98, 240, 128, 0.15)` }}>
-            <div style={{ flex: '1', borderRight: `1px dashed ${theme.borderTerminal}`, padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#030503' }}>
-              <h2 style={{ margin: '0 0 15px 0', color: theme.textBright, letterSpacing: '4px', textTransform: 'uppercase' }}>{name || 'VERGIL'}</h2>
-              <img src={getFullBodyPath(portrait)} alt="Full Body Operative" style={{ width: '100%', maxHeight: '460px', objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(74,124,89,0.35))' }} />
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '12px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', width: '100%', maxWidth: '820px', maxHeight: '95dvh', overflowY: 'auto', backgroundColor: theme.bgPanel, border: `2px solid ${theme.textBright}`, boxShadow: `0 0 40px rgba(98, 240, 128, 0.15)` }}>
+            <div style={{ flex: '1 1 280px', borderRight: `1px dashed ${theme.borderTerminal}`, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#030503' }}>
+              <h2 style={{ margin: '0 0 12px 0', color: theme.textBright, letterSpacing: '4px', textTransform: 'uppercase' }}>{name || 'VERGIL'}</h2>
+              <img src={getFullBodyPath(portrait)} alt="Full Body Operative" style={{ width: '100%', maxHeight: '380px', objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(74,124,89,0.35))' }} />
             </div>
-            <div style={{ flex: '1', padding: '36px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ flex: '1 1 320px', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <h3 style={{ color: theme.accentRed, borderBottom: `1px solid ${theme.accentRed}`, paddingBottom: '10px', letterSpacing: '2px', margin: 0 }}>&gt; CONFIRM OPERATIVE TETHER</h3>
-              <div style={{ marginTop: '20px', lineHeight: '2.1', fontSize: '0.88rem' }}>
+              <div style={{ marginTop: '18px', lineHeight: '2.0', fontSize: '0.86rem' }}>
                 <div><span style={{ color: theme.textMuted }}>CALLSIGN:</span> <strong style={{ color: theme.textBright }}>{(name || 'VERGIL').toUpperCase()}</strong></div>
                 <div><span style={{ color: theme.textMuted }}>SYNDICATE:</span> <strong style={{ color: theme.textBright }}>{(agency || 'DARKWIRE').toUpperCase()}</strong></div>
                 <div><span style={{ color: theme.textMuted }}>STARTING HUMANITY:</span> <span style={{ color: theme.textBright }}>100% (STABLE)</span></div>
                 <div><span style={{ color: theme.textMuted }}>DIRECTIVE:</span> <span style={{ color: theme.accentAmber }}>SEVER THE 72 GOETIAN ANCHORS &amp; BANISH THE FOUR HORSEMEN</span></div>
               </div>
-              <div style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <button
                   onClick={() => {
                     ThaumaturgicAudio.scryPing();
@@ -417,13 +597,13 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
                     localStorage.removeItem('thaumaturgic_os_micro_entropy_v1');
                     onStart(name || 'VERGIL', portrait, agency || 'DARKWIRE');
                   }}
-                  style={{ padding: '14px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '1rem', letterSpacing: '2px' }}
+                  style={{ padding: '13px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.95rem', letterSpacing: '2px' }}
                 >
                   &gt; FINALIZE TETHER &amp; DEPLOY
                 </button>
                 <button
                   onClick={() => setShowConfirm(false)}
-                  style={{ padding: '12px', backgroundColor: 'transparent', color: theme.textMuted, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer', fontFamily: theme.fontMono }}
+                  style={{ padding: '10px', backgroundColor: 'transparent', color: theme.textMuted, border: `1px solid ${theme.borderTerminal}`, cursor: 'pointer', fontFamily: theme.fontMono }}
                 >
                   &gt; REVISE OPERATIVE DOSSIER
                 </button>
@@ -433,39 +613,42 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
         </div>
       )}
 
-      {/* Unified boundary container without margin or overflow issues */}
-      <div style={{ width: '640px', maxHeight: '96vh', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgPanel, boxShadow: `0 0 30px rgba(98, 240, 128, 0.12)`, overflow: 'hidden', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        
-        {/* Responsive, Uncropped Title Banner (image_30.png) */}
-        <div style={{ width: '100%', height: '350px', position: 'relative', borderBottom: `1px solid ${theme.borderTerminal}`, overflow: 'hidden', backgroundColor: 'black', flexShrink: 0 }}>
-          <img 
-            src="/title_art.jpg" 
+      <div style={{ width: '100%', maxWidth: '620px', maxHeight: '96dvh', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgPanel, boxShadow: `0 0 30px rgba(98, 240, 128, 0.12)`, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '100%', position: 'relative', borderBottom: `1px solid ${theme.borderTerminal}`, backgroundColor: '#020403', flexShrink: 0 }}>
+          <img
+            src="/title_art.jpg"
             onError={(e) => {
               const target = e.currentTarget;
-              if (target.src.endsWith('/title_art.jpg')) {
-                target.src = '/title_art.png';
-              } else if (target.src.endsWith('/title_art.png')) {
-                target.src = '/branding/animus_mundi_start_banner.png';
-              }
+              if (target.src.endsWith('/title_art.jpg')) target.src = '/title_art.png';
+              else if (target.src.endsWith('/title_art.png')) target.src = '/branding/animus_mundi_start_banner.png';
             }}
-            alt="Animus Mundi: Seals of the 4" 
-            style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain', backgroundColor: '#020403' }}
+            alt="Animus Mundi: Seals of the 4"
+            style={{ width: '100%', height: 'auto', maxHeight: '240px', display: 'block', objectFit: 'contain' }}
           />
-          {/* Transition overlay */}
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(9,13,10,1) 0%, rgba(9,13,10,0) 25%, rgba(0,0,0,0) 100%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(9,13,10,1) 0%, rgba(9,13,10,0) 20%)', pointerEvents: 'none' }} />
         </div>
 
-        <div style={{ padding: '16px 28px 24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.09</span>
-
+        <div style={{ padding: '16px 24px 22px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+            <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.10</span>
+            <button
+              onClick={onOpenManual}
+              style={{
+                backgroundColor: 'rgba(255, 184, 0, 0.09)',
+                border: '1px solid rgba(255, 184, 0, 0.45)',
+                color: theme.accentAmber,
+                padding: '4px 10px',
+                fontFamily: theme.fontMono,
+                fontSize: '0.72rem',
+                cursor: 'pointer'
+              }}
+            >
+              [? FIELD MANUAL &amp; LORE]
+            </button>
           </div>
-          <h2 style={{ margin: '0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '6px', letterSpacing: '3px', color: theme.textBright, fontSize: '1.15rem' }}>
+          <h2 style={{ margin: 0, borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '6px', letterSpacing: '3px', color: theme.textBright, fontSize: '1.1rem' }}>
             INITIATING DATA-TETHER
           </h2>
-          <p style={{ fontSize: '0.74rem', color: '#a8ccaf', lineHeight: '1.4', margin: '0' }}>
-            The Four Horsemen are bleeding into London through the 72 Spirits of Solomon. Infiltrate fractured sectors via terminal CLI, dodge Malleus Inquisition strike teams, deduce each demon's True Name, and bind them into the Brass Vessel.
-          </p>
 
           {savedOperative && (
             <div style={{ padding: '10px', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgDark, textAlign: 'center' }}>
@@ -475,7 +658,7 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
                   &gt; RESUME: OP_{savedOperative.toUpperCase()}
                 </button>
                 <button onClick={handleWipeSave} style={{ flex: 1, padding: '9px', backgroundColor: '#2a0808', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.72rem' }}>
-                  WIPE
+                  WIPE SAVE
                 </button>
               </div>
             </div>
@@ -484,17 +667,17 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.74rem', color: theme.textBright }}>&gt; INPUT OPERATIVE CALLSIGN:</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VERGIL" style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none' }} />
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VERGIL" style={{ width: '100%', padding: '8px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none' }} />
             </div>
 
             <div>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.74rem', color: theme.textBright }}>&gt; INPUT AFFILIATED SYNDICATE:</label>
-              <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. DARKWIRE" style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none' }} />
+              <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. DARKWIRE" style={{ width: '100%', padding: '8px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none' }} />
             </div>
 
             <div>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.74rem', color: theme.textBright }}>&gt; SELECT OPERATIVE DOSSIER PORTRAIT:</label>
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 {[
                   { id: 'thaumaturge_m1', src: '/portraits/thaumaturge_m1.png' },
                   { id: 'thaumaturge_m2', src: '/portraits/thaumaturge_m2.png' },
@@ -508,14 +691,14 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
                       padding: '3px', cursor: 'pointer',
                       backgroundColor: portrait === p.src ? theme.textTerminal : 'transparent',
                       border: `2px solid ${portrait === p.src ? theme.textBright : theme.borderTerminal}`,
-                      borderRadius: '50%', transition: 'all 0.15s'
+                      borderRadius: '50%'
                     }}
                   >
                     <img
                       src={p.src}
                       alt="Operative"
                       style={{
-                        width: '56px', height: '56px', objectFit: 'cover', borderRadius: '50%',
+                        width: '54px', height: '54px', objectFit: 'cover', borderRadius: '50%',
                         opacity: portrait === p.src ? 1 : 0.45,
                         filter: portrait === p.src ? 'none' : 'grayscale(100%) sepia(20%) hue-rotate(80deg)'
                       }}
@@ -536,7 +719,7 @@ const StartScreen = ({ onStart, onLoad }: { onStart: (name: string, portrait: st
 };
 
 // ============================================================================ //
-// 6. SEALING & BANISHMENT TERMINALS (WITH VISIBLE TRACE LINES)
+// SEALING TERMINAL (WITH TYPEWRITER CLACK & HEAVY [SEALED] STAMP IMPACT)
 // ============================================================================ //
 interface SealingTerminalProps {
   suspect: typeof allGoetia[0];
@@ -584,16 +767,16 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
       setShowSealed(false);
       const interval = setInterval(() => {
         setTypedName(fullName.substring(0, i + 1));
-        ThaumaturgicAudio.keyClick();
+        ThaumaturgicAudio.typewriterClack();
         i++;
         if (i >= fullName.length) {
           clearInterval(interval);
           setTimeout(() => {
-            ThaumaturgicAudio.sealSuccess();
+            ThaumaturgicAudio.heavyStampImpact();
             setShowSealed(true);
-          }, 1200);
+          }, 650);
         }
-      }, 300);
+      }, 220);
       return () => clearInterval(interval);
     }
   }, [phase, suspect.name]);
@@ -691,8 +874,20 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-      <div style={{ width: '500px', padding: '30px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, boxShadow: `0 0 30px rgba(98, 240, 128, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal }}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '12px' }}>
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '500px',
+          padding: '26px',
+          backgroundColor: theme.bgPanel,
+          border: `1px solid ${theme.textBright}`,
+          boxShadow: `0 0 30px rgba(98, 240, 128, 0.2)`,
+          fontFamily: theme.fontMono,
+          color: theme.textTerminal,
+          animation: showSealed ? 'heavyImpactShake 0.34s ease-out both' : 'none'
+        }}
+      >
         {phase !== 'COMPLETE' && (
           <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '8px', color: theme.textBright }}>
             &gt; ROOT_ACCESS // VESSEL_SEALING_PROTOCOL
@@ -703,7 +898,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
           <form onSubmit={handleAuthSubmit}>
             <p style={{ fontSize: '0.8rem', marginBottom: '10px', lineHeight: '1.5' }}>
               HYPOTHESIS LOCKED: <strong style={{ color: theme.textBright }}>{suspect.name.toUpperCase()}</strong> ({suspect.rank} of {suspect.allegiance}).<br/>
-              <span style={{ color: theme.accentAmber }}>WARNING: If this entity is NOT the true Anchor of the current Sector, your catalysts will burn and the backlash will spike Global Entropy (+15%).</span>
+              <span style={{ color: theme.accentAmber }}>WARNING: If this entity is NOT the true Anchor of the current Sector, your catalysts will burn and spike Global Entropy (+15%).</span>
             </p>
             <input autoFocus type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder={`TYPE "${suspect.name.toUpperCase()}" TO COMMIT`} style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }} />
             <button type="submit" style={{ marginTop: '12px', padding: '10px', width: '100%', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>&gt; BURN CATALYSTS &amp; ENGAGE SEAL</button>
@@ -716,8 +911,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
             <h2 style={{ color: theme.accentRed, letterSpacing: '3px', margin: '0 0 10px 0' }}>! FALSE TRUE-NAME BACKLASH !</h2>
             <p style={{ fontSize: '0.82rem', color: '#ffb3b3', lineHeight: '1.6' }}>
               You inscribed the seal of <strong>{suspect.name}</strong>, but the entity haunting this sector rejected the binding. Your catalysts vaporized in a violent backlash.<br/><br/>
-              <strong>PENALTY:</strong> -20 Humanity | +15.00% Global Entropy.<br/>
-              Extract more forensic logs in the field and re-verify the 3 Signs in your Codex!
+              <strong>PENALTY:</strong> -20 Humanity | +15.00% Global Entropy.
             </p>
             <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontFamily: theme.fontMono }}>
               &gt; EMERGENCY DISCONNECT
@@ -731,16 +925,13 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
               <span style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>! CONNECTION VOLATILE</span>
               <span style={{ color: timeLeft <= 5 ? theme.accentRed : theme.textBright, fontWeight: 'bold' }}>00:{timeLeft.toString().padStart(2, '0')}</span>
             </div>
-            <p style={{ fontSize: '0.78rem', alignSelf: 'flex-start', marginBottom: '16px', color: theme.textMuted }}>
-              REQUESTING ALIGNMENT: <span style={{ color: theme.textTerminal }}>[{matrix.id}]</span>
-            </p>
-            <div style={{ position: 'relative', width: '300px', height: '300px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
+            <div style={{ position: 'relative', width: '280px', height: '280px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
               <img
                 src={`/seals/${suspect.id}.png`}
                 alt="Target Seal"
                 style={{
                   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                  width: '180px', height: '180px', opacity: 0.3, pointerEvents: 'none',
+                  width: '170px', height: '170px', opacity: 0.3, pointerEvents: 'none',
                   filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
                 }}
               />
@@ -771,7 +962,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
               src={`/seals/${suspect.id}.png`}
               alt="Goetian Seal"
               style={{
-                width: '200px', height: '200px', marginBottom: '20px',
+                width: '180px', height: '180px', marginBottom: '18px',
                 filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'
               }}
             />
@@ -780,20 +971,20 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
             </h2>
             {showSealed && (
               <>
-                <div style={{ color: theme.accentRed, fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '8px', marginTop: '10px', animation: 'slowPulse 2.5s ease-in-out infinite' }}>
+                <div style={{ color: theme.accentRed, border: `3px solid ${theme.accentRed}`, padding: '4px 16px', fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '8px', marginTop: '10px', animation: 'stampSlam 0.22s ease-out forwards', boxShadow: '0 0 25px rgba(255,42,85,0.6)' }}>
                   [SEALED]
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#a8ccaf', marginTop: '12px' }}>
-                  +5% Banishment Probability toward <strong>{suspect.allegiance}</strong> | Sector Permanently Secured &amp; Adjacent Ley-Routes Unlocked!
+                  +5% Banishment Probability toward <strong>{suspect.allegiance}</strong> | Sector Permanently Secured!
                 </p>
                 {!isCleanSeal && (
-                  <p style={{ color: theme.textMuted, fontSize: '0.8rem', marginTop: '10px' }}>
+                  <p style={{ color: theme.textMuted, fontSize: '0.8rem', marginTop: '6px' }}>
                     _CONTAINMENT FAILURE: GLOBAL ENTROPY SPIKED (+10%).
                   </p>
                 )}
                 <button
                   onClick={onClose}
-                  style={{ marginTop: '25px', padding: '10px 20px', width: '100%', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.textBright}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}
+                  style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.textBright}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}
                 >
                   &gt; ACKNOWLEDGE_CONTAINMENT
                 </button>
@@ -861,7 +1052,7 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
     setIsVictory(success);
     setPhase('RESOLUTION');
     if (success) {
-      ThaumaturgicAudio.sealSuccess();
+      ThaumaturgicAudio.heavyStampImpact();
       dispatch({ type: 'SET_FLAG', payload: { flagId: `banished_${horseman.toLowerCase()}`, value: true } });
       addToast(`BANISHMENT SUCCESSFUL. ${horseman} severed from reality!`, 'SEAL');
     } else {
@@ -921,8 +1112,20 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
   const activeMatrix = matrices[currentMatrixIdx];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-      <div style={{ width: '560px', padding: '32px', backgroundColor: overrideTheme.bg, border: `2px solid ${overrideTheme.border}`, boxShadow: `0 0 50px rgba(255, 51, 51, 0.2)`, fontFamily: theme.fontMono, color: overrideTheme.text }}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '12px' }}>
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '560px',
+          padding: '28px',
+          backgroundColor: overrideTheme.bg,
+          border: `2px solid ${overrideTheme.border}`,
+          boxShadow: `0 0 50px rgba(255, 51, 51, 0.2)`,
+          fontFamily: theme.fontMono,
+          color: overrideTheme.text,
+          animation: isVictory ? 'heavyImpactShake 0.38s ease-out both' : 'none'
+        }}
+      >
         {phase === 'LEDGER' && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', borderBottom: `1px solid ${overrideTheme.border}`, paddingBottom: '10px', marginBottom: '12px' }}>
@@ -933,7 +1136,7 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
               </div>
             </div>
             <p style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>Each sealed Goetia Lieutenant of {horseman} adds +5% to your Grand Rite stabilization roll (5% Base + {sealedCount} × 5%).</p>
-            <div style={{ maxHeight: '170px', overflowY: 'auto', fontSize: '0.76rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: 'black', padding: '10px', border: `1px solid ${overrideTheme.border}` }}>
+            <div style={{ maxHeight: '160px', overflowY: 'auto', fontSize: '0.76rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: 'black', padding: '10px', border: `1px solid ${overrideTheme.border}` }}>
               {lieutenants.map(g => {
                 const isSealed = state.sealedGoetia.includes(g.id);
                 return (
@@ -943,27 +1146,24 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
                 );
               })}
             </div>
-            <div style={{ marginTop: '16px', padding: '14px', backgroundColor: 'black', border: `1px dashed ${overrideTheme.border}`, textAlign: 'center' }}>
+            <div style={{ marginTop: '14px', padding: '12px', backgroundColor: 'black', border: `1px dashed ${overrideTheme.border}`, textAlign: 'center' }}>
               <div style={{ fontSize: '0.72rem', color: overrideTheme.text }}>CALCULATED BANISHMENT PROBABILITY</div>
-              <div style={{ fontSize: '2.2rem', color: overrideTheme.bright, fontWeight: 'bold' }}>{winProbability}%</div>
+              <div style={{ fontSize: '2rem', color: overrideTheme.bright, fontWeight: 'bold' }}>{winProbability}%</div>
             </div>
-            <button onClick={() => setPhase('RITUAL')} style={{ width: '100%', padding: '14px', marginTop: '16px', backgroundColor: overrideTheme.bright, color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '2px' }}>&gt; COMMENCE TRIPLE-MATRIX ENDURANCE RITE</button>
+            <button onClick={() => setPhase('RITUAL')} style={{ width: '100%', padding: '14px', marginTop: '14px', backgroundColor: overrideTheme.bright, color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '2px' }}>&gt; COMMENCE TRIPLE-MATRIX ENDURANCE RITE</button>
             <button onClick={onClose} style={{ width: '100%', padding: '10px', marginTop: '8px', backgroundColor: 'transparent', color: overrideTheme.text, border: `1px solid ${overrideTheme.text}`, cursor: 'pointer' }}>&gt; ABORT</button>
           </div>
         )}
         {phase === 'RITUAL' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '1rem', fontWeight: 'bold' }}>
-              <span style={{ color: overrideTheme.bright }}>MATRIX: {currentMatrixIdx + 1}/3 [{activeMatrix.id}]</span>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.95rem', fontWeight: 'bold' }}>
+              <span style={{ color: overrideTheme.bright }}>MATRIX: {currentMatrixIdx + 1}/3</span>
               <span style={{ color: overrideTheme.bright }}>T-MINUS: {timeLeft}s</span>
             </div>
-            <div style={{ position: 'relative', width: '310px', height: '310px', border: `2px solid ${overrideTheme.border}`, backgroundColor: 'black', borderRadius: '50%' }}>
+            <div style={{ position: 'relative', width: '290px', height: '290px', border: `2px solid ${overrideTheme.border}`, backgroundColor: 'black', borderRadius: '50%' }}>
               <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
-                {/* Guide Polygon (Now Solid & Clearly Visible) */}
                 <polygon points={activeMatrix.sequence.map(id => `${activeMatrix.nodes.find(n => n.id === id)!.x},${activeMatrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={overrideTheme.border} strokeWidth="0.9" strokeOpacity="0.7" />
-                {/* Completed Trace Path */}
                 <polyline points={path.map((nodeId) => `${activeMatrix.nodes.find(n => n.id === nodeId)!.x},${activeMatrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
-                {/* Active Pointer Rubber-Band Line (Restored!) */}
                 {currentPointer && path.length > 0 && path.length < activeMatrix.sequence.length && (
                   <line
                     x1={activeMatrix.nodes.find(n => n.id === path[path.length - 1])!.x}
@@ -992,15 +1192,15 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
         )}
         {phase === 'RESOLUTION' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <h1 style={{ color: isVictory ? 'white' : overrideTheme.bright, letterSpacing: '6px', fontSize: '2rem', margin: '0 0 15px 0' }}>
+            <h1 style={{ color: isVictory ? 'white' : overrideTheme.bright, letterSpacing: '6px', fontSize: '1.8rem', margin: '0 0 15px 0' }}>
               {isVictory ? 'HORSEMAN BANISHED' : 'TETHER RUPTURE'}
             </h1>
-            <p style={{ color: overrideTheme.text, lineHeight: '1.6', fontSize: '0.9rem' }}>
+            <p style={{ color: overrideTheme.text, lineHeight: '1.6', fontSize: '0.88rem' }}>
               {isVictory
                 ? `The conceptual apex of ${horseman} has been permanently severed from mundane reality.`
-                : `The Grand Rite fractured (${winProbability}% roll failed or timed out). Global Entropy spiked by +25%. Seal more Lieutenants before retrying!`}
+                : `The Grand Rite fractured (${winProbability}% roll failed or timed out). Global Entropy spiked by +25%.`}
             </p>
-            <button onClick={onClose} style={{ padding: '12px 24px', marginTop: '25px', backgroundColor: 'white', color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>&gt; RETURN TO OS</button>
+            <button onClick={onClose} style={{ padding: '12px 24px', marginTop: '20px', backgroundColor: 'white', color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>&gt; RETURN TO OS</button>
           </div>
         )}
       </div>
@@ -1009,32 +1209,32 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
 };
 
 // ============================================================================ //
-// 7. MAIN 6-VIEWPORT THAUMATURGIC OS COMPONENT
+// MAIN 7-VIEWPORT THAUMATURGIC OS COMPONENT
 // ============================================================================ //
 export default function App() {
   const { state, dispatch, draftContract, resetGame, sealGoetia, startInvestigation, loadGame, travelTo } = useEngine();
 
-  // Viewport, Font Scaling, Manual Modal & Map Zoom/Pan States
   const [viewport, setViewport] = useState<ViewportMode>('FIELD_OPS');
   const [mapViewMode, setMapViewMode] = useState<'SUB_GRID' | 'GEO_TRACKER'>('SUB_GRID');
   const [fontScale, setFontScale] = useState<FontScale>('MD');
+  const [controlMode, setControlMode] = useState<ControlMode>('PALETTE');
+  const [paletteCat, setPaletteCat] = useState<PaletteCategory>('INFILTRATE');
   const [showManual, setShowManual] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [hudFlash, setHudFlash] = useState<'NONE' | 'DAMAGE' | 'DECODE'>('NONE');
 
-  // Map Zoom & Pan State
+  // Map Zoom & Pan (Mouse + Touch Support)
   const [mapZoom, setMapZoom] = useState<number>(1);
   const [mapPan, setMapPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const isPanningRef = useRef(false);
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const didDragRef = useRef(false);
 
-  // Micro-Entropy State (0.01% increments for travel/rest/breach)
   const [microEntropy, setMicroEntropy] = useState<number>(() => {
     const saved = localStorage.getItem('thaumaturgic_os_micro_entropy_v1');
     return saved ? parseFloat(saved) || 0 : 0;
   });
 
-  // Procedural Sector Contracts Dictionary
   const [contracts, setContracts] = useState<Record<string, SectorContract>>(() => {
     const saved = localStorage.getItem('thaumaturgic_os_contracts_v1');
     if (saved) {
@@ -1044,22 +1244,17 @@ export default function App() {
   });
 
   const [yokaiCharges, setYokaiCharges] = useState<Record<string, number>>({});
-
-  // Codex Deduction State
   const [deducedSigns, setDeducedSigns] = useState<string[]>([]);
   const [codexHorsemanFilter, setCodexHorsemanFilter] = useState<'ALL' | 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH'>('ALL');
   const [selectedSuspectId, setSelectedSuspectId] = useState<string>('01_bael');
 
-  // Sealing & Banishment Modals
   const [activeSealSuspectId, setActiveSealSuspectId] = useState<string | null>(null);
   const [activeBanishmentTarget, setActiveBanishmentTarget] = useState<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH' | null>(null);
 
-  // CLI & Toasts
   const [terminalLines, setTerminalLines] = useState<TerminalEntry[]>([]);
   const [cliInput, setCliInput] = useState('');
   const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
 
-  // Canvas Refs
   const mapCanvasRef = useRef<HTMLCanvasElement>(null);
   const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
@@ -1071,6 +1266,11 @@ export default function App() {
   }>({ sonarRings: [], angle: 0, wavePhase: 0 });
 
   const formatLabel = (str: string) => str.replace(/_/g, ' ').toUpperCase();
+
+  const triggerHudFlash = (kind: 'DAMAGE' | 'DECODE') => {
+    setHudFlash(kind);
+    setTimeout(() => setHudFlash('NONE'), 420);
+  };
 
   const isSectorSecured = (sectorId: string) => !!state.flags[`sector_secured_${sectorId}`];
   const isSectorUnlocked = (sec: MacroSectorDef) => {
@@ -1091,7 +1291,7 @@ export default function App() {
   const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' | 'SEAL' = 'ALERT') => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4500);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4200);
   };
 
   const appendLog = (html: string, type: TerminalEntry['type'] = 'normal') => {
@@ -1120,19 +1320,15 @@ export default function App() {
         dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 2 } });
         dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'cursed_earth', amount: 2 } });
         dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'alchemical_distillate', amount: 2 } });
-        dispatch({ type: 'SET_FLAG', payload: { flagId: 'kitsune_mask_found', value: true } });
-        dispatch({ type: 'SET_FLAG', payload: { flagId: 'tengu_feather_found', value: true } });
       }
 
       appendLog(
         `<div style="border-left:2px solid #62f080;padding-left:10px;margin:4px 0;">` +
-        `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.09 — TERMINAL INFILTRATION PROTOCOL</div>` +
-        `<div style="color:#a8ccaf;line-height:1.55;">` +
-        `You are stationed at the <strong>PERIMETER TETHER</strong> outside Room 1. Field actions are executed via this CLI console:<br/>` +
-        `• Type <code style="color:#ffb800;">probe 1</code> to scan Room 1, then <code style="color:#ffb800;">breach 1</code> to enter it.<br/>` +
-        `• Type <code style="color:#ffb800;">extract</code> inside a breached room to harvest Forensic Clues &amp; Salvage.<br/>` +
-        `• If a room has a Hazard (<code>AETHYRIC_STATIC</code>, <code>INQUISITION_WIRE</code>, <code>MIASMA_FOG</code>), type <code style="color:#00f3ff;">degauss</code>, <code style="color:#00f3ff;">bypass</code>, or <code style="color:#00f3ff;">purify</code> first!<br/>` +
-        `• If Inquisition Heat nears 100%, type <code style="color:#ff2a55;">spoof</code> (-15 Obols) or <code style="color:#ff2a55;">bribe</code> (-25 Obols) to call off Malleus strike teams.` +
+        `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.10 — ACTIVE FORENSIC TRIANGULATION</div>` +
+        `<div style="color:#a8ccaf;line-height:1.5;">` +
+        `1. <strong>INFILTRATE:</strong> Start at the Perimeter Tether. Run <code style="color:#ffb800;">probe 1</code> and <code style="color:#ffb800;">breach 1</code>.<br/>` +
+        `2. <strong>COUNTER HAZARDS:</strong> Observe the room's physical symptom in the Live Telemetry strip and deduce the matching counter-protocol (<code style="color:#00f3ff;">degauss</code>, <code style="color:#00f3ff;">bypass</code>, <code style="color:#00f3ff;">purify</code>, <code style="color:#00f3ff;">demag</code>, <code style="color:#00f3ff;">lance</code>, <code style="color:#00f3ff;">anchor</code>).<br/>` +
+        `3. <strong>TRIANGULATE SIGNAL:</strong> Match your forensic instrument (<code style="color:#62f080;">vox</code>, <code style="color:#62f080;">lidar</code>, <code style="color:#62f080;">reagent</code>, <code style="color:#62f080;">lens</code>) to the room's raw anomaly symptom to decode the clue!` +
         `</div></div>`,
         'info'
       );
@@ -1162,22 +1358,16 @@ export default function App() {
   const selectedSubNode = currentContract?.subNodes.find(n => n.id === currentContract.selectedSubNodeId) || null;
   const currentHeat = state.sectorEntropy[state.currentNode] || 0;
 
-  // Helper to resolve a room argument (e.g. "1", "2", or selectedSubNode)
   const resolveTargetRoom = (arg?: string): SubGridNode | null => {
     if (!currentContract) return null;
     if (!arg) return selectedSubNode;
     const num = parseInt(arg.trim(), 10);
-    if (!isNaN(num)) {
-      return currentContract.subNodes.find(n => n.index === num) || null;
-    }
+    if (!isNaN(num)) return currentContract.subNodes.find(n => n.index === num) || null;
     return currentContract.subNodes.find(n => n.label.toLowerCase().includes(arg.toLowerCase())) || null;
   };
 
   const isAdjacentOrEntry = (targetNode: SubGridNode): boolean => {
-    if (!currentSubNode) {
-      // At Perimeter Tether: only Room 1 (index 1) is reachable
-      return targetNode.index === 1;
-    }
+    if (!currentSubNode) return targetNode.index === 1;
     return currentSubNode.connections.includes(targetNode.id);
   };
 
@@ -1189,11 +1379,11 @@ export default function App() {
       payload: { ...state, tetheredYokai: updatedTether, activeContracts: updatedTether }
     });
     const yName = allYokai.find(y => y.id === yokaiId)?.nameEn || yokaiId;
-    appendLog(`[*] TETHER SEVERED: <strong style="color:#ff2a55;">${yName}</strong> unbound (${reason}).`, 'warn');
+    appendLog(`[*] DAEMON UNBOUND: <strong style="color:#ff2a55;">${yName}</strong> (${reason}).`, 'warn');
     addToast(`Unbound: ${yName}`, 'ALERT');
   };
 
-  // --- CLI FIELD OPERATIONS ---
+  // --- FIELD INFILTRATION & FORENSIC TRIANGULATION ---
   const handleProbeSubNode = (targetNode?: SubGridNode | null) => {
     if (!currentContract) return;
     if (isSectorSecured(currentContract.sectorId)) {
@@ -1202,21 +1392,19 @@ export default function App() {
     }
     if (currentHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] MALLEUS INQUISITION LOCKDOWN (100% HEAT)! Field actions blocked. Type <code>spoof</code> (-15 Obols) or <code>bribe</code> (-25 Obols) to clear lockdown!`, 'error');
-      addToast(`100% Heat Lockdown! Run 'spoof' or 'bribe'`, 'ALERT');
+      appendLog(`[!] MALLEUS INQUISITION LOCKDOWN (100% HEAT)! Execute <code>spoof</code> or <code>bribe</code> first.`, 'error');
       return;
     }
 
     const node = targetNode || selectedSubNode;
     if (!node) return;
-
     if (node.status !== 'LOCKED') {
       appendLog(`[i] Room <strong>${node.label}</strong> is already ${node.status}.`, 'system');
       return;
     }
     if (!isAdjacentOrEntry(node)) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Cannot probe <strong>${node.label}</strong>—not adjacent to your current position (${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER - Room 1 only'}).`, 'error');
+      appendLog(`[-] Cannot probe <strong>${node.label}</strong>—not adjacent to your current position.`, 'error');
       return;
     }
 
@@ -1237,13 +1425,16 @@ export default function App() {
     setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: node.id, subNodes: updatedNodes } }));
 
     const sigDesc =
-      node.nodeType === 'ANOMALY' ? '<span style="color:#62f080;">[ESOTERIC ANOMALY + SALVAGE]</span>' :
+      node.nodeType === 'ANOMALY' ? '<span style="color:#62f080;">[UNDECODED ESOTERIC SIGNAL]</span>' :
       node.nodeType === 'SHRINE' ? '<span style="color:#00f3ff;">[DORMANT KAMI SHRINE]</span>' :
-      node.nodeType === 'AMBUSH' ? '<span style="color:#ff2a55;">[WARNING: MALLEUS INQUISITION HOUND AMBUSH!]</span>' :
-      node.nodeType === 'ANCHOR' ? '<span style="color:#ffb800;">[GOETIAN CONDUIT ANCHOR]</span>' : '[MUNDANE ROOM]';
+      node.nodeType === 'AMBUSH' ? '<span style="color:#ff2a55;">[MALLEUS HOUND SIGNATURE!]</span>' :
+      node.nodeType === 'ANCHOR' ? '<span style="color:#ffb800;">[GOETIAN CONDUIT ANCHOR]</span>' : '[SALVAGE CACHE]';
 
-    const hazardDesc = node.hazard !== 'NONE' ? ` | HAZARD: <span style="color:#ffb800;">[${node.hazard}]</span>` : '';
-    appendLog(`[📡 AUSPEX PROBE] <strong>${node.label}</strong> (-${humCost} HUM): ${sigDesc}${hazardDesc}`, 'info');
+    const hazardSymptom = node.hazard !== 'NONE'
+      ? `<br/><span style="color:#ffb800;">⚠️ INTERFERENCE SYMPTOM: "${HAZARD_MANIFEST[node.hazard].symptom}"</span>`
+      : '';
+
+    appendLog(`[📡 AUSPEX PROBE] <strong>${node.label}</strong> (-${humCost} HUM): ${sigDesc}${hazardSymptom}`, 'info');
   };
 
   const handleBreachOrMoveSubNode = (targetNode?: SubGridNode | null) => {
@@ -1254,21 +1445,19 @@ export default function App() {
     }
     if (currentHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] MALLEUS INQUISITION LOCKDOWN (100% HEAT)! Witch-hound squads have sealed all doors. Type <code>spoof</code> (-15 Obols) or <code>bribe</code> (-25 Obols) to break the cordon!`, 'error');
-      addToast(`SECTOR LOCKED AT 100% HEAT!`, 'ALERT');
+      appendLog(`[!] 100% HEAT LOCKDOWN! Run <code>spoof</code> or <code>bribe</code> to lift the Malleus cordon.`, 'error');
       return;
     }
 
     const node = targetNode || selectedSubNode;
     if (!node) return;
-
     if (currentSubNode && node.id === currentSubNode.id) {
       appendLog(`[i] Already positioned inside <strong>${node.label}</strong>.`, 'system');
       return;
     }
     if (!isAdjacentOrEntry(node)) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] <strong>${node.label}</strong> is not connected to your current position (${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER -> Breach Room 1 first'}).`, 'error');
+      appendLog(`[-] <strong>${node.label}</strong> is not connected to your current position.`, 'error');
       return;
     }
 
@@ -1282,15 +1471,17 @@ export default function App() {
     if (wasLocked && node.nodeType === 'AMBUSH') {
       heatGain += 20;
       dispatch({ type: 'MODIFY_HUMANITY', payload: -12 });
-      appendLog(`[!] MALLEUS INQUISITION AMBUSH in <strong>${node.label}</strong>! Witch-hounds tracked your tether (-12 Humanity, +${heatGain}% Inquisition Heat)!`, 'error');
-      addToast(`Inquisition Ambush! -12 Humanity`, 'ALERT');
+      triggerHudFlash('DAMAGE');
+      appendLog(`[!] MALLEUS INQUISITION AMBUSH in <strong>${node.label}</strong>! Witch-hounds tracked your tether (-12% Humanity, +${heatGain}% Heat)!`, 'error');
+      addToast(`Inquisition Ambush! -12% Humanity`, 'ALERT');
     } else {
       appendLog(`[⚡ ${wasLocked ? 'BREACH' : 'MOVE'}] Entered <strong>${node.label}</strong> (+${heatGain}% Inquisition Heat).`, 'info');
     }
 
     if (node.hazard !== 'NONE') {
-      const counterCmd = node.hazard === 'AETHYRIC_STATIC' ? 'degauss' : node.hazard === 'INQUISITION_WIRE' ? 'bypass' : 'purify';
-      appendLog(`[⚠️ ROOM HAZARD ACTIVE: <strong>${node.hazard}</strong>] Run CLI directive <code style="color:#00f3ff;">${counterCmd}</code> before extracting!`, 'warn');
+      appendLog(`[⚠️ ACTIVE ROOM HAZARD] <em>"${HAZARD_MANIFEST[node.hazard].symptom}"</em> (Consult [F7] MANUAL or counter-protocols to neutralize before scanning!)`, 'warn');
+    } else if (node.rawSignalSymptom && node.status !== 'EXTRACTED') {
+      appendLog(`[🔎 RAW SIGNAL DETECTED] <em>"${node.rawSignalSymptom}"</em> — Deploy matching forensic instrument (<code>vox</code>, <code>lidar</code>, <code>reagent</code>, or <code>lens</code>).`, 'info');
     }
 
     const newHeat = Math.min(100, currentHeat + heatGain);
@@ -1298,11 +1489,8 @@ export default function App() {
 
     if (newHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`<div style="background:rgba(255,42,85,0.2);border:1px solid #ff2a55;padding:8px;color:#ff2a55;font-weight:bold;">[🚨 100% INQUISITION HEAT — TOTAL SECTOR LOCKDOWN!] Malleus Strike Teams have cordoned ${currentContract.sectorLabel}. Type <code>spoof</code> or <code>bribe</code> in CLI immediately!</div>`, 'error');
-      addToast(`100% HEAT! SECTOR LOCKED DOWN!`, 'ALERT');
-    } else if (newHeat >= 75 && currentHeat < 75) {
-      ThaumaturgicAudio.errorBuzz();
-      addToast(`WARNING: Inquisition Heat at ${newHeat}%!`, 'ALERT');
+      triggerHudFlash('DAMAGE');
+      appendLog(`<div style="background:rgba(255,42,85,0.2);border:1px solid #ff2a55;padding:8px;color:#ff2a55;font-weight:bold;">[🚨 100% INQUISITION HEAT — TOTAL SECTOR LOCKDOWN!] Malleus Strike Teams have cordoned ${currentContract.sectorLabel}.</div>`, 'error');
     }
 
     const updatedNodes = currentContract.subNodes.map(n =>
@@ -1320,16 +1508,31 @@ export default function App() {
     }));
   };
 
-  const handleClearRoomHazard = (expectedHazard: 'AETHYRIC_STATIC' | 'INQUISITION_WIRE' | 'MIASMA_FOG') => {
+  // Counter-Hazard Execution (Punishes Wrong Guesses!)
+  const handleAttemptHazardCounter = (cmdUsed: string) => {
     if (!currentContract || !currentSubNode) {
-      appendLog(`[-] You must breach Room 1 to enter the sub-grid first.`, 'error');
+      appendLog(`[-] Breach Room 1 to enter the sub-grid first.`, 'error');
       return;
     }
-    if (currentSubNode.hazard !== expectedHazard) {
-      appendLog(`[i] No ${expectedHazard} present in ${currentSubNode.label}.`, 'system');
+    if (currentSubNode.hazard === 'NONE') {
+      appendLog(`[i] No active room hazard in <strong>${currentSubNode.label}</strong>.`, 'system');
       return;
     }
+
+    const hazardSpec = HAZARD_MANIFEST[currentSubNode.hazard];
+    if (hazardSpec.counterCmd !== cmdUsed) {
+      ThaumaturgicAudio.errorBuzz();
+      triggerHudFlash('DAMAGE');
+      const shockHum = state.tetheredYokai.includes('yokai_baku') ? -3 : -6;
+      dispatch({ type: 'MODIFY_HUMANITY', payload: shockHum });
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 8 } });
+      appendLog(`[!] PROTOCOL MISMATCH! Running <code>${cmdUsed}</code> against <strong>${hazardSpec.label}</strong> triggered a resonance backlash (${shockHum}% HUM, +8% Heat)! Re-read the symptom or check [F7] MANUAL.`, 'error');
+      addToast(`Wrong Counter-Protocol! ${shockHum}% HUM`, 'ALERT');
+      return;
+    }
+
     ThaumaturgicAudio.scryPing();
+    triggerHudFlash('DECODE');
     const updatedNodes = currentContract.subNodes.map(n =>
       n.id === currentSubNode.id ? { ...n, hazard: 'NONE' as const } : n
     );
@@ -1337,43 +1540,61 @@ export default function App() {
       ...prev,
       [currentContract.sectorId]: { ...currentContract, subNodes: updatedNodes }
     }));
-    if (expectedHazard === 'INQUISITION_WIRE') {
+
+    if (currentSubNode.hazard === 'INQUISITION_WIRE') {
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -10 } });
-      appendLog(`[+] INQUISITION WIRETAP BYPASSED in <strong>${currentSubNode.label}</strong> (-10% Inquisition Heat). Safe to run <code>extract</code>.`, 'success');
-    } else {
-      appendLog(`[+] HAZARD CLEARED: <strong>${expectedHazard}</strong> neutralized in ${currentSubNode.label}. Safe to run <code>extract</code>.`, 'success');
     }
-    addToast(`Cleared ${expectedHazard}!`, 'SEAL');
+    appendLog(`[✓ HAZARD NEUTRALIZED] ${hazardSpec.clearMsg}`, 'success');
+    if (currentSubNode.rawSignalSymptom && currentSubNode.status !== 'EXTRACTED') {
+      appendLog(`[🔎 SIGNAL ISOLATED] <em>"${currentSubNode.rawSignalSymptom}"</em> — Ready for forensic triangulation (<code>vox</code> / <code>lidar</code> / <code>reagent</code> / <code>lens</code>).`, 'info');
+    }
+    addToast(`Cleared: ${hazardSpec.label}`, 'SEAL');
   };
 
-  const handleExtractSubNode = () => {
+  // Forensic Tool Execution (`vox`, `lidar`, `reagent`, `lens`)
+  const handleRunForensicTool = (toolCmd: string, expectedChannel: ForensicChannel, toolLabel: string) => {
     if (!currentContract || !currentSubNode) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] You are at the Perimeter Tether. Type <code>breach 1</code> to enter Room 1 first.`, 'error');
+      appendLog(`[-] You are at the Perimeter Tether. Breach Room 1 first.`, 'error');
       return;
     }
     if (currentHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT). Extraction blocked! Type <code>spoof</code> or <code>bribe</code> first.`, 'error');
+      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT). Forensic instruments jammed!`, 'error');
       return;
     }
     if (currentSubNode.status === 'EXTRACTED') {
-      appendLog(`[i] <strong>${currentSubNode.label}</strong> has already been swept clean.`, 'system');
+      appendLog(`[i] <strong>${currentSubNode.label}</strong> has already been fully analyzed and swept.`, 'system');
       return;
     }
-
-    // Check active room hazard!
     if (currentSubNode.hazard !== 'NONE') {
       ThaumaturgicAudio.errorBuzz();
-      const counterCmd = currentSubNode.hazard === 'AETHYRIC_STATIC' ? 'degauss' : currentSubNode.hazard === 'INQUISITION_WIRE' ? 'bypass' : 'purify';
-      dispatch({ type: 'MODIFY_HUMANITY', payload: -6 });
+      triggerHudFlash('DAMAGE');
+      const shockHum = state.tetheredYokai.includes('yokai_baku') ? -3 : -6;
+      dispatch({ type: 'MODIFY_HUMANITY', payload: shockHum });
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 10 } });
-      appendLog(`[!] EXTRACTION BLOCKED BY <strong>${currentSubNode.hazard}</strong> (-6 HUM, +10% Heat)! Type <code style="color:#00f3ff;">${counterCmd}</code> in the CLI to clear the hazard first!`, 'error');
-      addToast(`Hazard Blocked Extraction! Type '${counterCmd}'`, 'ALERT');
+      appendLog(`[!] HAZARD INTERFERENCE! Running <code>${toolCmd}</code> while <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> is active caused a feedback shock (${shockHum}% HUM, +10% Heat)! Neutralize the room hazard first!`, 'error');
+      addToast(`Hazard Blocked Scan! Clear Hazard First!`, 'ALERT');
       return;
     }
 
+    if (!currentSubNode.signalChannel) {
+      appendLog(`[i] No esoteric signal in <strong>${currentSubNode.label}</strong>. Running standard salvage sweep instead...`, 'system');
+      handleExtractSubNode(true);
+      return;
+    }
+
+    if (currentSubNode.signalChannel !== expectedChannel) {
+      ThaumaturgicAudio.errorBuzz();
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 5 } });
+      appendLog(`[-] INSTRUMENT MISMATCH: <strong>${toolLabel}</strong> (<code>${toolCmd}</code>) returned only noise against symptom: <em>"${currentSubNode.rawSignalSymptom}"</em> (+5% Heat). Try a different forensic instrument!`, 'warn');
+      addToast(`Wrong Forensic Instrument! (+5% Heat)`, 'ALERT');
+      return;
+    }
+
+    // Correct Forensic Instrument! Decode Clue + Harvest Salvage
     ThaumaturgicAudio.sealSuccess();
+    triggerHudFlash('DECODE');
     addMicroEntropy(0.01);
     const updatedLogs = [...currentContract.discoveredLogs];
 
@@ -1381,33 +1602,25 @@ export default function App() {
       updatedLogs.push({
         id: `${currentSubNode.id}_log`,
         nodeLabel: currentSubNode.label,
-        text: currentSubNode.forensicText
+        text: currentSubNode.forensicText,
+        channel: expectedChannel
       });
       appendLog(
-        `<div style="background:rgba(98,240,128,0.07);border-left:3px solid #62f080;padding:8px 10px;margin:4px 0;">` +
-        `<div style="color:#62f080;font-weight:bold;">[🔍 FORENSIC ANOMALY RECORDED AT ${currentSubNode.label}]</div>` +
+        `<div style="background:rgba(98,240,128,0.09);border-left:3px solid #62f080;padding:8px 10px;margin:4px 0;">` +
+        `<div style="color:#62f080;font-weight:bold;">[✓ ${toolLabel} // SIGNAL DECODED AT ${currentSubNode.label}]</div>` +
         `<div style="color:#ffffff;margin-top:4px;">"${currentSubNode.forensicText}"</div>` +
-        `<div style="color:#ffb800;font-size:0.75rem;margin-top:4px;">-&gt; Open <strong>[F2] CODEX</strong> to cross-reference this phenomenon!</div>` +
+        `<div style="color:#ffb800;font-size:0.75rem;margin-top:4px;">-&gt; Logged to <strong>[F2] CODEX</strong> for True-Name deduction!</div>` +
         `</div>`,
         'success'
       );
-      addToast(`Forensic Log Recorded! Check [F2] Codex.`, 'INTEL');
-    }
-
-    if (currentSubNode.nodeType === 'SHRINE' && currentSubNode.shrineYokaiId) {
-      const yokai = allYokai.find(y => y.id === currentSubNode.shrineYokaiId);
-      if (yokai && yokai.unlockFlag) {
-        dispatch({ type: 'SET_FLAG', payload: { flagId: yokai.unlockFlag, value: true } });
-        appendLog(`[⛩️ KAMI SHRINE AWAKENED] Discovered spirit relic for <strong style="color:#00f3ff;">${yokai.nameEn}</strong>!`, 'success');
-        addToast(`Yokai Discovered: ${yokai.nameEn}`, 'SEAL');
-      }
+      addToast(`Signal Decoded via ${toolLabel}!`, 'INTEL');
     }
 
     if (currentSubNode.salvageDrop) {
       const { itemId, amount, obols } = currentSubNode.salvageDrop;
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
-      appendLog(`[📦 SALVAGE HARVESTED] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
+      appendLog(`[📦 SALVAGE RECOVERED] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
     }
 
     const updatedNodes = currentContract.subNodes.map(n =>
@@ -1424,8 +1637,70 @@ export default function App() {
     }));
   };
 
+  const handleExtractSubNode = (bypassSignalCheck = false) => {
+    if (!currentContract || !currentSubNode) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[-] Breach Room 1 to enter the sub-grid first.`, 'error');
+      return;
+    }
+    if (currentHeat >= 100) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT). Extraction blocked!`, 'error');
+      return;
+    }
+    if (currentSubNode.status === 'EXTRACTED') {
+      appendLog(`[i] <strong>${currentSubNode.label}</strong> has already been swept clean.`, 'system');
+      return;
+    }
+    if (currentSubNode.hazard !== 'NONE') {
+      ThaumaturgicAudio.errorBuzz();
+      triggerHudFlash('DAMAGE');
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -6 });
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 10 } });
+      appendLog(`[!] EXTRACTION BLOCKED BY ROOM HAZARD: <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> (-6% HUM, +10% Heat)! Neutralize the hazard first!`, 'error');
+      return;
+    }
+
+    if (!bypassSignalCheck && currentSubNode.signalChannel) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[!] UNDECODED FORENSIC SIGNAL IN ROOM: <em>"${currentSubNode.rawSignalSymptom}"</em> — Deploy the matching forensic instrument (<code>vox</code>, <code>lidar</code>, <code>reagent</code>, or <code>lens</code>) to decode the clue and harvest salvage!`, 'warn');
+      addToast(`Use Forensic Tool (vox/lidar/reagent/lens)!`, 'INTEL');
+      return;
+    }
+
+    ThaumaturgicAudio.sealSuccess();
+    triggerHudFlash('DECODE');
+    addMicroEntropy(0.01);
+
+    if (currentSubNode.nodeType === 'SHRINE' && currentSubNode.shrineYokaiId) {
+      const yokai = allYokai.find(y => y.id === currentSubNode.shrineYokaiId);
+      if (yokai && yokai.unlockFlag) {
+        dispatch({ type: 'SET_FLAG', payload: { flagId: yokai.unlockFlag, value: true } });
+        appendLog(`[⛩️ KAMI SHRINE AWAKENED] Synchronized spirit daemon <strong style="color:#00f3ff;">${yokai.nameEn}</strong>!`, 'success');
+        addToast(`Shikigami Unlocked: ${yokai.nameEn}`, 'SEAL');
+      }
+    }
+
+    if (currentSubNode.salvageDrop) {
+      const { itemId, amount, obols } = currentSubNode.salvageDrop;
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
+      appendLog(`[📦 SALVAGE HARVESTED] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
+    }
+
+    const updatedNodes = currentContract.subNodes.map(n =>
+      n.id === currentSubNode.id ? { ...n, status: 'EXTRACTED' as const } : n
+    );
+
+    setContracts(prev => ({
+      ...prev,
+      [currentContract.sectorId]: { ...currentContract, subNodes: updatedNodes }
+    }));
+  };
+
   const handleInvokeYokaiPower = (yokaiId: string) => {
-    const spec = YOKAI_INVOCATIONS[yokaiId] || { label: 'INVOKE', maxCharges: 1, desc: '' };
+    const spec = YOKAI_DAEMON_SPECS[yokaiId];
+    if (!spec) return;
     const currentCharges = yokaiCharges[yokaiId] ?? spec.maxCharges;
     if (currentCharges <= 0) {
       handleUnbindYokai(yokaiId, 'Contract charges exhausted');
@@ -1436,33 +1711,33 @@ export default function App() {
 
     if (yokaiId === 'yokai_kitsune') {
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -30 } });
-      appendLog(`[👹 ${yName.toUpperCase()} // FOXFIRE SHROUD] Illusory flames masked your trail (-30% Inquisition Heat).`, 'success');
+      appendLog(`[👹 ${spec.codeName} // FOXFIRE SHROUD] Injected phantom telemetry (-30% Inquisition Heat).`, 'success');
     } else if (yokaiId === 'yokai_tengu') {
       if (!currentContract) return;
-      if (state.humanity <= 5) { addToast('Requires 5 Humanity!', 'ALERT'); return; }
+      if (state.humanity <= 5) { addToast('Requires 5% Humanity!', 'ALERT'); return; }
       dispatch({ type: 'MODIFY_HUMANITY', payload: -5 });
       const revealedNodes = currentContract.subNodes.map(n => n.status === 'LOCKED' ? { ...n, status: 'PROBED' as const } : n);
       setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, subNodes: revealedNodes } }));
-      appendLog(`[👹 ${yName.toUpperCase()} // GALE SWEEP] Mountain winds scoured the sector (-5 HUM). All room signatures revealed!`, 'success');
+      appendLog(`[👹 ${spec.codeName} // GALE SWEEP] Aerial LiDAR scoured the sector (-5% HUM). All room nodes revealed!`, 'success');
     } else if (yokaiId === 'yokai_baku') {
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
       dispatch({ type: 'MODIFY_HUMANITY', payload: 20 });
-      appendLog(`[👹 ${yName.toUpperCase()} // DEVOUR NIGHTMARE] Baku consumed local paranoia (-15% Heat, +20 Humanity).`, 'success');
+      appendLog(`[👹 ${spec.codeName} // DEVOUR NIGHTMARE] Converted -15% Inquisition Heat into +20% Humanity.`, 'success');
     } else if (yokaiId === 'yokai_zashiki') {
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 35 } });
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 1 } });
-      appendLog(`[👹 ${yName.toUpperCase()} // FORTUNE BOON] Bestowed +35 Obols and +1 Scrap Metal before departing!`, 'success');
+      appendLog(`[👹 ${spec.codeName} // FORTUNE BOON] Liquidated syndicate cache for +35 Obols and +1 Scrap Metal!`, 'success');
     } else if (yokaiId === 'yokai_kameosa') {
-      if (state.humanity <= 8) { addToast('Requires 8 Humanity!', 'ALERT'); return; }
+      if (state.humanity <= 8) { addToast('Requires 8% Humanity!', 'ALERT'); return; }
       dispatch({ type: 'MODIFY_HUMANITY', payload: -8 });
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 1 } });
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'cursed_earth', amount: 1 } });
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'alchemical_distillate', amount: 1 } });
-      appendLog(`[👹 ${yName.toUpperCase()} // FERMENT MATTER] Turned your blood (-8 HUM) into +1 Metal, +1 Earth, and +1 Distillate!`, 'success');
+      appendLog(`[👹 ${spec.codeName} // FERMENT MATTER] Synthesized +1 Metal, +1 Earth, and +1 Distillate (-8% HUM)!`, 'success');
     } else if (yokaiId === 'yokai_kamaitachi') {
       if (!currentContract || !selectedSubNode) return;
       if (!isAdjacentOrEntry(selectedSubNode)) {
-        addToast('Select an adjacent room (or Room 1 from Perimeter) first!', 'ALERT');
+        addToast('Select an adjacent room (or Room 1) first!', 'ALERT');
         return;
       }
       const updatedNodes = currentContract.subNodes.map(n =>
@@ -1478,12 +1753,12 @@ export default function App() {
           subNodes: updatedNodes
         }
       }));
-      appendLog(`[👹 ${yName.toUpperCase()} // WIND SICKLE] Sliced silently into <strong>${selectedSubNode.label}</strong> (0% Heat, Ambush &amp; Hazards neutralized)!`, 'success');
+      appendLog(`[👹 ${spec.codeName} // WIND SICKLE] Sliced into <strong>${selectedSubNode.label}</strong> (0% Heat, Ambush &amp; Hazards neutralized)!`, 'success');
     } else if (yokaiId === 'yokai_amabie') {
       if ((state.inventory.obols || 0) < 10) { addToast('Requires 10 Obols!', 'ALERT'); return; }
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -10 } });
       addMicroEntropy(-2.5);
-      appendLog(`[👹 ${yName.toUpperCase()} // PROPHETIC WARD] Purged -2.50% Global Entropy (-10 Obols).`, 'success');
+      appendLog(`[👹 ${spec.codeName} // PROPHETIC WARD] Purged -2.50% Global Entropy (-10 Obols).`, 'success');
     } else if (yokaiId === 'yokai_noppera') {
       if (currentContract) {
         const disarmNodes = currentContract.subNodes.map(n =>
@@ -1492,7 +1767,7 @@ export default function App() {
         setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, subNodes: disarmNodes } }));
       }
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
-      appendLog(`[👹 ${yName.toUpperCase()} // FACELESS DECOY] Disarmed sector Inquisition ambushes and dropped Heat by -15%.`, 'success');
+      appendLog(`[👹 ${spec.codeName} // FACELESS DECOY] Disarmed sector Ambush nodes and dropped Heat by -15%.`, 'success');
     }
 
     ThaumaturgicAudio.scryPing();
@@ -1506,7 +1781,7 @@ export default function App() {
     }
   };
 
-  // --- CLI COMMAND PROCESSOR ---
+  // --- CLI & COMMAND PALETTE DISPATCHER ---
   const processCliCommand = (raw: string) => {
     const trimmed = raw.trim();
     if (!trimmed) return;
@@ -1518,14 +1793,11 @@ export default function App() {
 
     if (cmd === 'help' || cmd === '?') {
       appendLog(
-        `<div style="background:rgba(31,61,38,0.25);border:1px solid #1f3d26;padding:10px;line-height:1.6;">` +
-        `<strong style="color:#62f080;">FIELD OPS CLI DIRECTIVES:</strong><br/>` +
-        `• <code style="color:#ffb800;">probe [1-6]</code> — Scan room # (or selected room) for Ambushes, Shrines &amp; Hazards<br/>` +
-        `• <code style="color:#ffb800;">breach [1-6]</code> / <code style="color:#ffb800;">move [1-6]</code> — Breach or enter room #<br/>` +
-        `• <code style="color:#ffb800;">extract</code> — Harvest forensic clue, shrine relic, &amp; salvage from current room<br/>` +
-        `• <code style="color:#00f3ff;">degauss</code> | <code style="color:#00f3ff;">bypass</code> | <code style="color:#00f3ff;">purify</code> — Clear Static, Wiretaps, or Miasma hazards<br/>` +
-        `• <code style="color:#ff2a55;">spoof</code> (-15 Obols: -25% Heat) | <code style="color:#ff2a55;">bribe</code> (-25 Obols: -45% Heat, clears 100% Lockdown)<br/>` +
-        `• <code style="color:#62f080;">status</code> | <code style="color:#62f080;">map</code> | <code style="color:#62f080;">codex</code> | <code style="color:#62f080;">safehouse</code> | <code style="color:#62f080;">horsemen</code> | <code style="color:#62f080;">clear</code>` +
+        `<div style="background:rgba(31,61,38,0.25);border:1px solid #1f3d26;padding:10px;line-height:1.55;">` +
+        `<strong style="color:#62f080;">INFILTRATION:</strong> <code style="color:#ffb800;">probe [1-6]</code> | <code style="color:#ffb800;">breach [1-6]</code> | <code style="color:#ffb800;">extract</code><br/>` +
+        `<strong style="color:#62f080;">FORENSIC SUITE:</strong> <code style="color:#62f080;">vox</code> (Audio) | <code style="color:#62f080;">lidar</code> (Thermal/Spatial) | <code style="color:#62f080;">reagent</code> (Matter) | <code style="color:#62f080;">lens</code> (Astral)<br/>` +
+        `<strong style="color:#00f3ff;">COUNTER-HAZARDS:</strong> <code style="color:#00f3ff;">degauss</code> | <code style="color:#00f3ff;">bypass</code> | <code style="color:#00f3ff;">purify</code> | <code style="color:#00f3ff;">demag</code> | <code style="color:#00f3ff;">lance</code> | <code style="color:#00f3ff;">anchor</code><br/>` +
+        `<strong style="color:#ff2a55;">INQUISITION:</strong> <code style="color:#ff2a55;">spoof</code> (-15 Obols: -25% Heat) | <code style="color:#ff2a55;">bribe</code> (-25 Obols: -45% Heat)` +
         `</div>`,
         'info'
       );
@@ -1534,13 +1806,17 @@ export default function App() {
     } else if (cmd === 'breach' || cmd === 'move' || cmd === 'enter' || cmd === 'node') {
       handleBreachOrMoveSubNode(resolveTargetRoom(arg));
     } else if (cmd === 'extract' || cmd === 'loot') {
-      handleExtractSubNode();
-    } else if (cmd === 'degauss') {
-      handleClearRoomHazard('AETHYRIC_STATIC');
-    } else if (cmd === 'bypass') {
-      handleClearRoomHazard('INQUISITION_WIRE');
-    } else if (cmd === 'purify') {
-      handleClearRoomHazard('MIASMA_FOG');
+      handleExtractSubNode(false);
+    } else if (cmd === 'vox') {
+      handleRunForensicTool('vox', 'AUDIO_FLUX', 'VOX SPECTROGRAM');
+    } else if (cmd === 'lidar') {
+      handleRunForensicTool('lidar', 'THERMAL_TRACE', 'THERMAL LIDAR');
+    } else if (cmd === 'reagent') {
+      handleRunForensicTool('reagent', 'MATTER_SAMPLE', 'REAGENT ASSAY');
+    } else if (cmd === 'lens') {
+      handleRunForensicTool('lens', 'ASTRAL_ECHO', 'ENOCHIAN LENS');
+    } else if (['degauss', 'bypass', 'purify', 'demag', 'lance', 'anchor'].includes(cmd)) {
+      handleAttemptHazardCounter(cmd);
     } else if (cmd === 'spoof') {
       if ((state.inventory.obols || 0) < 15) {
         ThaumaturgicAudio.errorBuzz();
@@ -1565,12 +1841,7 @@ export default function App() {
       addToast(`Inquisition Cordon Lifted (-45% Heat)!`, 'SEAL');
     } else if (cmd === 'status' || cmd === 'look') {
       if (!currentContract) return;
-      appendLog(`[+] SECTOR: <strong>${currentContract.sectorLabel}</strong> | POSITION: <strong>${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}</strong> | HEAT: <strong>${currentHeat}%</strong>`, 'info');
-      currentContract.subNodes.forEach(n => {
-        const reach = isAdjacentOrEntry(n) ? '<span style="color:#62f080;">[ADJACENT]</span>' : '';
-        const haz = n.status !== 'LOCKED' && n.hazard !== 'NONE' ? `<span style="color:#ffb800;">[HAZARD: ${n.hazard}]</span>` : '';
-        appendLog(`  Room ${n.index}: <strong>${n.label}</strong> [${n.status}] ${reach} ${haz}`, 'normal');
-      });
+      appendLog(`[+] SECTOR: <strong>${currentContract.sectorLabel}</strong> | POS: <strong>${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}</strong> | HEAT: <strong>${currentHeat}%</strong>`, 'info');
     } else if (cmd === 'map') {
       setMapViewMode(prev => prev === 'SUB_GRID' ? 'GEO_TRACKER' : 'SUB_GRID');
     } else if (cmd === 'codex') {
@@ -1583,17 +1854,17 @@ export default function App() {
       setViewport('HORSEMEN');
     } else if (cmd === 'dossier') {
       setViewport('DOSSIER');
-    } else if (cmd === 'manual') { 
-      setViewport('MANUAL'); 
+    } else if (cmd === 'manual') {
+      setViewport('MANUAL');
     } else if (cmd === 'clear' || cmd === 'cls') {
       setTerminalLines([]);
     } else {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Unknown directive "${cmd}". Type <code>help</code> for tactical CLI syntax.`, 'error');
+      appendLog(`[-] Unknown directive "${cmd}". Type <code>help</code> or switch to <code>MODE: PALETTE</code>.`, 'error');
     }
   };
 
-  // --- CANVAS RENDERING LOOP (WITH ZOOM & PAN TRANSFORM) ---
+  // --- CANVAS RENDERING LOOP ---
   useEffect(() => {
     if (state.gameStage !== 'ACTIVE' || viewport !== 'FIELD_OPS') return;
     let animId: number;
@@ -1617,19 +1888,16 @@ export default function App() {
           const h = canvas.height;
           ctx.clearRect(0, 0, w, h);
 
-          // Background Grid
           ctx.strokeStyle = 'rgba(74, 124, 89, 0.08)';
           ctx.lineWidth = 1;
           for (let x = 0; x < w; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
           for (let y = 0; y < h; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
 
-          // Apply Zoom & Pan Transform around Canvas Center
           ctx.save();
           ctx.translate(w / 2 + mapPan.x, h / 2 + mapPan.y);
           ctx.scale(mapZoom, mapZoom);
           ctx.translate(-w / 2, -h / 2);
 
-          // Expanding Sonar Rings
           for (let i = fx.sonarRings.length - 1; i >= 0; i--) {
             const sr = fx.sonarRings[i];
             sr.r += 4;
@@ -1705,7 +1973,7 @@ export default function App() {
 
               let subBadge = sectorSecured ? '[SECURED]' : `[${node.status}]`;
               if (!sectorSecured && node.status === 'PROBED') {
-                subBadge = node.nodeType === 'AMBUSH' ? '[! AMBUSH !]' : node.nodeType === 'SHRINE' ? '[SHRINE]' : node.nodeType === 'ANCHOR' ? '[ANCHOR]' : '[ANOMALY]';
+                subBadge = node.nodeType === 'AMBUSH' ? '[! AMBUSH !]' : node.nodeType === 'SHRINE' ? '[SHRINE]' : node.nodeType === 'ANCHOR' ? '[ANCHOR]' : '[SIGNAL]';
               }
               ctx.font = '10px "Courier New", monospace';
               ctx.fillStyle = color;
@@ -1713,11 +1981,10 @@ export default function App() {
 
               if (node.status !== 'LOCKED' && node.hazard !== 'NONE' && !sectorSecured) {
                 ctx.fillStyle = '#00f3ff';
-                ctx.fillText(`! ${node.hazard} !`, nx, ny - 22);
+                ctx.fillText(`! HAZARD ACTIVE !`, nx, ny - 22);
               }
             });
           } else {
-            // DRAW 16-SECTOR REGIONAL CAMPAIGN MAP
             MACRO_SECTORS.forEach(node => {
               const unlockedA = isSectorUnlocked(node);
               node.connections.forEach(tid => {
@@ -1772,7 +2039,6 @@ export default function App() {
         }
       }
 
-      // Render Waveform
       const waveCanvas = waveformCanvasRef.current;
       if (waveCanvas) {
         const ctx = waveCanvas.getContext('2d');
@@ -1800,13 +2066,12 @@ export default function App() {
     return () => cancelAnimationFrame(animId);
   }, [state.gameStage, viewport, mapViewMode, currentContract, state.currentNode, state.sectorEntropy, state.flags, mapZoom, mapPan]);
 
-  // Convert Mouse Screen Coordinates into Zoomed/Panned Canvas World Coordinates
-  const getWorldCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const getWorldCoordsFromClient = (clientX: number, clientY: number) => {
     const canvas = mapCanvasRef.current;
     if (!canvas) return { wx: 0, wy: 0, w: 1, h: 1 };
     const rect = canvas.getBoundingClientRect();
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
+    const sx = clientX - rect.left;
+    const sy = clientY - rect.top;
     const w = canvas.width;
     const h = canvas.height;
     const wx = (sx - w / 2 - mapPan.x) / mapZoom + w / 2;
@@ -1814,23 +2079,24 @@ export default function App() {
     return { wx, wy, w, h };
   };
 
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Unified Pointer Events for Mouse + Mobile Touch Pan/Tap
+  const handleCanvasPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     isPanningRef.current = true;
     didDragRef.current = false;
     panStartRef.current = { x: e.clientX - mapPan.x, y: e.clientY - mapPan.y };
   };
 
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isPanningRef.current) return;
     const dx = e.clientX - panStartRef.current.x;
     const dy = e.clientY - panStartRef.current.y;
-    if (Math.hypot(dx - mapPan.x, dy - mapPan.y) > 4) {
+    if (Math.hypot(dx - mapPan.x, dy - mapPan.y) > 5) {
       didDragRef.current = true;
     }
     setMapPan({ x: dx, y: dy });
   };
 
-  const handleCanvasMouseUp = () => {
+  const handleCanvasPointerUp = () => {
     isPanningRef.current = false;
   };
 
@@ -1842,20 +2108,19 @@ export default function App() {
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (didDragRef.current) return;
-    const { wx, wy, w, h } = getWorldCoords(e);
+    const { wx, wy, w, h } = getWorldCoordsFromClient(e.clientX, e.clientY);
 
     if (mapViewMode === 'SUB_GRID' && currentContract) {
       for (const node of currentContract.subNodes) {
         const nx = node.x * w;
         const ny = node.y * h;
-        if (Math.hypot(wx - nx, wy - ny) <= 28) {
+        if (Math.hypot(wx - nx, wy - ny) <= 30) {
           ThaumaturgicAudio.keyClick();
           setContracts(prev => ({
             ...prev,
             [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: node.id }
           }));
           visualFxRef.current.sonarRings.push({ x: node.x, y: node.y, r: 6, alpha: 0.9 });
-          cliInputRef.current?.focus();
           break;
         }
       }
@@ -1863,14 +2128,14 @@ export default function App() {
       for (const sec of MACRO_SECTORS) {
         const nx = sec.x * w;
         const ny = sec.y * h;
-        if (Math.hypot(wx - nx, wy - ny) <= 24) {
+        if (Math.hypot(wx - nx, wy - ny) <= 26) {
           if (!isSectorUnlocked(sec)) {
             ThaumaturgicAudio.errorBuzz();
-            addToast(`Sector Locked! Secure an adjacent sector first to open this ley-line.`, 'ALERT');
+            addToast(`Sector Locked! Secure an adjacent sector first.`, 'ALERT');
             return;
           }
           ThaumaturgicAudio.scryPing();
-          addMicroEntropy(0.02); // Travel time increases Global Entropy by +0.02%
+          addMicroEntropy(0.02);
           setDeducedSigns([]);
           if (sec.id === 'safehouse') {
             travelTo('safehouse');
@@ -1878,8 +2143,7 @@ export default function App() {
           } else {
             travelTo(sec.id);
             setMapViewMode('SUB_GRID');
-            const statusNote = isSectorSecured(sec.id) ? '[SECTOR SECURED]' : '[ACTIVE RUPTURE]';
-            appendLog(`[*] ROUTED TETHER TO SECTOR: <strong style="color:#62f080;">${sec.label}</strong> (${sec.region}) ${statusNote}. (+0.02% Global Entropy)`, 'info');
+            appendLog(`[*] ROUTED TETHER TO SECTOR: <strong style="color:#62f080;">${sec.label}</strong> (${sec.region}). (+0.02% Global Entropy)`, 'info');
           }
           break;
         }
@@ -1887,7 +2151,6 @@ export default function App() {
     }
   };
 
-  // Secure Logout Handler (Returns to Start Screen without deleting save)
   const handleLogout = () => {
     ThaumaturgicAudio.keyClick();
     dispatch({ type: 'LOAD_GAME', payload: { ...state, gameStage: 'START_SCREEN' } });
@@ -1912,7 +2175,6 @@ export default function App() {
     );
   }
 
-  // Current Sector's active clue count (Resets to 0 when sector is secured!)
   const activeSectorClueCount = currentContract && !isSectorSecured(currentContract.sectorId)
     ? currentContract.discoveredLogs.length
     : 0;
@@ -1927,94 +2189,141 @@ export default function App() {
   const securedSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorSecured(s.id)).length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', backgroundColor: theme.bgDark, color: theme.textTerminal, fontFamily: theme.fontMono, overflow: 'hidden', userSelect: 'none' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100dvh',
+        width: '100vw',
+        backgroundColor: theme.bgDark,
+        color: theme.textTerminal,
+        fontFamily: theme.fontMono,
+        overflow: 'hidden',
+        userSelect: 'none',
+        animation: hudFlash === 'DAMAGE' ? 'screenShake 0.36s cubic-bezier(.36,.07,.19,.97) both' : 'none'
+      }}
+    >
       <style>{`
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body, #root { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050706; }
         @keyframes blink { 50% { opacity: 0; } }
-        @keyframes slowPulse { 0%, 100% { opacity: 0.6; transform: scale(0.98); } 50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 15px #ff2a55; } }
+        @keyframes stampSlam {
+          0% { transform: scale(2.6) rotate(-12deg); opacity: 0; }
+          70% { transform: scale(0.92) rotate(-6deg); opacity: 1; }
+          100% { transform: scale(1) rotate(-8deg); opacity: 1; }
+        }
+        @keyframes screenShake {
+          0%, 100% { transform: translate3d(0, 0, 0); }
+          15% { transform: translate3d(-5px, 3px, 0); }
+          30% { transform: translate3d(5px, -3px, 0); }
+          45% { transform: translate3d(-4px, -2px, 0); }
+          60% { transform: translate3d(4px, 2px, 0); }
+          75% { transform: translate3d(-2px, 1px, 0); }
+        }
+        @keyframes heavyImpactShake {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+          15% { transform: translate3d(0, 8px, 0) scale(0.985); }
+          35% { transform: translate3d(-4px, -5px, 0) scale(1.005); }
+          55% { transform: translate3d(4px, 3px, 0); }
+          75% { transform: translate3d(-2px, -2px, 0); }
+        }
+        @keyframes crtFlicker {
+          0%, 100% { opacity: 0.92; }
+          48% { opacity: 0.96; }
+          50% { opacity: 0.72; }
+          52% { opacity: 0.95; }
+        }
         @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes sigilGlitch {
           0%, 100% { transform: translate(0, 0) scale(1); filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) blur(2.5px); }
-          25% { transform: translate(-3px, 1px) skewX(6deg); filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(130%) blur(1.5px) drop-shadow(4px 0 #ff2a55); }
           50% { transform: translate(2px, -2px) scale(1.03); filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(70%) blur(3.5px); }
-          75% { transform: translate(-2px, -1px) skewX(-6deg); filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(120%) blur(2px) drop-shadow(-4px 0 #00f3ff); }
         }
         .crt-scanlines {
           pointer-events: none; position: fixed; inset: 0; z-index: 50;
           background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), radial-gradient(circle at center, transparent 65%, rgba(0, 5, 2, 0.6) 100%);
           background-size: 100% 3px, 100% 100%;
         }
+        .crt-critical {
+          animation: crtFlicker 2.4s infinite;
+          box-shadow: inset 0 0 45px rgba(255, 42, 85, 0.25);
+        }
+        .crt-glitch {
+          background:
+            linear-gradient(90deg, rgba(255, 42, 85, 0.14), rgba(0, 243, 255, 0.14)),
+            linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
+          background-size: 100% 100%, 100% 3px;
+        }
         .macro-chip {
           background: rgba(98, 240, 128, 0.07); border: 1px solid #1f3d26; color: #62f080;
-          padding: 5px 10px; font-family: inherit; font-size: 0.74rem; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+          padding: 5px 10px; font-family: inherit; font-size: 0.73rem; cursor: pointer; white-space: nowrap; transition: all 0.15s;
         }
-        .macro-chip:hover:not(:disabled) { background: rgba(98, 240, 128, 0.2); border-color: #62f080; }
+        .macro-chip:hover:not(:disabled) { background: rgba(98, 240, 128, 0.22); border-color: #62f080; }
         .macro-chip:disabled { opacity: 0.4; cursor: not-allowed; }
-        .macro-chip-amber { background: rgba(255, 184, 0, 0.09); border-color: rgba(255, 184, 0, 0.45); color: #ffb800; }
+        .macro-chip-amber { background: rgba(255, 184, 0, 0.1); border-color: rgba(255, 184, 0, 0.45); color: #ffb800; }
+        .macro-chip-cyan { background: rgba(0, 243, 255, 0.1); border-color: rgba(0, 243, 255, 0.45); color: #00f3ff; }
         .macro-chip-danger { background: rgba(255, 42, 85, 0.12); border-color: rgba(255, 42, 85, 0.5); color: #ff2a55; }
         .viewport-tab {
-          padding: 6px 10px; font-family: inherit; font-size: 0.72rem; font-weight: bold; letter-spacing: 0.5px;
-          cursor: pointer; border: 1px solid #1f3d26; background: #060907; color: #4a7c59; transition: all 0.15s;
+          padding: 6px 9px; font-family: inherit; font-size: 0.71rem; font-weight: bold;
+          cursor: pointer; border: 1px solid #1f3d26; background: #060907; color: #4a7c59; white-space: nowrap;
         }
         .viewport-tab.active {
-          background: #62f080; color: #000000; border-color: #62f080; box-shadow: 0 0 12px rgba(98, 240, 128, 0.35);
+          background: #62f080; color: #000000; border-color: #62f080; box-shadow: 0 0 10px rgba(98, 240, 128, 0.35);
+        }
+        .responsive-split { display: flex; flex: 1; overflow: hidden; gap: 8px; padding: 8px; }
+        .pane-left { width: 52%; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+        .pane-right { width: 48%; display: flex; flex-direction: column; overflow: hidden; }
+        .codex-col { width: 33.33%; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+        .grid-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        @media (max-width: 920px) {
+          .responsive-split { flex-direction: column; overflow-y: auto; }
+          .pane-left, .pane-right, .codex-col { width: 100% !important; min-height: 360px; flex-shrink: 0; }
+          .grid-4col { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 580px) {
+          .grid-4col { grid-template-columns: 1fr; }
         }
       `}</style>
 
-      <div className="crt-scanlines" />
-      
+      <div
+        className={`crt-scanlines ${currentHeat >= 75 ? 'crt-critical' : ''} ${hudFlash === 'DAMAGE' ? 'crt-glitch' : ''}`}
+      />
 
       {/* ================================================================== */}
-      {/* TOP TACTICAL BAR: 6-VIEWPORT SWITCHER, TEXT SIZE, MANUAL & LOGOUT  */}
+      {/* TOP TACTICAL BAR (SCROLLABLE ON MOBILE + MODE PALETTE/CLI TOGGLE)  */}
       {/* ================================================================== */}
-      <header style={{ height: '48px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.73rem', zIndex: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}>
-            [F1] FIELD_OPS
-          </button>
-          <button className={`viewport-tab ${viewport === 'CODEX' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('CODEX'); }}>
-            [F2] CODEX ({activeSectorClueCount})
-          </button>
-          <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}>
-            [F3] KAGE_NO_SHO ({state.tetheredYokai.length}/2)
-          </button>
-          <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}>
-            [F4] SAFEHOUSE / ALTAR
-          </button>
-          <button
-            className={`viewport-tab ${viewport === 'HORSEMEN' ? 'active' : ''}`}
-            onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('HORSEMEN'); }}
-            style={viewport !== 'HORSEMEN' ? { borderColor: theme.accentRed, color: theme.accentRed } : undefined}
-          >
-            [F5] THE 4 HORSEMEN
-          </button>
-          <button className={`viewport-tab ${viewport === 'DOSSIER' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('DOSSIER'); }}>
-            [F6] DOSSIER
-          </button>
-          <button className={`viewport-tab ${viewport === 'MANUAL' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('MANUAL'); }}>
-            [F7] MANUAL
-          </button>
+      <header style={{ minHeight: '46px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', overflowX: 'auto', zIndex: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}>[F1] FIELD_OPS</button>
+          <button className={`viewport-tab ${viewport === 'CODEX' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('CODEX'); }}>[F2] CODEX ({activeSectorClueCount})</button>
+          <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}>[F3] KAGE ({state.tetheredYokai.length}/2)</button>
+          <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}>[F4] SAFEHOUSE</button>
+          <button className={`viewport-tab ${viewport === 'HORSEMEN' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('HORSEMEN'); }} style={viewport !== 'HORSEMEN' ? { borderColor: theme.accentRed, color: theme.accentRed } : undefined}>[F5] HORSEMEN</button>
+          <button className={`viewport-tab ${viewport === 'DOSSIER' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('DOSSIER'); }}>[F6] DOSSIER</button>
+          <button className={`viewport-tab ${viewport === 'MANUAL' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('MANUAL'); }}>[F7] MANUAL</button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ padding: '4px 7px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentRed }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, fontSize: '0.72rem' }}>
+          <span style={{ padding: '4px 6px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentRed }}>
             ENTROPY: <strong>{totalGlobalEntropy.toFixed(2)}%</strong>
           </span>
-
-          <span style={{ padding: '4px 7px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: state.humanity < 40 ? theme.accentRed : theme.textBright }}>
+          <span style={{ padding: '4px 6px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: state.humanity < 40 ? theme.accentRed : theme.textBright }}>
             HUM: <strong>{state.humanity}%</strong>
           </span>
-
-          <span style={{ padding: '4px 7px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentAmber, fontWeight: 'bold' }}>
+          <span style={{ padding: '4px 6px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentAmber, fontWeight: 'bold' }}>
             OBOLS: {state.inventory.obols || 0}
           </span>
 
-          {/* Text Scale Toggle */}
           <button
-            onClick={() => {
-              ThaumaturgicAudio.keyClick();
-              setFontScale(prev => prev === 'SM' ? 'MD' : prev === 'MD' ? 'LG' : 'SM');
-            }}
-            title="Cycle Interface Text Size (SM / MD / LG)"
+            onClick={() => { ThaumaturgicAudio.keyClick(); setControlMode(prev => prev === 'PALETTE' ? 'CLI' : 'PALETTE'); }}
+            className={`macro-chip ${controlMode === 'PALETTE' ? 'macro-chip-amber' : ''}`}
+            style={{ padding: '4px 7px' }}
+            title="Toggle between Tactical Command Palette and Pure CLI Mode"
+          >
+            MODE:{controlMode}
+          </button>
+
+          <button
+            onClick={() => { ThaumaturgicAudio.keyClick(); setFontScale(prev => prev === 'SM' ? 'MD' : prev === 'MD' ? 'LG' : 'SM'); }}
             className="macro-chip"
             style={{ padding: '4px 7px' }}
           >
@@ -2025,116 +2334,120 @@ export default function App() {
             {audioEnabled ? '🔊' : '🔇'}
           </button>
 
-          {/* Log Out Button */}
-          <button onClick={handleLogout} className="macro-chip macro-chip-danger" style={{ padding: '4px 8px' }} title="Save & Return to Start Screen">
+          <button onClick={handleLogout} className="macro-chip macro-chip-danger" style={{ padding: '4px 7px' }}>
             LOG OUT
           </button>
         </div>
       </header>
 
       {/* ================================================================== */}
-      {/* VIEWPORT 1: [F1] FIELD_OPS (SUB-GRID, ZOOM/PAN MAP & CLI CONSOLE)  */}
+      {/* VIEWPORT 1: [F1] FIELD_OPS (MAP, LIVE TELEMETRY, PALETTE & CLI)    */}
       {/* ================================================================== */}
       {viewport === 'FIELD_OPS' && (
-        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '8px', padding: '8px' }}>
-          <section style={{ width: '52%', display: 'flex', flexDirection: 'column', gap: '8px', overflow: 'hidden' }}>
-
-            {/* Inquisition Heat & High-Risk Alert Banner */}
-            <div style={{ backgroundColor: currentHeat >= 75 ? '#1f050a' : theme.bgPanel, border: `1px solid ${currentHeat >= 75 ? theme.accentRed : theme.borderTerminal}`, padding: '10px', flexShrink: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: '6px' }}>
+        <main
+          className="responsive-split"
+          style={{
+            backgroundColor: hudFlash === 'DAMAGE' ? 'rgba(255,42,85,0.18)' : hudFlash === 'DECODE' ? 'rgba(98,240,128,0.12)' : 'transparent',
+            transition: 'background-color 0.25s'
+          }}
+        >
+          <section className="pane-left">
+            {/* Inquisition Heat Banner */}
+            <div style={{ backgroundColor: currentHeat >= 75 ? '#1f050a' : theme.bgPanel, border: `1px solid ${currentHeat >= 75 ? theme.accentRed : theme.borderTerminal}`, padding: '9px 10px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '5px', flexWrap: 'wrap', gap: '4px' }}>
                 <span style={{ color: theme.textBright, fontWeight: 'bold' }}>
-                  {currentContract?.sectorLabel || formatLabel(state.currentNode)} // POS: {currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}
+                  {currentContract?.sectorLabel} // POS: {currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}
                 </span>
                 <span style={{ color: currentHeat >= 75 ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
-                  INQUISITION HEAT: {currentHeat}% {currentHeat >= 100 ? '[LOCKED DOWN!]' : currentHeat >= 75 ? '[CRITICAL!]' : ''}
+                  INQUISITION HEAT: {currentHeat}% {currentHeat >= 100 ? '[LOCKDOWN!]' : ''}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ flex: 1, height: '10px', backgroundColor: '#020302', border: `1px solid ${theme.borderTerminal}`, padding: '1px' }}>
+                <div style={{ flex: 1, height: '9px', backgroundColor: '#020302', border: `1px solid ${theme.borderTerminal}`, padding: '1px' }}>
                   <div style={{ width: `${currentHeat}%`, height: '100%', backgroundColor: currentHeat >= 75 ? theme.accentRed : currentHeat >= 35 ? theme.accentAmber : theme.textBright, transition: 'width 0.25s' }} />
                 </div>
-                <canvas ref={waveformCanvasRef} width={96} height={22} style={{ backgroundColor: '#020302', border: `1px solid ${theme.borderTerminal}`, flexShrink: 0 }} />
+                <canvas ref={waveformCanvasRef} width={90} height={20} style={{ backgroundColor: '#020302', border: `1px solid ${theme.borderTerminal}`, flexShrink: 0 }} />
               </div>
-              {currentHeat >= 75 && (
-                <div style={{ marginTop: '6px', color: theme.accentRed, fontSize: '0.74rem', fontWeight: 'bold', animation: 'blink 1s infinite' }}>
-                  {currentHeat >= 100
-                    ? '🚨 ORDO MALLEUS LOCKDOWN ACTIVE (100% HEAT): All room actions blocked! Type `spoof` (-15 Obols) or `bribe` (-25 Obols) in CLI!'
-                    : '⚠️ WARNING: Malleus Witch-Hound triangulation at 75%+! Type `spoof` in CLI or retreat to Safehouse before Heat hits 100%!'}
-                </div>
-              )}
             </div>
 
-            {/* Interactive Sub-Grid / 16-Sector Geo-Tracker Canvas with Zoom & Pan */}
-            <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ position: 'absolute', top: 8, left: 10, right: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, fontSize: '0.72rem' }}>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            {/* Interactive Sub-Grid / Regional Map Canvas with Touch + Mouse Pan */}
+            <div style={{ flex: 1, minHeight: '240px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'absolute', top: 6, left: 8, right: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, fontSize: '0.7rem', flexWrap: 'wrap', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '4px' }}>
                   <button onClick={() => { setMapViewMode('SUB_GRID'); setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className={`macro-chip ${mapViewMode === 'SUB_GRID' ? 'macro-chip-amber' : ''}`}>LOCAL SUB-GRID</button>
                   <button onClick={() => { setMapViewMode('GEO_TRACKER'); setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className={`macro-chip ${mapViewMode === 'GEO_TRACKER' ? 'macro-chip-amber' : ''}`}>REGIONAL MAP ({securedSectorsCount}/16)</button>
                 </div>
-
-                {/* Zoom & Pan Controls */}
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', backgroundColor: 'rgba(5,7,6,0.9)', padding: '3px 6px', border: `1px solid ${theme.borderTerminal}` }}>
-                  <span style={{ color: theme.textMuted, marginRight: '4px' }}>ZOOM: {Math.round(mapZoom * 100)}%</span>
-                  <button onClick={() => setMapZoom(z => Math.min(2.8, +(z + 0.25).toFixed(2)))} className="macro-chip" style={{ padding: '2px 7px' }}>+</button>
-                  <button onClick={() => setMapZoom(z => Math.max(0.6, +(z - 0.25).toFixed(2)))} className="macro-chip" style={{ padding: '2px 7px' }}>-</button>
-                  <button onClick={() => { setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className="macro-chip" style={{ padding: '2px 7px' }}>RESET</button>
+                <div style={{ display: 'flex', gap: '3px', alignItems: 'center', backgroundColor: 'rgba(5,7,6,0.9)', padding: '2px 5px', border: `1px solid ${theme.borderTerminal}` }}>
+                  <span style={{ color: theme.textMuted }}>{Math.round(mapZoom * 100)}%</span>
+                  <button onClick={() => setMapZoom(z => Math.min(2.8, +(z + 0.25).toFixed(2)))} className="macro-chip" style={{ padding: '1px 6px' }}>+</button>
+                  <button onClick={() => setMapZoom(z => Math.max(0.6, +(z - 0.25).toFixed(2)))} className="macro-chip" style={{ padding: '1px 6px' }}>-</button>
+                  <button onClick={() => { setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className="macro-chip" style={{ padding: '1px 6px' }}>RST</button>
                 </div>
               </div>
 
               <canvas
                 ref={mapCanvasRef}
-                onMouseDown={handleCanvasMouseDown}
-                onMouseMove={handleCanvasMouseMove}
-                onMouseUp={handleCanvasMouseUp}
-                onMouseLeave={handleCanvasMouseUp}
+                onPointerDown={handleCanvasPointerDown}
+                onPointerMove={handleCanvasPointerMove}
+                onPointerUp={handleCanvasPointerUp}
+                onPointerCancel={handleCanvasPointerUp}
+                onPointerLeave={handleCanvasPointerUp}
                 onWheel={handleCanvasWheel}
                 onClick={handleCanvasClick}
-                style={{ width: '100%', height: '100%', display: 'block', cursor: isPanningRef.current ? 'grabbing' : 'grab' }}
+                style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none', cursor: 'grab' }}
               />
 
-              {/* Bottom Status Strip (CLI Driven — No Clickable Probe/Breach/Extract Buttons!) */}
-              {mapViewMode === 'SUB_GRID' && selectedSubNode && (
-                <div style={{ position: 'absolute', bottom: 8, left: 10, right: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(5,7,6,0.94)', border: `1px solid ${theme.borderTerminal}`, padding: '8px 12px', zIndex: 10, fontSize: '0.75rem' }}>
-                  <div>
-                    <span style={{ color: theme.textMuted }}>SELECTED: </span>
-                    <strong style={{ color: theme.textBright }}>{selectedSubNode.label}</strong>
-                    <span style={{ marginLeft: '8px', color: theme.accentAmber }}>[{selectedSubNode.status}]</span>
-                    {selectedSubNode.status !== 'LOCKED' && selectedSubNode.hazard !== 'NONE' && (
-                      <span style={{ marginLeft: '8px', color: theme.accentCyan }}>[HAZARD: {selectedSubNode.hazard}]</span>
-                    )}
-                  </div>
-                  <div style={{ color: '#a8ccaf', fontSize: '0.72rem' }}>
-                    CLI: <code style={{ color: theme.accentAmber }}>probe {selectedSubNode.index}</code> | <code style={{ color: theme.accentAmber }}>breach {selectedSubNode.index}</code> | <code style={{ color: theme.accentAmber }}>extract</code>
-                  </div>
+              {/* LIVE ROOM TELEMETRY & SYMPTOM FEEDBACK BAR */}
+              <div style={{ backgroundColor: 'rgba(5,7,6,0.95)', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', zIndex: 10, fontSize: '0.73rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>
+                    TARGET NODE: <strong style={{ color: theme.textBright }}>{selectedSubNode?.label || 'NONE'}</strong> [{selectedSubNode?.status}]
+                  </span>
+                  <span style={{ color: theme.accentAmber }}>
+                    CLUES DECODED: <strong>{activeSectorClueCount}/3</strong>
+                  </span>
                 </div>
-              )}
+                {currentSubNode ? (
+                  <div style={{ color: currentSubNode.hazard !== 'NONE' ? theme.accentCyan : currentSubNode.status === 'EXTRACTED' ? theme.textBright : '#ffffff' }}>
+                    {currentSubNode.hazard !== 'NONE'
+                      ? `⚠️ ROOM HAZARD SYMPTOM: "${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"`
+                      : currentSubNode.status === 'EXTRACTED'
+                      ? `✓ Room sweep complete. Select an adjacent room node to continue.`
+                      : currentSubNode.rawSignalSymptom
+                      ? `🔎 RAW SIGNAL SYMPTOM: "${currentSubNode.rawSignalSymptom}"`
+                      : `⛩️ Room clear of signal interference. Run 'extract' to harvest Shrine / Salvage.`}
+                  </div>
+                ) : (
+                  <div style={{ color: '#a8ccaf' }}>
+                    Stationed at Perimeter Tether. Probe or Breach <strong>Room 1</strong> to enter the sub-grid.
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Active Shikigami & Raw Salvage Strip */}
-            <div style={{ height: '108px', flexShrink: 0, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '10px', display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '0.75rem' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: theme.textBright, fontWeight: 'bold', marginBottom: '6px' }}>ACTIVE SHIKIGAMI TETHER ({state.tetheredYokai.length}/2)</div>
+            <div style={{ minHeight: '94px', flexShrink: 0, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '0.73rem', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 240px' }}>
+                <div style={{ color: theme.textBright, fontWeight: 'bold', marginBottom: '4px' }}>ACTIVE SHIKIGAMI DAEMONS ({state.tetheredYokai.length}/2)</div>
                 {state.tetheredYokai.length === 0 ? (
-                  <div style={{ color: theme.textMuted }}>No Yokai bound. Open <strong style={{ color: theme.textBright }}>[F3] KAGE_NO_SHO</strong> to bind spirits.</div>
+                  <div style={{ color: theme.textMuted }}>No Daemons bound. Open <strong style={{ color: theme.textBright }}>[F3] KAGE</strong> to bind Shikigami.</div>
                 ) : (
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '6px' }}>
                     {state.tetheredYokai.map(yid => {
                       const y = allYokai.find(item => item.id === yid);
-                      const spec = YOKAI_INVOCATIONS[yid] || { label: 'INVOKE', maxCharges: 1, desc: '' };
-                      const charges = yokaiCharges[yid] ?? spec.maxCharges;
+                      const spec = YOKAI_DAEMON_SPECS[yid];
+                      const charges = yokaiCharges[yid] ?? (spec?.maxCharges || 1);
                       return (
-                        <div key={yid} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '4px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ color: theme.textBright, fontSize: '0.72rem' }}>{y?.nameEn}</strong>
-                            <span style={{ color: theme.accentAmber, fontSize: '0.66rem' }}>[{charges}/{spec.maxCharges} USES]</span>
+                        <div key={yid} style={{ flex: 1, padding: '5px 7px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <strong style={{ color: theme.textBright, fontSize: '0.7rem' }}>{y?.nameEn}</strong>
+                            <span style={{ color: theme.accentAmber, fontSize: '0.65rem' }}>[{charges}/{spec?.maxCharges} USES]</span>
                           </div>
                           <div style={{ display: 'flex', gap: '4px' }}>
-                            <button onClick={() => handleInvokeYokaiPower(yid)} title={spec.desc} className="macro-chip macro-chip-amber" style={{ flex: 1, padding: '3px 6px', fontSize: '0.66rem', textAlign: 'center' }}>
-                              ⚡ {spec.label}
+                            <button onClick={() => handleInvokeYokaiPower(yid)} title={spec?.activeDesc} className="macro-chip macro-chip-amber" style={{ flex: 1, padding: '3px 5px', fontSize: '0.65rem' }}>
+                              ⚡ {spec?.activeLabel}
                             </button>
-                            <button onClick={() => handleUnbindYokai(yid, 'Manually severed by operative')} title="Sever Pact & Unbind Spirit" className="macro-chip macro-chip-danger" style={{ padding: '3px 6px', fontSize: '0.66rem' }}>
-                              ✕
-                            </button>
+                            <button onClick={() => handleUnbindYokai(yid, 'Manually severed')} className="macro-chip macro-chip-danger" style={{ padding: '3px 6px', fontSize: '0.65rem' }}>✕</button>
                           </div>
                         </div>
                       );
@@ -2142,24 +2455,23 @@ export default function App() {
                   </div>
                 )}
               </div>
-
-              <div style={{ width: '230px', borderLeft: `1px dashed ${theme.borderTerminal}`, paddingLeft: '12px' }}>
-                <div style={{ color: theme.accentAmber, fontWeight: 'bold', marginBottom: '4px' }}>RAW SALVAGE IN STORAGE</div>
+              <div style={{ width: '190px', borderLeft: `1px dashed ${theme.borderTerminal}`, paddingLeft: '10px' }}>
+                <div style={{ color: theme.accentAmber, fontWeight: 'bold', marginBottom: '3px' }}>RAW SALVAGE</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Scrap Metal:</span> <strong style={{ color: theme.textBright }}>{state.inventory.scrap_metal || 0}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Cursed Earth:</span> <strong style={{ color: theme.textBright }}>{state.inventory.cursed_earth || 0}</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Alch. Distillate:</span> <strong style={{ color: theme.textBright }}>{state.inventory.alchemical_distillate || 0}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Distillate:</span> <strong style={{ color: theme.textBright }}>{state.inventory.alchemical_distillate || 0}</strong></div>
               </div>
             </div>
           </section>
 
-          {/* RIGHT PANE: FIELD FORENSIC CLI CONSOLE */}
-          <section style={{ width: '48%', display: 'flex', flexDirection: 'column', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, overflow: 'hidden', zoom: FONT_ZOOM_MAP[fontScale] }}>
-            <div style={{ height: '32px', backgroundColor: '#040805', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', flexShrink: 0 }}>
-              <span><strong style={{ color: theme.textBright }}>● TTY1 CONSOLE</strong> // {currentContract?.sectorLabel} ({activeSectorClueCount}/3 Clues)</span>
+          {/* RIGHT PANE: TTY1 CONSOLE + TOGGLEABLE TACTICAL COMMAND PALETTE */}
+          <section className="pane-right" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, zoom: FONT_ZOOM_MAP[fontScale] }}>
+            <div style={{ height: '30px', backgroundColor: '#040805', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', flexShrink: 0 }}>
+              <span><strong style={{ color: theme.textBright }}>● TTY1 CONSOLE</strong> // {currentContract?.sectorLabel}</span>
               <span style={{ color: theme.accentAmber }}>VESSEL: {state.sealedGoetia.length}/72 SEALED</span>
             </div>
 
-            <div onClick={() => cliInputRef.current?.focus()} style={{ flex: 1, padding: '14px', overflowY: 'auto', fontSize: '0.82rem', lineHeight: '1.58', backgroundColor: '#030504', userSelect: 'text', cursor: 'text' }}>
+            <div onClick={() => cliInputRef.current?.focus()} style={{ flex: 1, padding: '12px', overflowY: 'auto', fontSize: '0.8rem', lineHeight: '1.55', backgroundColor: '#030504', userSelect: 'text', cursor: 'text' }}>
               {terminalLines.map(line => {
                 const colorMap = { normal: '#a8ccaf', info: '#62f080', system: '#4a7c59', success: '#62f080', warn: '#ffb800', error: '#ff2a55', command: '#ffffff' };
                 return <div key={line.id} style={{ color: colorMap[line.type], marginBottom: '6px' }} dangerouslySetInnerHTML={{ __html: line.html }} />;
@@ -2167,12 +2479,55 @@ export default function App() {
               <div ref={terminalEndRef} />
             </div>
 
-            {/* CLI Syntax Reference Strip (No Auto-Click Field Action Buttons) */}
-            <div style={{ backgroundColor: '#050906', borderTop: `1px solid ${theme.borderTerminal}`, padding: '6px 12px', fontSize: '0.7rem', color: '#a8ccaf', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
-              <span>SYNTAX: <code style={{ color: theme.accentAmber }}>probe [1-6]</code> | <code style={{ color: theme.accentAmber }}>breach [1-6]</code> | <code style={{ color: theme.accentAmber }}>extract</code></span>
-              <span>HAZARDS: <code style={{ color: theme.accentCyan }}>degauss</code> | <code style={{ color: theme.accentCyan }}>bypass</code> | <code style={{ color: theme.accentCyan }}>purify</code></span>
-              <span>HEAT: <code style={{ color: theme.accentRed }}>spoof</code> | <code style={{ color: theme.accentRed }}>bribe</code></span>
-            </div>
+            {/* SECONDARY CONTROL METHOD: CATEGORIZED COMMAND PALETTE DECK */}
+            {controlMode === 'PALETTE' && (
+              <div style={{ backgroundColor: '#060a07', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    <button onClick={() => setPaletteCat('INFILTRATE')} className={`macro-chip ${paletteCat === 'INFILTRATE' ? 'macro-chip-amber' : ''}`} style={{ padding: '3px 7px', fontSize: '0.68rem' }}>1. INFILTRATE</button>
+                    <button onClick={() => setPaletteCat('FORENSICS')} className={`macro-chip ${paletteCat === 'FORENSICS' ? 'macro-chip-amber' : ''}`} style={{ padding: '3px 7px', fontSize: '0.68rem' }}>2. FORENSIC SUITE</button>
+                    <button onClick={() => setPaletteCat('HAZARDS')} className={`macro-chip ${paletteCat === 'HAZARDS' ? 'macro-chip-cyan' : ''}`} style={{ padding: '3px 7px', fontSize: '0.68rem' }}>3. COUNTER-HAZARDS</button>
+                    <button onClick={() => setPaletteCat('INQUISITION')} className={`macro-chip ${paletteCat === 'INQUISITION' ? 'macro-chip-danger' : ''}`} style={{ padding: '3px 7px', fontSize: '0.68rem' }}>4. INQUISITION</button>
+                  </div>
+                  <span style={{ fontSize: '0.66rem', color: theme.textMuted }}>TARGET: RM #{selectedSubNode?.index || 1}</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {paletteCat === 'INFILTRATE' && (
+                    <>
+                      <button onClick={() => processCliCommand(`probe ${selectedSubNode?.index || 1}`)} className="macro-chip">📡 probe {selectedSubNode?.index || 1}</button>
+                      <button onClick={() => processCliCommand(`breach ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-amber">⚡ breach {selectedSubNode?.index || 1}</button>
+                      <button onClick={() => processCliCommand('extract')} className="macro-chip">📦 extract (Salvage/Shrine)</button>
+                      <button onClick={() => processCliCommand('status')} className="macro-chip">📋 status</button>
+                    </>
+                  )}
+                  {paletteCat === 'FORENSICS' && (
+                    <>
+                      <button onClick={() => processCliCommand('vox')} className="macro-chip" title="Analyze Acoustic / EVP / Seismic Signals">🎙️ vox (Audio/EVP)</button>
+                      <button onClick={() => processCliCommand('lidar')} className="macro-chip" title="Map Thermal / Optical / Spatial Shifts">🔦 lidar (Thermal/Spatial)</button>
+                      <button onClick={() => processCliCommand('reagent')} className="macro-chip" title="Assay Physical / Bio / Alchemical Matter">🧪 reagent (Matter/Bio)</button>
+                      <button onClick={() => processCliCommand('lens')} className="macro-chip" title="Translate Astral / Enochian / Chrono Drift">👁️ lens (Astral/Chrono)</button>
+                    </>
+                  )}
+                  {paletteCat === 'HAZARDS' && (
+                    <>
+                      <button onClick={() => processCliCommand('degauss')} className="macro-chip macro-chip-cyan">degauss</button>
+                      <button onClick={() => processCliCommand('bypass')} className="macro-chip macro-chip-cyan">bypass</button>
+                      <button onClick={() => processCliCommand('purify')} className="macro-chip macro-chip-cyan">purify</button>
+                      <button onClick={() => processCliCommand('demag')} className="macro-chip macro-chip-cyan">demag</button>
+                      <button onClick={() => processCliCommand('lance')} className="macro-chip macro-chip-cyan">lance</button>
+                      <button onClick={() => processCliCommand('anchor')} className="macro-chip macro-chip-cyan">anchor</button>
+                    </>
+                  )}
+                  {paletteCat === 'INQUISITION' && (
+                    <>
+                      <button onClick={() => processCliCommand('spoof')} className="macro-chip macro-chip-danger">📡 spoof (-15 Obols: -25% Heat)</button>
+                      <button onClick={() => processCliCommand('bribe')} className="macro-chip macro-chip-danger">🪙 bribe (-25 Obols: -45% Heat)</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             <form
               onSubmit={e => {
@@ -2181,16 +2536,15 @@ export default function App() {
                 processCliCommand(cliInput);
                 setCliInput('');
               }}
-              style={{ height: '42px', backgroundColor: '#000', borderTop: `1px solid ${theme.borderTerminal}`, padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{ height: '40px', backgroundColor: '#000', borderTop: `1px solid ${theme.borderTerminal}`, padding: '0 10px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}
             >
-              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem' }}>root@os:~#</span>
+              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>root@os:~#</span>
               <input
                 ref={cliInputRef}
-                autoFocus
                 value={cliInput}
                 onChange={e => setCliInput(e.target.value)}
-                placeholder="Type directive (e.g. probe 1, breach 1, extract, degauss, spoof, help)..."
-                style={{ flex: 1, backgroundColor: 'transparent', color: theme.textBright, border: 'none', outline: 'none', fontFamily: theme.fontMono, fontSize: '0.82rem' }}
+                placeholder="Type directive (probe 1, breach 1, vox, lidar, reagent, lens, help)..."
+                style={{ flex: 1, backgroundColor: 'transparent', color: theme.textBright, border: 'none', outline: 'none', fontFamily: theme.fontMono, fontSize: '0.8rem' }}
               />
               <button type="submit" className="macro-chip">EXEC</button>
             </form>
@@ -2199,29 +2553,27 @@ export default function App() {
       )}
 
       {/* ================================================================== */}
-      {/* VIEWPORT 2: [F2] GOETIAN_CODEX (MANUAL DEDUCTION & SIGIL MATRIX)   */}
+      {/* VIEWPORT 2: [F2] GOETIAN_CODEX                                     */}
       {/* ================================================================== */}
       {viewport === 'CODEX' && (
-        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '10px', padding: '10px', zoom: FONT_ZOOM_MAP[fontScale] }}>
-          <section style={{ width: '34%', display: 'flex', flexDirection: 'column', gap: '8px', overflow: 'hidden' }}>
+        <main className="responsive-split" style={{ zoom: FONT_ZOOM_MAP[fontScale] }}>
+          <section className="codex-col">
             <div style={{ height: '40%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>1. ACTIVE SECTOR CLUES ({activeSectorClueCount})</span>
+              <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>1. DECODED SECTOR CLUES ({activeSectorClueCount}/3)</span>
                 <span style={{ color: theme.accentAmber }}>{currentContract?.sectorLabel}</span>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.78rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.76rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {(!currentContract || isSectorSecured(currentContract.sectorId)) ? (
-                  <div style={{ color: theme.textBright }}>
-                    ✓ {currentContract?.sectorLabel || 'Sector'} has been permanently SECURED and its logs archived. Deploy to a new sector on the Regional Map!
-                  </div>
+                  <div style={{ color: theme.textBright }}>✓ Sector secured. Deploy to a new sector on the Regional Map!</div>
                 ) : currentContract.discoveredLogs.length === 0 ? (
                   <div style={{ color: theme.textMuted, fontStyle: 'italic' }}>
-                    No forensic logs extracted in {currentContract.sectorLabel} yet. Return to [F1] FIELD_OPS and run <code>probe 1</code> &rarr; <code>breach 1</code> &rarr; <code>extract</code>.
+                    No signals decoded yet. Breach rooms in [F1] FIELD_OPS and run <code>vox</code>, <code>lidar</code>, <code>reagent</code>, or <code>lens</code>.
                   </div>
                 ) : (
                   currentContract.discoveredLogs.map((log, i) => (
                     <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.textBright}` }}>
-                      <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '0.72rem' }}>CLUE #{i + 1} // {log.nodeLabel}</div>
+                      <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '0.7rem' }}>CLUE #{i + 1} [{log.channel}] // {log.nodeLabel}</div>
                       <div style={{ color: '#ffffff', marginTop: '3px' }}>"{log.text}"</div>
                     </div>
                   ))
@@ -2231,12 +2583,12 @@ export default function App() {
 
             <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px' }}>
-                <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem' }}>2. DEDUCE PHENOMENA ({deducedSigns.length}/3)</span>
+                <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>2. FILTER PHENOMENA ({deducedSigns.length}/3)</span>
                 {deducedSigns.length > 0 && (
-                  <button onClick={() => setDeducedSigns([])} className="macro-chip macro-chip-danger" style={{ padding: '2px 8px' }}>CLEAR FILTERS</button>
+                  <button onClick={() => setDeducedSigns([])} className="macro-chip macro-chip-danger" style={{ padding: '2px 8px' }}>CLEAR</button>
                 )}
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
                 {PHENOMENON_CATALOG.map(phenom => {
                   const isChecked = deducedSigns.includes(phenom.tag);
                   return (
@@ -2244,16 +2596,14 @@ export default function App() {
                       key={phenom.tag}
                       onClick={() => {
                         ThaumaturgicAudio.keyClick();
-                        setDeducedSigns(prev =>
-                          prev.includes(phenom.tag) ? prev.filter(t => t !== phenom.tag) : [...prev, phenom.tag]
-                        );
+                        setDeducedSigns(prev => prev.includes(phenom.tag) ? prev.filter(t => t !== phenom.tag) : [...prev, phenom.tag]);
                       }}
                       style={{
-                        padding: '7px 8px', textAlign: 'left',
+                        padding: '6px 8px', textAlign: 'left',
                         backgroundColor: isChecked ? 'rgba(98, 240, 128, 0.2)' : '#030504',
                         border: `1px solid ${isChecked ? theme.textBright : theme.borderTerminal}`,
                         color: isChecked ? theme.textBright : '#a8ccaf',
-                        cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.74rem'
+                        cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.72rem'
                       }}
                     >
                       {isChecked ? '[X] ' : '[ ] '} {phenom.label}
@@ -2264,19 +2614,18 @@ export default function App() {
             </div>
           </section>
 
-          <section style={{ width: '34%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <section className="codex-col" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px' }}>
-              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.82rem' }}>3. MATCHING GOETIA ({filteredCodexGoetia.length}/72)</span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>3. SUSPECTS ({filteredCodexGoetia.length}/72)</span>
+              <div style={{ display: 'flex', gap: '3px' }}>
                 {(['ALL', 'CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => (
-                  <button key={h} onClick={() => setCodexHorsemanFilter(h)} className={`macro-chip ${codexHorsemanFilter === h ? 'macro-chip-amber' : ''}`} style={{ padding: '2px 6px', fontSize: '0.68rem' }}>
+                  <button key={h} onClick={() => setCodexHorsemanFilter(h)} className={`macro-chip ${codexHorsemanFilter === h ? 'macro-chip-amber' : ''}`} style={{ padding: '2px 5px', fontSize: '0.66rem' }}>
                     {h === 'ALL' ? 'ALL' : h.slice(0, 3)}
                   </button>
                 ))}
               </div>
             </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
               {filteredCodexGoetia.map(g => {
                 const isSealed = state.sealedGoetia.includes(g.id);
                 const isSelected = g.id === selectedSuspectId;
@@ -2285,7 +2634,7 @@ export default function App() {
                     key={g.id}
                     onClick={() => { ThaumaturgicAudio.keyClick(); setSelectedSuspectId(g.id); }}
                     style={{
-                      padding: '8px 10px', textAlign: 'left',
+                      padding: '7px 10px', textAlign: 'left',
                       backgroundColor: isSelected ? '#112217' : '#030504',
                       border: `1px solid ${isSelected ? theme.textBright : theme.borderTerminal}`,
                       color: isSealed ? theme.textMuted : theme.textBright,
@@ -2295,17 +2644,9 @@ export default function App() {
                   >
                     <div>
                       <strong>#{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()}</strong>
-                      <div style={{ fontSize: '0.7rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance} — {g.title}</div>
+                      <div style={{ fontSize: '0.68rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance}</div>
                     </div>
-                    <span
-                      style={{
-                        fontSize: '0.68rem', padding: '2px 6px',
-                        border: isSealed ? `1px solid ${theme.accentRed}` : 'none',
-                        backgroundColor: isSealed ? 'rgba(255, 42, 85, 0.12)' : 'transparent',
-                        color: isSealed ? theme.accentRed : theme.accentAmber,
-                        fontWeight: isSealed ? 'bold' : 'normal'
-                      }}
-                    >
+                    <span style={{ fontSize: '0.66rem', color: isSealed ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
                       {isSealed ? '✗ SEALED' : '[INSPECT]'}
                     </span>
                   </button>
@@ -2314,90 +2655,60 @@ export default function App() {
             </div>
           </section>
 
-          <section style={{ width: '32%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflowY: 'auto' }}>
+          <section className="codex-col" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', justifyContent: 'space-between', overflowY: 'auto' }}>
             <div>
-              <div style={{ fontSize: '0.72rem', color: theme.accentAmber, letterSpacing: '1px' }}>
-                ARS GOETIA DOSSIER // #{selectedSuspect.manifestId.toString().padStart(2, '0')} ({selectedSuspect.allegiance})
-              </div>
-              <h2 style={{ margin: '4px 0 4px 0', color: theme.textBright, letterSpacing: '2px' }}>
-                {selectedSuspect.name.toUpperCase()}
-              </h2>
-              <div style={{ fontSize: '0.8rem', color: '#ffffff', fontWeight: 'bold', marginBottom: '12px' }}>
-                {selectedSuspect.rank} — "{selectedSuspect.title}"
-              </div>
+              <div style={{ fontSize: '0.7rem', color: theme.accentAmber }}>ARS GOETIA DOSSIER // #{selectedSuspect.manifestId.toString().padStart(2, '0')} ({selectedSuspect.allegiance})</div>
+              <h2 style={{ margin: '4px 0', color: theme.textBright }}>{selectedSuspect.name.toUpperCase()}</h2>
+              <div style={{ fontSize: '0.78rem', color: '#ffffff', fontWeight: 'bold', marginBottom: '10px' }}>{selectedSuspect.rank} — "{selectedSuspect.title}"</div>
 
               {(() => {
                 const isTargetSealed = state.sealedGoetia.includes(selectedSuspect.id);
                 return (
-                  <div
-                    style={{
-                      position: 'relative', width: '145px', height: '145px', margin: '0 auto 12px auto',
-                      backgroundColor: '#030504',
-                      border: `1px solid ${isTargetSealed ? theme.accentRed : theme.borderTerminal}`,
-                      borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center',
-                      overflow: 'hidden',
-                      boxShadow: isTargetSealed ? 'inset 0 0 20px rgba(255, 42, 85, 0.2)' : 'inset 0 0 15px rgba(98, 240, 128, 0.08)'
-                    }}
-                  >
+                  <div style={{ position: 'relative', width: '130px', height: '130px', margin: '0 auto 10px auto', backgroundColor: '#030504', border: `1px solid ${isTargetSealed ? theme.accentRed : theme.borderTerminal}`, display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
                     <img
                       src={`/seals/${selectedSuspect.id}.png`}
-                      alt={`${selectedSuspect.name} Seal`}
+                      alt={selectedSuspect.name}
                       style={{
-                        width: '118px', height: '118px',
+                        width: '108px', height: '108px',
                         opacity: isTargetSealed ? 0.85 : 0.22,
                         filter: isTargetSealed ? 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' : undefined,
-                        animation: isTargetSealed ? 'none' : 'sigilGlitch 2.2s infinite steps(2)',
-                        pointerEvents: 'none'
+                        animation: isTargetSealed ? 'none' : 'sigilGlitch 2.2s infinite steps(2)'
                       }}
                     />
-                    {!isTargetSealed && (
-                      <>
-                        <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0px, rgba(0,0,0,0.55) 2px, transparent 2px, transparent 4px)', pointerEvents: 'none' }} />
-                        <div style={{ position: 'absolute', backgroundColor: 'rgba(5, 7, 6, 0.88)', border: `1px dashed ${theme.borderTerminal}`, padding: '3px 8px', fontSize: '0.62rem', color: theme.accentAmber, letterSpacing: '1px', fontWeight: 'bold' }}>
-                          [ SIGIL_OBSCURED ]
-                        </div>
-                      </>
-                    )}
                     {isTargetSealed && (
-                      <>
-                        <svg viewBox="0 0 100 100" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-                          <line x1="12" y1="12" x2="88" y2="88" stroke={theme.accentRed} strokeWidth="3.5" strokeOpacity="0.85" />
-                          <line x1="88" y1="12" x2="12" y2="88" stroke={theme.accentRed} strokeWidth="3.5" strokeOpacity="0.85" />
-                        </svg>
-                        <div style={{ position: 'absolute', transform: 'rotate(-14deg)', border: `2px solid ${theme.accentRed}`, backgroundColor: 'rgba(15, 2, 2, 0.92)', color: theme.accentRed, padding: '3px 10px', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '3px', boxShadow: '0 0 12px rgba(255, 42, 85, 0.6)' }}>
-                          [SEALED]
-                        </div>
-                      </>
+                      <div style={{ position: 'absolute', transform: 'rotate(-12deg)', border: `2px solid ${theme.accentRed}`, backgroundColor: 'rgba(15, 2, 2, 0.92)', color: theme.accentRed, padding: '2px 8px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        [SEALED]
+                      </div>
                     )}
                   </div>
                 );
               })()}
 
-              <p style={{ fontSize: '0.78rem', color: '#a8ccaf', lineHeight: '1.55', padding: '10px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}` }}>
+              <p style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5', padding: '8px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}` }}>
                 {selectedSuspect.description}
               </p>
 
-              <div style={{ marginTop: '12px', padding: '10px', border: `1px dashed ${theme.borderTerminal}`, backgroundColor: '#030504' }}>
-                <div style={{ fontSize: '0.74rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '6px' }}>KNOWN MANIFESTATION SIGNS:</div>
+              <div style={{ marginTop: '10px', padding: '8px', border: `1px dashed ${theme.borderTerminal}`, backgroundColor: '#030504' }}>
+                <div style={{ fontSize: '0.72rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '4px' }}>MANIFESTATION SIGNS:</div>
                 {selectedSuspect.requiredIntel.map(tag => {
                   const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
                   const isToggled = deducedSigns.includes(tag);
                   return (
-                    <div key={tag} style={{ fontSize: '0.74rem', marginBottom: '4px', color: isToggled ? theme.textBright : '#a8ccaf' }}>
+                    <div key={tag} style={{ fontSize: '0.72rem', color: isToggled ? theme.textBright : '#a8ccaf' }}>
                       {isToggled ? '✓ ' : '• '} <strong>{def?.label || formatLabel(tag)}</strong>
                     </div>
                   );
                 })}
               </div>
 
-              <div style={{ marginTop: '12px', padding: '10px', border: `1px solid ${theme.accentRed}`, backgroundColor: '#030504' }}>
-                <div style={{ fontSize: '0.74rem', color: theme.accentRed, fontWeight: 'bold', marginBottom: '6px' }}>REQUIRED BINDING CATALYSTS:</div>
+              <div style={{ marginTop: '10px', padding: '8px', border: `1px solid ${theme.accentRed}`, backgroundColor: '#030504' }}>
+                <div style={{ fontSize: '0.72rem', color: theme.accentRed, fontWeight: 'bold', marginBottom: '4px' }}>REQUIRED BINDING CATALYSTS:</div>
                 {Object.entries(selectedSuspect.sealCost || {}).map(([item, amt]) => {
                   const have = state.inventory[item] || 0;
                   return (
-                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: '4px' }}>
+                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem' }}>
                       <span style={{ color: '#ffffff' }}>{formatLabel(item)} x{amt}</span>
-                      <span style={{ color: have >= amt ? theme.textBright : theme.accentRed, fontWeight: 'bold' }}>(Have: {have}/{amt})</span>
+                      <span style={{ color: have >= amt ? theme.textBright : theme.accentRed, fontWeight: 'bold' }}>({have}/{amt})</span>
                     </div>
                   );
                 })}
@@ -2405,11 +2716,11 @@ export default function App() {
             </div>
 
             {state.sealedGoetia.includes(selectedSuspect.id) ? (
-              <div style={{ padding: '12px', marginTop: '12px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold', letterSpacing: '2px' }}>
+              <div style={{ padding: '10px', marginTop: '10px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold' }}>
                 [ ENTITY SEALED IN VESSEL ]
               </div>
             ) : (
-              <div style={{ marginTop: '12px' }}>
+              <div style={{ marginTop: '10px' }}>
                 {(() => {
                   const sealCost = selectedSuspect.sealCost || {};
                   const canAfford = Object.entries(sealCost).every(([item, amt]) => (state.inventory[item] || 0) >= amt);
@@ -2418,14 +2729,14 @@ export default function App() {
                       onClick={() => setActiveSealSuspectId(selectedSuspect.id)}
                       disabled={!canAfford}
                       style={{
-                        width: '100%', padding: '13px',
+                        width: '100%', padding: '12px',
                         backgroundColor: canAfford ? theme.accentRed : '#1a1a1a',
                         color: canAfford ? 'white' : theme.textMuted,
                         border: 'none', cursor: canAfford ? 'pointer' : 'not-allowed',
-                        fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '1px', fontSize: '0.8rem'
+                        fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.78rem'
                       }}
                     >
-                      {canAfford ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}` : `> SYNTHESIZE CATALYSTS IN [F4] SAFEHOUSE FIRST`}
+                      {canAfford ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}` : `> SYNTHESIZE CATALYSTS IN [F4] SAFEHOUSE`}
                     </button>
                   );
                 })()}
@@ -2436,86 +2747,94 @@ export default function App() {
       )}
 
       {/* ================================================================== */}
-      {/* VIEWPORT 3: [F3] KAGE_NO_SHO (SPIRIT COMPENDIUM & TETHER SLOTS)    */}
+      {/* VIEWPORT 3: [F3] KAGE_NO_SHO (REWORKED CYBER-OCCULT DAEMON SPECS)  */}
       {/* ================================================================== */}
       {viewport === 'KAGE_NO_SHO' && (
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
-          <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
             <div>
-              <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.9rem' }}>KAGE-NO-SHO // THE BOOK OF SHADOWS (RULE OF TWO)</div>
-              <div style={{ color: '#a8ccaf', fontSize: '0.76rem', marginTop: '3px' }}>
-                Bind up to 2 Yokai intermediaries simultaneously. Each bound spirit grants a Passive Interceptor and a finite Active Invocation.
+              <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.88rem' }}>KAGE-NO-SHO // SHIKIGAMI KERNEL INTERCEPTORS (MAX 2 BOUND)</div>
+              <div style={{ color: '#a8ccaf', fontSize: '0.74rem', marginTop: '2px' }}>
+                Bind up to 2 Shikigami Daemons into your Thaumaturgic OS. Each daemon provides a continuous Passive Hook and finite Active Invocations.
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ color: theme.accentCyan, fontSize: '0.82rem', fontWeight: 'bold' }}>ESOTERIC INK: {state.ink || 0}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: theme.accentCyan, fontSize: '0.8rem', fontWeight: 'bold' }}>ESOTERIC INK: {state.ink || 0}</span>
               <button
                 onClick={() => {
                   if ((state.inventory.obols || 0) >= 10) {
                     ThaumaturgicAudio.keyClick();
                     dispatch({ type: 'LOAD_GAME', payload: { ...state, inventory: { ...state.inventory, obols: (state.inventory.obols || 0) - 10 }, ink: (state.ink || 0) + 1 } });
-                    addToast(`Purchased +1 Esoteric Ink`, 'ITEM');
+                    addToast(`Distilled +1 Esoteric Ink`, 'ITEM');
                   } else {
                     addToast(`Requires 10 Obols to distill Esoteric Ink.`, 'ALERT');
                   }
                 }}
                 className="macro-chip macro-chip-amber"
               >
-                + DISTILL ESOTERIC INK (-10 OBOLS)
+                + DISTILL INK (-10 OBOLS)
               </button>
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+          <div className="grid-4col" style={{ flex: 1, overflowY: 'auto' }}>
             {allYokai.map(yokai => {
               const isBound = state.tetheredYokai.includes(yokai.id);
+              const spec = YOKAI_DAEMON_SPECS[yokai.id] || {
+                codeName: yokai.nameEn.toUpperCase(),
+                classTag: 'SHIKIGAMI DAEMON',
+                passiveHook: 'PASSIVE HOOK: Stabilizes operative tether.',
+                activeLabel: 'INVOKE',
+                maxCharges: 1,
+                activeDesc: yokai.gameUtility,
+                loreNote: ''
+              };
               const cost = yokai.draftCost;
               const canAfford = (!cost.obols || (state.inventory.obols || 0) >= cost.obols) && (!cost.humanity || state.humanity > cost.humanity) && (!cost.ink || (state.ink || 0) >= cost.ink);
-              const costStr = [cost.obols ? `${cost.obols} Obols` : '', cost.humanity ? `${cost.humanity} Humanity` : '', cost.ink ? `${cost.ink} Ink` : ''].filter(Boolean).join(' + ');
-
-              const spec = YOKAI_INVOCATIONS[yokai.id] || { label: 'INVOKE', maxCharges: 1, desc: '' };
+              const costStr = [cost.obols ? `${cost.obols} Obols` : '', cost.humanity ? `${cost.humanity}% HUM` : '', cost.ink ? `${cost.ink} Ink` : ''].filter(Boolean).join(' + ');
               const chargesLeft = yokaiCharges[yokai.id] ?? spec.maxCharges;
 
               return (
-                <div key={yokai.id} style={{ backgroundColor: theme.bgPanel, border: `1px solid ${isBound ? theme.textBright : theme.borderTerminal}`, padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div key={yokai.id} style={{ backgroundColor: theme.bgPanel, border: `1px solid ${isBound ? theme.textBright : theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '1px' }}>{yokai.utilityClass.toUpperCase()}</span>
-                      {isBound && <span style={{ fontSize: '0.68rem', backgroundColor: theme.textBright, color: 'black', padding: '1px 6px', fontWeight: 'bold' }}>BOUND</span>}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.66rem', color: theme.accentAmber, letterSpacing: '1px' }}>{spec.classTag}</span>
+                      {isBound && <span style={{ fontSize: '0.66rem', backgroundColor: theme.textBright, color: 'black', padding: '1px 6px', fontWeight: 'bold' }}>BOUND</span>}
                     </div>
-                    <h3 style={{ margin: '0 0 8px 0', color: theme.textBright, fontSize: '0.95rem' }}>{yokai.nameEn}</h3>
-                    <p style={{ fontSize: '0.74rem', color: '#ffffff', lineHeight: '1.45', marginBottom: '6px' }}>{yokai.gameUtility}</p>
-                    <div style={{ padding: '6px', backgroundColor: '#030504', border: `1px dashed ${theme.borderTerminal}`, fontSize: '0.7rem', color: theme.accentAmber }}>
-                      <strong>ACTIVE ({spec.maxCharges} CHARGES):</strong> {spec.label} — {spec.desc}
+                    <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.9rem' }}>{spec.codeName}</h3>
+                    <div style={{ fontSize: '0.72rem', color: theme.accentCyan, marginBottom: '6px' }}>{spec.passiveHook}</div>
+                    <div style={{ padding: '6px', backgroundColor: '#030504', border: `1px dashed ${theme.borderTerminal}`, fontSize: '0.7rem', color: '#ffffff' }}>
+                      <strong style={{ color: theme.accentAmber }}>ACTIVE ({spec.maxCharges} USES): {spec.activeLabel}</strong><br/>
+                      {spec.activeDesc}
                     </div>
-                    <p style={{ fontSize: '0.7rem', color: theme.textMuted, fontStyle: 'italic', marginTop: '8px' }}>"{yokai.costDescription}"</p>
+                    <p style={{ fontSize: '0.68rem', color: '#a8ccaf', fontStyle: 'italic', marginTop: '6px' }}>{spec.loreNote}</p>
                   </div>
 
-                  <div style={{ marginTop: '10px', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '10px' }}>
-                    <div style={{ fontSize: '0.72rem', color: isBound ? theme.textBright : theme.accentRed, fontWeight: 'bold', marginBottom: '8px' }}>
-                      {isBound ? `CHARGES REMAINING: ${chargesLeft} / ${spec.maxCharges}` : `PACT COST: ${costStr}`}
+                  <div style={{ marginTop: '8px', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '8px' }}>
+                    <div style={{ fontSize: '0.7rem', color: isBound ? theme.textBright : theme.accentRed, fontWeight: 'bold', marginBottom: '6px' }}>
+                      {isBound ? `CHARGES: ${chargesLeft}/${spec.maxCharges}` : `BIND TRIBUTE: ${costStr}`}
                     </div>
                     {isBound ? (
-                      <button
-                        onClick={() => handleUnbindYokai(yokai.id, 'Manually severed in Kage-no-Sho')}
-                        className="macro-chip macro-chip-danger"
-                        style={{ width: '100%', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}
-                      >
-                        &gt; SEVER PACT (UNBIND)
+                      <button onClick={() => handleUnbindYokai(yokai.id, 'Manually severed')} className="macro-chip macro-chip-danger" style={{ width: '100%', padding: '7px', fontWeight: 'bold' }}>
+                        &gt; UNBIND DAEMON
                       </button>
                     ) : (
                       <button
                         onClick={() => {
+                          if (state.tetheredYokai.length >= 2) {
+                            addToast('Rule of Two: Unbind an active daemon first!', 'ALERT');
+                            return;
+                          }
                           ThaumaturgicAudio.sealSuccess();
                           draftContract(yokai.id, yokai.draftCost);
                           setYokaiCharges(prev => ({ ...prev, [yokai.id]: spec.maxCharges }));
-                          addToast(`Bound ${yokai.nameEn} (${spec.maxCharges} Charges)!`, 'SEAL');
+                          addToast(`Bound ${yokai.nameEn}!`, 'SEAL');
                         }}
                         disabled={!canAfford}
                         className="macro-chip"
-                        style={{ width: '100%', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}
+                        style={{ width: '100%', padding: '7px', fontWeight: 'bold' }}
                       >
-                        {canAfford ? '> FORGE PACT & BIND' : '> INSUFFICIENT TRIBUTE'}
+                        {canAfford ? '> COMPILE & BIND PACT' : '> INSUFFICIENT TRIBUTE'}
                       </button>
                     )}
                   </div>
@@ -2527,27 +2846,27 @@ export default function App() {
       )}
 
       {/* ================================================================== */}
-      {/* VIEWPORT 4: [F4] SAFEHOUSE / ALTAR (SYNTHESIS, REST & WARDING)     */}
+      {/* VIEWPORT 4: [F4] SAFEHOUSE / ALTAR                                 */}
       {/* ================================================================== */}
       {viewport === 'SAFEHOUSE_ALTAR' && (
-        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
-          <section style={{ width: '62%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '8px', marginBottom: '10px' }}>
+        <main className="responsive-split" style={{ zoom: FONT_ZOOM_MAP[fontScale] }}>
+          <section className="pane-left" style={{ width: '60%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
               <div>
-                <h2 style={{ margin: 0, color: theme.textBright, fontSize: '1rem', letterSpacing: '2px' }}>&gt; SAFEHOUSE ALTAR // ALCHEMICAL SYNTHESIS</h2>
-                <div style={{ fontSize: '0.74rem', color: '#a8ccaf', marginTop: '2px' }}>
-                  Transmute raw field salvage into refined planetary Solomonic catalysts.
-                  {state.tetheredYokai.includes('yokai_kameosa') && <span style={{ color: theme.accentAmber }}> [KAMEOSA ACTIVE: 0 Obol Cost, -2 Humanity per craft!]</span>}
+                <h2 style={{ margin: 0, color: theme.textBright, fontSize: '0.95rem' }}>&gt; SAFEHOUSE ALTAR // CATALYST SYNTHESIS</h2>
+                <div style={{ fontSize: '0.72rem', color: '#a8ccaf' }}>
+                  Transmute raw salvage into planetary Solomonic catalysts.
+                  {state.tetheredYokai.includes('yokai_kameosa') && <span style={{ color: theme.accentAmber }}> [KAMEOSA.ALC ACTIVE: 0 Obol Cost, -2% HUM!]</span>}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '10px', fontSize: '0.75rem', backgroundColor: '#030504', padding: '6px 10px', border: `1px solid ${theme.borderTerminal}` }}>
+              <div style={{ display: 'flex', gap: '8px', fontSize: '0.72rem', backgroundColor: '#030504', padding: '5px 8px', border: `1px solid ${theme.borderTerminal}` }}>
                 <span>Metal: <strong style={{ color: theme.textBright }}>{state.inventory.scrap_metal || 0}</strong></span>
                 <span>Earth: <strong style={{ color: theme.textBright }}>{state.inventory.cursed_earth || 0}</strong></span>
                 <span>Distillate: <strong style={{ color: theme.textBright }}>{state.inventory.alchemical_distillate || 0}</strong></span>
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '8px' }}>
               {ALTAR_RECIPES.map(recipe => {
                 const isKameosa = state.tetheredYokai.includes('yokai_kameosa');
                 const effObolCost = isKameosa ? 0 : recipe.obolCost;
@@ -2559,15 +2878,15 @@ export default function App() {
                 return (
                   <div key={recipe.outputId} style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ color: theme.textBright, fontSize: '0.82rem' }}>{recipe.label.toUpperCase()}</strong>
-                        <span style={{ color: theme.accentAmber, fontSize: '0.72rem' }}>OWNED: x{ownedOutput}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <strong style={{ color: theme.textBright, fontSize: '0.78rem' }}>{recipe.label.toUpperCase()}</strong>
+                        <span style={{ color: theme.accentAmber, fontSize: '0.7rem' }}>x{ownedOutput}</span>
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#a8ccaf', margin: '4px 0 8px 0' }}>{recipe.desc}</div>
+                      <div style={{ fontSize: '0.68rem', color: '#a8ccaf', margin: '4px 0 8px 0' }}>{recipe.desc}</div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '6px' }}>
-                      <span style={{ fontSize: '0.7rem', color: theme.textMuted }}>
-                        Req: {recipe.rawAmount}x {formatLabel(recipe.rawMaterialId)} + {isKameosa ? '2 HUM' : `${effObolCost} Obols`}
+                      <span style={{ fontSize: '0.68rem', color: theme.textMuted }}>
+                        {recipe.rawAmount}x {formatLabel(recipe.rawMaterialId)} + {isKameosa ? '2% HUM' : `${effObolCost} Obols`}
                       </span>
                       <button
                         onClick={() => {
@@ -2590,11 +2909,11 @@ export default function App() {
             </div>
           </section>
 
-          <section style={{ width: '38%', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 8px 0', color: theme.textBright, fontSize: '0.9rem' }}>&gt; SAFEHOUSE HEARTH // TETHER RECOVERY</h3>
-              <p style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5' }}>
-                Rest inside the brass-warded safehouse to restore +30 Humanity. Resting advances world time (+0.05% Global Entropy &amp; +4% Inquisition Heat in active sectors).
+          <section className="pane-right" style={{ width: '40%', gap: '10px' }}>
+            <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
+              <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.88rem' }}>&gt; SAFEHOUSE HEARTH // TETHER RECOVERY</h3>
+              <p style={{ fontSize: '0.74rem', color: '#a8ccaf', lineHeight: '1.5' }}>
+                Restore +30% Humanity (+0.05% Global Entropy &amp; +4% Inquisition Heat in active sectors).
               </p>
               <button
                 onClick={() => {
@@ -2602,31 +2921,26 @@ export default function App() {
                   dispatch({ type: 'MODIFY_HUMANITY', payload: 30 });
                   dispatch({ type: 'ADVANCE_TIME', payload: 4 });
                   addMicroEntropy(0.05);
-                  addToast(`Restored +30 Humanity (+0.05% Global Entropy).`, 'SEAL');
+                  addToast(`Restored +30% Humanity (+0.05% Global Entropy).`, 'SEAL');
                 }}
                 disabled={state.humanity >= 100}
                 className="macro-chip"
-                style={{ width: '100%', padding: '10px', marginTop: '8px', fontWeight: 'bold' }}
+                style={{ width: '100%', padding: '10px', fontWeight: 'bold' }}
               >
-                &gt; REST AT SAFEHOUSE (+30 HUMANITY / +0.05% ENTROPY)
+                &gt; REST AT SAFEHOUSE (+30% HUM / +0.05% ENTROPY)
               </button>
             </div>
 
-            <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.9rem' }}>&gt; INQUISITION COUNTER-INTELLIGENCE</h3>
-              <p style={{ fontSize: '0.74rem', color: '#a8ccaf', marginBottom: '10px' }}>
-                Burn 20 Obols to jam Ordo Malleus direction-finders and lift lockouts in an active sector (-35% Inquisition Heat).
-              </p>
+            <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.88rem' }}>&gt; INQUISITION COUNTER-INTELLIGENCE</h3>
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorUnlocked(s) && !isSectorSecured(s.id)).map(sec => {
                   const heat = state.sectorEntropy[sec.id] || 0;
                   return (
-                    <div key={sec.id} style={{ padding: '8px 10px', backgroundColor: '#030504', border: `1px solid ${heat >= 100 ? theme.accentRed : theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={sec.id} style={{ padding: '8px', backgroundColor: '#030504', border: `1px solid ${heat >= 100 ? theme.accentRed : theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <strong style={{ color: theme.textBright, fontSize: '0.76rem' }}>{sec.label}</strong>
-                        <div style={{ fontSize: '0.7rem', color: heat >= 75 ? theme.accentRed : theme.accentAmber }}>
-                          INQUISITION HEAT: {heat}% {heat >= 100 ? '[LOCKED DOWN]' : ''}
-                        </div>
+                        <strong style={{ color: theme.textBright, fontSize: '0.74rem' }}>{sec.label}</strong>
+                        <div style={{ fontSize: '0.68rem', color: heat >= 75 ? theme.accentRed : theme.accentAmber }}>HEAT: {heat}%</div>
                       </div>
                       <button
                         onClick={() => {
@@ -2638,7 +2952,7 @@ export default function App() {
                         disabled={heat === 0 || (state.inventory.obols || 0) < 20}
                         className="macro-chip macro-chip-danger"
                       >
-                        JAM MALLEUS (-20 OBOLS)
+                        JAM (-20 OBOLS)
                       </button>
                     </div>
                   );
@@ -2650,28 +2964,11 @@ export default function App() {
       )}
 
       {/* ================================================================== */}
-      {/* VIEWPORT 5: [F5] THE 4 HORSEMEN (WITH VECTOR SIGILS)               */}
+      {/* VIEWPORT 5: [F5] THE 4 HORSEMEN                                    */}
       {/* ================================================================== */}
       {viewport === 'HORSEMEN' && (
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
-          <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.accentRed}`, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ color: theme.accentRed, fontWeight: 'bold', fontSize: '0.95rem', letterSpacing: '2px' }}>
-                APOCALYPSE TELEMETRY // THE FOUR HORSEMEN OF THE ESCHATON
-              </div>
-              <div style={{ color: '#a8ccaf', fontSize: '0.76rem', marginTop: '4px' }}>
-                Each Horseman is tethered to reality by <strong>18 Goetian Lieutenants</strong>. Sealing a high-ranking <strong>King, Prince, or Duke</strong> triggers a <em>Resonance Cascade</em> that severs 1–2 lesser Lieutenants automatically. Each severed anchor raises your Grand Banishment Rite probability by <strong>+5%</strong>.
-              </div>
-            </div>
-            <div style={{ textAlign: 'right', minWidth: '190px' }}>
-              <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>HORSEMEN BANISHED</div>
-              <div style={{ fontSize: '1.6rem', color: theme.textBright, fontWeight: 'bold' }}>
-                {(['CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).filter(h => state.flags[`banished_${h.toLowerCase()}`]).length} / 4
-              </div>
-            </div>
-          </div>
-
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', overflow: 'hidden' }}>
+          <div className="grid-4col" style={{ flex: 1, overflowY: 'auto' }}>
             {(['CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => {
               const info = HORSEMAN_LORE[h];
               const lieutenants = allGoetia.filter(g => g.allegiance === h);
@@ -2680,91 +2977,47 @@ export default function App() {
               const isBanished = !!state.flags[`banished_${h.toLowerCase()}`];
 
               return (
-                <div
-                  key={h}
-                  style={{
-                    backgroundColor: theme.bgPanel,
-                    border: `1px solid ${isBanished ? theme.textBright : info.color}`,
-                    padding: '14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    overflow: 'hidden',
-                    boxShadow: `inset 0 0 25px ${isBanished ? 'rgba(98,240,128,0.1)' : 'rgba(255,42,85,0.06)'}`
-                  }}
-                >
-                  <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: info.color, letterSpacing: '1px' }}>
+                <div key={h} style={{ backgroundColor: theme.bgPanel, border: `1px solid ${isBanished ? theme.textBright : info.color}`, padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.66rem', color: info.color }}>
                       <span>{info.sealName}</span>
-                      <span>{isBanished ? '[BANISHED]' : `[${18 - sealedCount} ANCHORS ACTIVE]`}</span>
+                      <span>{isBanished ? '[BANISHED]' : `[${18 - sealedCount} ACTIVE]`}</span>
                     </div>
-
-                    {/* Horseman Header + Custom Vector Sigil */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '8px 0' }}>
-                      <HorsemanSigilSvg horseman={h} color={info.color} size={56} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '8px 0' }}>
+                      <HorsemanSigilSvg horseman={h} color={info.color} size={50} />
                       <div>
-                        <h2 style={{ margin: 0, color: '#ffffff', letterSpacing: '3px', fontSize: '1.3rem' }}>{h}</h2>
-                        <div style={{ fontSize: '0.68rem', color: info.color, fontWeight: 'bold', marginTop: '2px' }}>{info.riderTitle}</div>
+                        <h2 style={{ margin: 0, color: '#ffffff', letterSpacing: '2px', fontSize: '1.2rem' }}>{h}</h2>
+                        <div style={{ fontSize: '0.66rem', color: info.color, fontWeight: 'bold' }}>{info.riderTitle}</div>
                       </div>
                     </div>
-
-                    <p style={{ fontSize: '0.72rem', color: '#a8ccaf', lineHeight: '1.45', margin: '0 0 10px 0' }}>{info.omenDesc}</p>
-
-                    <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '8px', marginBottom: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '4px' }}>
-                        <span style={{ color: '#a8ccaf' }}>ANCHORS SEVERED: <strong>{sealedCount}/18</strong></span>
-                        <span style={{ color: info.color, fontWeight: 'bold' }}>RITE ODDS: {winProb}%</span>
+                    <p style={{ fontSize: '0.7rem', color: '#a8ccaf', lineHeight: '1.4' }}>{info.omenDesc}</p>
+                    <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '7px', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', marginBottom: '4px' }}>
+                        <span>ANCHORS: <strong>{sealedCount}/18</strong></span>
+                        <span style={{ color: info.color, fontWeight: 'bold' }}>ODDS: {winProb}%</span>
                       </div>
-                      <div style={{ height: '6px', backgroundColor: '#000', border: `1px solid ${theme.borderTerminal}` }}>
-                        <div style={{ width: `${(sealedCount / 18) * 100}%`, height: '100%', backgroundColor: info.color, transition: 'width 0.3s' }} />
+                      <div style={{ height: '5px', backgroundColor: '#000', border: `1px solid ${theme.borderTerminal}` }}>
+                        <div style={{ width: `${(sealedCount / 18) * 100}%`, height: '100%', backgroundColor: info.color }} />
                       </div>
                     </div>
-
-                    <div style={{ fontSize: '0.68rem', color: theme.textMuted, marginBottom: '4px', fontWeight: 'bold' }}>
-                      COURT OF {h} (18 LIEUTENANTS):
-                    </div>
-                    <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', maxHeight: '180px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '6px' }}>
                       {lieutenants.map(g => {
                         const isSealed = state.sealedGoetia.includes(g.id);
                         return (
-                          <div
-                            key={g.id}
-                            onClick={() => { setSelectedSuspectId(g.id); setViewport('CODEX'); }}
-                            style={{
-                              display: 'flex', justifyContent: 'space-between', padding: '3px 5px',
-                              fontSize: '0.7rem', cursor: 'pointer',
-                              backgroundColor: isSealed ? 'rgba(98, 240, 128, 0.08)' : 'transparent',
-                              color: isSealed ? theme.textBright : '#a8ccaf',
-                              textDecoration: isSealed ? 'line-through' : 'none'
-                            }}
-                          >
-                            <span>#{g.manifestId.toString().padStart(2, '0')} {g.name} ({g.rank})</span>
-                            <span style={{ color: isSealed ? theme.textBright : theme.accentRed }}>
-                              {isSealed ? 'SEALED' : 'TETHERED'}
-                            </span>
+                          <div key={g.id} onClick={() => { setSelectedSuspectId(g.id); setViewport('CODEX'); }} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 4px', fontSize: '0.68rem', cursor: 'pointer', color: isSealed ? theme.textBright : '#a8ccaf', textDecoration: isSealed ? 'line-through' : 'none' }}>
+                            <span>#{g.manifestId.toString().padStart(2, '0')} {g.name}</span>
+                            <span style={{ color: isSealed ? theme.textBright : theme.accentRed }}>{isSealed ? 'SEALED' : 'ACTIVE'}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
-
-                  <div style={{ marginTop: '12px' }}>
+                  <div style={{ marginTop: '10px' }}>
                     {isBanished ? (
-                      <div style={{ padding: '12px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold', fontSize: '0.78rem', letterSpacing: '2px' }}>
-                        ✓ {h} BANISHED FROM REALITY
-                      </div>
+                      <div style={{ padding: '10px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold', fontSize: '0.74rem' }}>✓ {h} BANISHED</div>
                     ) : (
-                      <button
-                        onClick={() => setActiveBanishmentTarget(h)}
-                        style={{
-                          width: '100%', padding: '12px',
-                          backgroundColor: '#2a0808', color: '#ffffff',
-                          border: `1px solid ${info.color}`,
-                          cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold',
-                          fontSize: '0.75rem', letterSpacing: '1px'
-                        }}
-                      >
-                        &gt; INITIATE {h} GRAND RITE ({winProb}%)
+                      <button onClick={() => setActiveBanishmentTarget(h)} style={{ width: '100%', padding: '11px', backgroundColor: '#2a0808', color: '#ffffff', border: `1px solid ${info.color}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.73rem' }}>
+                        &gt; INITIATE {h} RITE ({winProb}%)
                       </button>
                     )}
                   </div>
@@ -2776,121 +3029,84 @@ export default function App() {
       )}
 
       {/* ================================================================== */}
-      {/* VIEWPORT 6: [F6] AGENT_DOSSIER (LOCKED PORTRAIT & 0.01% ENTROPY)   */}
+      {/* VIEWPORT 6: [F6] AGENT_DOSSIER                                     */}
       {/* ================================================================== */}
       {viewport === 'DOSSIER' && (
-        <main style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '12px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
-          <section style={{ width: '38%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '8px', fontSize: '0.75rem' }}>
+        <main className="responsive-split" style={{ zoom: FONT_ZOOM_MAP[fontScale] }}>
+          <section className="pane-left" style={{ width: '38%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '18px', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', fontSize: '0.74rem' }}>
               <span style={{ color: theme.textBright, fontWeight: 'bold' }}>BIOMETRIC TETHER FEED</span>
-              <span style={{ color: theme.accentAmber }}>STATUS: LOCKED</span>
+              <span style={{ color: theme.accentAmber }}>LOCKED</span>
             </div>
-
-            <img
-              src={getFullBodyPath(state.playerPortrait)}
-              alt="Operative Full Body"
-              style={{ maxHeight: '82%', maxWidth: '100%', objectFit: 'contain', filter: 'drop-shadow(0 0 18px rgba(98, 240, 128, 0.28))' }}
-            />
-
-            <div style={{ width: '100%', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '10px', textAlign: 'center', fontSize: '0.72rem', color: theme.textMuted, letterSpacing: '1px' }}>
-              IDENTITY IMPRINT: <strong style={{ color: theme.textBright }}>{state.playerName.toUpperCase()}</strong> // BIOMETRICALLY SEALED
+            <img src={getFullBodyPath(state.playerPortrait)} alt="Operative" style={{ maxHeight: '78%', maxWidth: '100%', objectFit: 'contain' }} />
+            <div style={{ width: '100%', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '8px', textAlign: 'center', fontSize: '0.72rem' }}>
+              OPERATIVE: <strong style={{ color: theme.textBright }}>{state.playerName.toUpperCase()}</strong>
             </div>
           </section>
 
-          <section style={{ width: '62%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflowY: 'auto' }}>
+          <section className="pane-right" style={{ width: '62%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '20px', justifyContent: 'space-between', overflowY: 'auto' }}>
             <div>
-              <div style={{ fontSize: '0.74rem', color: theme.accentAmber, letterSpacing: '2px' }}>NOCTURNAL SYNDICATE // OPERATIVE SERVICE RECORD</div>
-              <h1 style={{ margin: '4px 0 16px 0', color: theme.textBright, letterSpacing: '3px', fontSize: '1.6rem', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '10px' }}>
+              <h1 style={{ margin: '0 0 14px 0', color: theme.textBright, fontSize: '1.4rem', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '8px' }}>
                 OPERATIVE {state.playerName.toUpperCase()} // {state.agencyName.toUpperCase()}
               </h1>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>GOETIA BOUND IN VESSEL</div>
-                  <div style={{ fontSize: '1.8rem', color: theme.textBright, fontWeight: 'bold', marginTop: '4px' }}>{state.sealedGoetia.length} / 72</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+                <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '12px' }}>
+                  <div style={{ fontSize: '0.68rem', color: theme.textMuted }}>GOETIA SEALED</div>
+                  <div style={{ fontSize: '1.5rem', color: theme.textBright, fontWeight: 'bold' }}>{state.sealedGoetia.length} / 72</div>
                 </div>
-                <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>SECTORS SECURED</div>
-                  <div style={{ fontSize: '1.8rem', color: theme.accentAmber, fontWeight: 'bold', marginTop: '4px' }}>{securedSectorsCount} / 16</div>
+                <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '12px' }}>
+                  <div style={{ fontSize: '0.68rem', color: theme.textMuted }}>SECTORS SECURED</div>
+                  <div style={{ fontSize: '1.5rem', color: theme.accentAmber, fontWeight: 'bold' }}>{securedSectorsCount} / 16</div>
                 </div>
-                <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>HORSEMEN BANISHED</div>
-                  <div style={{ fontSize: '1.8rem', color: theme.accentRed, fontWeight: 'bold', marginTop: '4px' }}>
-                    {(['CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).filter(h => state.flags[`banished_${h.toLowerCase()}`]).length} / 4
-                  </div>
-                </div>
-                <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>TETHER STABILITY (HUMANITY)</div>
-                  <div style={{ fontSize: '1.6rem', color: theme.textBright, fontWeight: 'bold', marginTop: '4px' }}>{state.humanity}%</div>
-                </div>
-                <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>GLOBAL ENTROPY (PRECISION)</div>
-                  <div style={{ fontSize: '1.6rem', color: theme.accentRed, fontWeight: 'bold', marginTop: '4px' }}>{totalGlobalEntropy.toFixed(2)}%</div>
-                </div>
-                <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: theme.textMuted }}>OBOL TREASURY</div>
-                  <div style={{ fontSize: '1.6rem', color: theme.accentAmber, fontWeight: 'bold', marginTop: '4px' }}>{state.inventory.obols || 0}</div>
+                <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '12px' }}>
+                  <div style={{ fontSize: '0.68rem', color: theme.textMuted }}>GLOBAL ENTROPY</div>
+                  <div style={{ fontSize: '1.5rem', color: theme.accentRed, fontWeight: 'bold' }}>{totalGlobalEntropy.toFixed(2)}%</div>
                 </div>
               </div>
-
-              <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', marginBottom: '20px' }}>
-                <div style={{ fontSize: '0.78rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '8px' }}>
-                  SOLOMONIC BRASS VESSEL // BOUND ENTITIES ({state.sealedGoetia.length})
+              <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '12px' }}>
+                <div style={{ fontSize: '0.76rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '6px' }}>SOLOMONIC BRASS VESSEL ({state.sealedGoetia.length})</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {state.sealedGoetia.map(gid => {
+                    const g = allGoetia.find(item => item.id === gid);
+                    return (
+                      <span key={gid} style={{ padding: '3px 7px', backgroundColor: '#112217', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontSize: '0.7rem' }}>
+                        ✓ #{g?.manifestId} {g?.name.toUpperCase()}
+                      </span>
+                    );
+                  })}
                 </div>
-                {state.sealedGoetia.length === 0 ? (
-                  <div style={{ fontSize: '0.75rem', color: theme.textMuted, fontStyle: 'italic' }}>No Goetian Lieutenants bound yet.</div>
-                ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {state.sealedGoetia.map(gid => {
-                      const g = allGoetia.find(item => item.id === gid);
-                      return (
-                        <span key={gid} style={{ padding: '4px 8px', backgroundColor: '#112217', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontSize: '0.72rem' }}>
-                          ✓ #{g?.manifestId} {g?.name.toUpperCase()} ({g?.allegiance})
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             </div>
 
-            <div style={{ borderTop: `1px dashed ${theme.accentRed}`, paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ color: theme.accentRed, fontWeight: 'bold', fontSize: '0.82rem' }}>SESSION MANAGEMENT &amp; TETHER PURGE</div>
-                <div style={{ color: '#a8ccaf', fontSize: '0.72rem' }}>Log out safely to the Start Screen, or permanently wipe all local save data.</div>
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={handleLogout} className="macro-chip macro-chip-amber" style={{ padding: '12px 16px', fontWeight: 'bold' }}>
-                  &gt; LOG OUT TO TITLE
-                </button>
-                <button
-                  onClick={() => {
-                    if (window.confirm('TERMINATE SESSION & WIPE LOCAL SAVE DATA? This cannot be undone.')) {
-                      ThaumaturgicAudio.errorBuzz();
-                      localStorage.removeItem('thaumaturgic_os_contracts_v1');
-                      localStorage.removeItem('thaumaturgic_os_micro_entropy_v1');
-                      setContracts({});
-                      setMicroEntropy(0);
-                      resetGame();
-                    }
-                  }}
-                  style={{ padding: '12px 18px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '1px' }}
-                >
-                  &gt; WIPE SAVE &amp; RESET
-                </button>
-              </div>
+            <div style={{ borderTop: `1px dashed ${theme.accentRed}`, paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <button onClick={handleLogout} className="macro-chip macro-chip-amber" style={{ padding: '10px 14px', fontWeight: 'bold' }}>&gt; LOG OUT TO TITLE</button>
+              <button
+                onClick={() => {
+                  if (window.confirm('TERMINATE SESSION & WIPE LOCAL SAVE DATA?')) {
+                    ThaumaturgicAudio.errorBuzz();
+                    localStorage.removeItem('thaumaturgic_os_contracts_v1');
+                    localStorage.removeItem('thaumaturgic_os_micro_entropy_v1');
+                    setContracts({});
+                    setMicroEntropy(0);
+                    resetGame();
+                  }
+                }}
+                style={{ padding: '10px 16px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}
+              >
+                &gt; WIPE SAVE &amp; RESET
+              </button>
             </div>
           </section>
         </main>
       )}
 
       {/* ================================================================== */}
-      {/* VIEWPORT 7: [F7] MANUAL (OPERATIVE GUIDE & SOLOMONIC LORE)         */}
+      {/* VIEWPORT 7: [F7] MANUAL                                            */}
       {/* ================================================================== */}
       {viewport === 'MANUAL' && <ManualViewport fontScale={fontScale} />}
 
       {/* ================================================================== */}
-      {/* SEALING & BANISHMENT MODALS + RESONANCE CASCADES + TOASTS          */}
+      {/* SEALING & BANISHMENT MODALS + RESONANCE CASCADES                   */}
       {/* ================================================================== */}
       {activeSealSuspectId && (() => {
         const suspect = allGoetia.find(g => g.id === activeSealSuspectId);
@@ -2914,8 +3130,6 @@ export default function App() {
                 });
               }
 
-              // SOLOMONIC HIERARCHY RESONANCE CASCADE:
-              // Sealing a King, Prince, or Duke automatically collapses 1-2 lesser Lieutenants of the same Horseman!
               let cascadeMsg = '';
               if (['King', 'Prince', 'Duke'].includes(suspect.rank)) {
                 const vassals = allGoetia.filter(
@@ -2931,22 +3145,18 @@ export default function App() {
                 }
               }
 
-              // Clear Codex filters & discovered logs for the secured sector so the badge resets to (0)
               setDeducedSigns([]);
               if (currentContract) {
                 setContracts(prev => ({
                   ...prev,
-                  [currentContract.sectorId]: {
-                    ...currentContract,
-                    discoveredLogs: []
-                  }
+                  [currentContract.sectorId]: { ...currentContract, discoveredLogs: [] }
                 }));
               }
 
               appendLog(
                 `<div style="border-left:3px solid #62f080;padding-left:10px;margin:6px 0;color:#62f080;">` +
                 `<strong>[✓ SECTOR PERMANENTLY SECURED: ${currentContract?.sectorLabel}]</strong><br/>` +
-                `Goetian Anchor <strong>${suspect.name}</strong> severed! +45 Obols awarded. Adjacent ley-line sectors unlocked on your <strong>REGIONAL MAP</strong>.${cascadeMsg}` +
+                `Goetian Anchor <strong>${suspect.name}</strong> severed! +45 Obols awarded.${cascadeMsg}` +
                 `</div>`,
                 'success'
               );
@@ -2970,7 +3180,7 @@ export default function App() {
         />
       )}
 
-      <div style={{ position: 'fixed', bottom: '50px', right: '20px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 1000, pointerEvents: 'none' }}>
+      <div style={{ position: 'fixed', bottom: '48px', right: '16px', display: 'flex', flexDirection: 'column', gap: '6px', zIndex: 1000, pointerEvents: 'none' }}>
         {toasts.map(toast => (
           <div
             key={toast.id}
@@ -2981,11 +3191,11 @@ export default function App() {
               color: theme.textBright,
               border: `1px solid ${theme.borderTerminal}`,
               borderLeft: `4px solid ${toast.type === 'INTEL' ? theme.textBright : toast.type === 'ITEM' ? theme.accentAmber : theme.accentRed}`,
-              padding: '10px 16px',
+              padding: '9px 14px',
               fontFamily: theme.fontMono,
-              fontSize: '0.78rem',
+              fontSize: '0.76rem',
               boxShadow: '0 4px 12px rgba(0,0,0,0.85)',
-              maxWidth: '320px'
+              maxWidth: '300px'
             }}
           >
             {toast.message}
