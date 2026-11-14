@@ -21,7 +21,7 @@ No hand-holding. No quest markers. Just raw forensic clues, a command line, and 
 
 ## // THE CORE LOOP: INFILTRATE, TRIANGULATE, BIND
 
-Every compromised sector is a 6-room tactical sub-grid haunted by one of the 72 Goetian lieutenants. You drop in outside at the **Perimeter Tether** with every door locked—and work your way in:
+Every compromised sector is a procedurally laid-out tactical sub-grid (5–8 rooms) haunted by one of the 72 Goetian lieutenants. You drop in outside at the **Perimeter Tether** with every door locked—and work your way in:
 
 1. **Breach the Threshold:** Recon adjacent rooms with `scan` (alias `probe`) and move in with `enter` (aliases `breach`, `move`). Every ward you break spikes **Inquisition Heat**, and walking into a Malleus Witch-Hound patrol costs Humanity — run `decoy` on a patrolled room first.
 2. **Read Symptoms, Not Prompts:** Rooms can be trapped with one of four hazards (Aethyric Static, Malleus Laser Tripwire, Brimstone Miasma, Blood-Hex Ward). The OS only reports the *physical symptom*—you have to deduce the right counter-command (`degauss`, `bypass`, `purge`/`purify`, `dispel`) or eat a nasty feedback shock.
@@ -29,9 +29,14 @@ Every compromised sector is a 6-room tactical sub-grid haunted by one of the 72 
    * `vox` — **EVP / Spectrogram Filter** (whispers, infrasound tremors, raptor shrieks, lupine howls)
    * `assay` (alias `reagent`) — **Alchemical Assay** (amphibian slime, rapid rust, transmuted metals, plague spores, arterial frenzy)
    * `auspex` (aliases `lidar`, `lens`) — **Astral / Thermal Sensor** (light refraction, $-18^\circ\text{C}$ cryo-stasis, $1,200^\circ\text{C}$ scorching, dead scripts, star drift, backward clocks)
-4. **Deduce the True Name:** Cross-reference your decoded forensic logs against 24 phenomena in the **Goetian Codex** to isolate your target out of 72 suspects.
+4. **Build the Case:** Field readings are rarely clean — most come back **degraded**, narrowing a clue to two or three possible phenomena. Resolve them with `refine` (costs Humanity and Heat) or reason around them using other evidence:
+   * **Witness statements** — `interview` the sector's civilian witness for a partly redacted account of what they saw, then compare it with the Lemegeton entries in the Codex.
+   * **Anchor resonance** — `attune` at the **[ANCHOR]** chamber to learn which Horseman's court the demon serves (plus a +4s sealing bonus). Attune again for a costly deep reading of its rank.
+   * The **Codex** ranks all 72 suspects by how well they fit your evidence and rules out the ones that contradict it — the final call is yours, and a wrong True Name burns your catalysts.
 5. **Synthesize & Seal:** Transmute raw salvage (`Scrap Metal`, `Cursed Earth`, `Alchemical Distillate`) into planetary Solomonic metals (`Gold Leaf`, `Silver Shavings`, `Copper Wire`, `Quicksilver Drops`, `Sacred Sand`, `Cold Iron Filings`, `Lead Weights`), type the demon's True Name, and trace its binding geometry before the connection collapses.
 6. **Trigger Resonance Cascades:** The Ars Goetia is a feudal hierarchy. Sealing a high-ranking **King**, **Prince**, or **Duke** sends a shockwave through their legion, automatically collapsing **1 to 2 lesser vassals** of that Horseman's court straight into your Brass Vessel.
+
+7. **Read the Conditions:** Sectors can roll conditions that change how they play — **Malleus Surveillance** (+50% Heat), **Hallowed Ground** (-40% Heat), **Aethyric Storm** (every reading degraded), **Lucid Witness** (far less redaction) or **Heavily Warded** (every room trapped).
 
 ---
 
@@ -55,6 +60,7 @@ Switch instantaneously across seven specialized OS screens via function keys or 
 * **Inquisition Heat (`0%–100%`):** The Vatican-Crown **Ordo Malleus** monitors ley-line spikes with mobile tracking vans and witch-hound packs. At **75%+ Heat**, your CRT display flickers crimson with triangulation warnings. At **100% Heat**, the sector enters **Total Lockdown**—all room actions are blocked until you run `spoof` (`-15` Obols), `bribe` (`-25` Obols), invoke a stealth Shikigami, or retreat to the Safehouse.
 * **Global Entropy (`0.00%` Precision):** Tracks the irreversible fraying of mundane reality. Ticks up by $+0.01\%$ to $+0.05\%$ during travel, breaches, and safehouse rest, and spikes violently if you misidentify a demon or fracture a ritual.
 * **Game Over:** The run ends if Humanity hits `0%` (*Tether Severed*) or Global Entropy reaches `100%` (*Reality Unravelled*).
+* **Victory:** Banish all four Horsemen to close the operation. The debrief scores your run — sectors lost, spirits left manifested, and final entropy decide whether you retire as an *Archon of the Brass Vessel* or a *Pyrrhic Survivor*.
 
 ---
 
