@@ -5,11 +5,15 @@ import { fileURLToPath } from 'url';
 // 1. Get the absolute path of this exact script file (Bulletproof ES Module pathing)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const repoRoot = path.resolve(__dirname, '..');
 
 // 2. Build exact paths starting from the script's location
-const targetPath = path.join(__dirname, 'data_ingest', '00_Manifest.txt');
-const outDir = path.join(__dirname, 'src', 'content', 'goetia');
-const outFile = path.join(outDir, 'index.ts');
+const targetPath = path.join(repoRoot, 'data_ingest', '00_Manifest.txt');
+const outDir = path.join(repoRoot, 'data_ingest', 'generated');
+// Writes a JSON scaffold to data_ingest/generated/. The hand-curated
+// src/content/goetia/index.ts (titles, costs, clue fingerprints) is never
+// overwritten — copy across anything you need by hand.
+const outFile = path.join(outDir, 'goetia.json');
 
 console.log('🚀 Script started...');
 console.log(`🔍 Looking for raw text file at: ${targetPath}`);
@@ -34,7 +38,7 @@ try {
     
     if (idStr && name && rank) {
       // Assign an allegiance for the prototype
-      const allegiances = ['Conquest', 'War', 'Famine', 'Death'];
+      const allegiances = ['CONQUEST', 'WAR', 'FAMINE', 'DEATH']; // must match HorsemanAllegiance
       const assignedAllegiance = allegiances[parseInt(idStr, 10) % 4];
 
       goetiaList.push({
@@ -50,7 +54,7 @@ try {
 
   console.log(`🔨 Successfully parsed ${goetiaList.length} demons.`);
 
-  const outputTs = `import { GoetiaLieutenant } from './types';\n\nexport const allGoetia: GoetiaLieutenant[] = ${JSON.stringify(goetiaList, null, 2)};\n`;
+  const outputJson = JSON.stringify(goetiaList, null, 2) + '\n';
 
   // Ensure the output directory actually exists
   if (!fs.existsSync(outDir)) {
@@ -58,9 +62,10 @@ try {
       fs.mkdirSync(outDir, { recursive: true });
   }
 
-  fs.writeFileSync(outFile, outputTs);
+  fs.writeFileSync(outFile, outputJson);
   console.log(`🏁 SUCCESS: Goetia parsed and written to ${outFile}`);
 
 } catch (error) {
   console.error('🔥 FATAL ERROR:', error);
+  process.exitCode = 1;
 }

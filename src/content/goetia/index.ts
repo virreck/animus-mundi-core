@@ -375,7 +375,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     id: "53_camio", manifestId: 53, name: "Camio", rank: "President", allegiance: "FAMINE",
     title: "The Bird of Ashes",
     description: "Appears as a thrush, then as a man carrying a sharp sword in burning ashes. He translates the language of birds, dogs, and waters.",
-    requiredIntel: ["avian_screeches", "water_corruption", "brimstone_ash"],
+    requiredIntel: ["avian_screeches", "water_corruption", "thermal_scorching"],
     sealCost: { mercury_drops: 1, brimstone_ash: 2 }
   },
   {

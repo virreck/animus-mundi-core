@@ -1,10 +1,10 @@
 // src/App.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useEngine } from './ui/hooks/useEngine';
+import { useEngine, peekSavedOperative } from './ui/hooks/useEngine';
 import { allGoetia } from './content/goetia';
 import { allYokai } from './content/yokai';
 import type { GameAction } from './engine/reducer';
-import type { GameState } from './engine/state';
+import { type GameState, getTotalGlobalEntropy, getMaxHumanity } from './engine/state';
 import {
   PHENOMENON_CATALOG,
   ALTAR_RECIPES,
@@ -15,6 +15,9 @@ import {
   type SubGridNode,
   type ForensicChannel
 } from './engine/sectorGenerator';
+import { generateSealMatrix } from './engine/sealMatrix';
+import { ThaumaturgicAudio } from './ui/audio';
+import { SigilTracingBoard } from './ui/components/SigilTracingBoard';
 
 interface TerminalEntry {
   id: number;
@@ -40,6 +43,10 @@ const theme = {
   accentCyan: '#00f3ff',
   fontMono: '"JetBrains Mono", "Courier New", Courier, monospace',
 };
+
+/** Escapes text before it is interpolated into terminal HTML (rendered via dangerouslySetInnerHTML). */
+const escapeHtml = (text: string) =>
+  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 const SIGIL_REVEALED_FILTER = 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 6px rgba(98, 240, 128, 0.45))';
 
@@ -335,135 +342,7 @@ const HorsemanSigilSvg = ({ horseman, color, size = 64 }: { horseman: 'CONQUEST'
   </svg>
 );
 
-const ThaumaturgicAudio = {
-  ctx: null as AudioContext | null,
-  enabled: true,
-  init() {
-    if (!this.ctx && typeof window !== 'undefined') {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
-    }
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-  },
-  playTone(freq: number, type: OscillatorType = 'sine', duration = 0.08, vol = 0.06, slideTo: number | null = null) {
-    if (!this.enabled) return;
-    try {
-      this.init();
-      if (!this.ctx) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-      if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
-      gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start();
-      osc.stop(this.ctx.currentTime + duration);
-    } catch { /* ignore */ }
-  },
-  keyClick() { this.playTone(820 + Math.random() * 240, 'triangle', 0.025, 0.025); },
-  typewriterClack() {
-    if (!this.enabled) return;
-    try {
-      this.init();
-      if (!this.ctx) return;
-      const now = this.ctx.currentTime;
-      const bufferSize = Math.floor(this.ctx.sampleRate * 0.035);
-      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const output = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.28));
-      const whiteNoise = this.ctx.createBufferSource();
-      whiteNoise.buffer = noiseBuffer;
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(1950 + Math.random() * 450, now);
-      filter.Q.setValueAtTime(2.8, now);
-      const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.24, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
-      whiteNoise.connect(filter);
-      filter.connect(noiseGain);
-      noiseGain.connect(this.ctx.destination);
-      whiteNoise.start(now);
-      this.playTone(1350 + Math.random() * 250, 'square', 0.022, 0.055, 320);
-    } catch { /* ignore */ }
-  },
-  heavyStampImpact() {
-    if (!this.enabled) return;
-    try {
-      this.init();
-      if (!this.ctx) return;
-      const now = this.ctx.currentTime;
-      const subOsc = this.ctx.createOscillator();
-      const subGain = this.ctx.createGain();
-      subOsc.type = 'sine';
-      subOsc.frequency.setValueAtTime(155, now);
-      subOsc.frequency.exponentialRampToValueAtTime(26, now + 0.45);
-      subGain.gain.setValueAtTime(0.38, now);
-      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
-      subOsc.connect(subGain);
-      subGain.connect(this.ctx.destination);
-      subOsc.start(now);
-      subOsc.stop(now + 0.48);
 
-      const crunchOsc = this.ctx.createOscillator();
-      const crunchGain = this.ctx.createGain();
-      crunchOsc.type = 'sawtooth';
-      crunchOsc.frequency.setValueAtTime(220, now);
-      crunchOsc.frequency.exponentialRampToValueAtTime(42, now + 0.25);
-      crunchGain.gain.setValueAtTime(0.18, now);
-      crunchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
-      crunchOsc.connect(crunchGain);
-      crunchGain.connect(this.ctx.destination);
-      crunchOsc.start(now);
-      crunchOsc.stop(now + 0.26);
-    } catch { /* ignore */ }
-  },
-  scryPing() {
-    this.playTone(1120, 'sine', 0.32, 0.08, 560);
-    setTimeout(() => this.playTone(1490, 'sine', 0.22, 0.05), 110);
-  },
-  senseSweep() {
-    [330, 440, 554, 659].forEach((f, i) => setTimeout(() => this.playTone(f, 'sawtooth', 0.07, 0.04), i * 50));
-  },
-  sealSuccess() {
-    [440, 554.37, 659.25, 880].forEach((f, i) => setTimeout(() => this.playTone(f, 'triangle', 0.22, 0.09), i * 65));
-  },
-  errorBuzz() { this.playTone(135, 'sawtooth', 0.24, 0.09, 80); }
-};
-
-function generateSealMatrix() {
-  const geometries = [
-    { n: 5, s: 2, name: "PENTAGRAM" }, { n: 7, s: 2, name: "HEPTAGRAM_OBTUSE" },
-    { n: 7, s: 3, name: "HEPTAGRAM_ACUTE" }, { n: 8, s: 3, name: "OCTAGRAM" },
-    { n: 9, s: 2, name: "ENNEAGRAM_OBTUSE" }, { n: 9, s: 4, name: "ENNEAGRAM_ACUTE" }
-  ];
-  const config = geometries[Math.floor(Math.random() * geometries.length)];
-  const isBound = Math.random() > 0.5;
-  const rotationOffset = Math.random() * Math.PI * 2;
-  const nodes: { id: number; x: number; y: number }[] = [];
-  for (let i = 0; i < config.n; i++) {
-    const angle = rotationOffset + (i * 2 * Math.PI) / config.n;
-    nodes.push({ id: i, x: 50 + 42 * Math.sin(angle), y: 50 - 42 * Math.cos(angle) });
-  }
-  const sequence: number[] = [];
-  let current = 0;
-  for (let i = 0; i < config.n; i++) {
-    sequence.push(current);
-    current = (current + config.s) % config.n;
-  }
-  sequence.push(0);
-  if (isBound) {
-    for (let i = 0; i < config.n; i++) {
-      current = (current + 1) % config.n;
-      sequence.push(current);
-    }
-  }
-  const timeLimit = Math.ceil((sequence.length - 1) * 1.45) + 4;
-  return { id: `${isBound ? "BOUND_" : "LESSER_"}${config.name}_PROTOCOL`, timeLimit, nodes, sequence };
-}
 
 const getFullBodyPath = (squarePath: string) => {
   const filename = (squarePath || '/portraits/thaumaturge_m1.png').split('/').pop();
@@ -605,11 +484,8 @@ const StartScreen = ({
   const [showConfirm, setShowConfirm] = useState(false);
   const [saveTick, setSaveTick] = useState(0);
 
-  const savedData = localStorage.getItem('thaumaturgic_os_save_v1');
-  let savedOperative: string | null = null;
-  if (savedData && saveTick >= 0) {
-    try { savedOperative = JSON.parse(savedData).playerName; } catch { /* ignore */ }
-  }
+  // saveTick forces a re-read after the save is wiped
+  const savedOperative: string | null = saveTick >= 0 ? peekSavedOperative() : null;
 
   const handleWipeSave = () => {
     if (window.confirm('PURGE LOCAL TETHER DATA? This will erase your current operative save and reset all 72 Goetia seals.')) {
@@ -799,16 +675,13 @@ const SealingTerminal = ({
   tetheredYokai
 }: SealingTerminalProps) => {
   const [matrix] = useState(() => generateSealMatrix());
-  const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE' | 'MISIDENTIFIED'>('AUTH');
+  const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE' | 'MISIDENTIFIED' | 'FAILED'>('AUTH');
   const [nameInput, setNameInput] = useState('');
   const hasTimeBuff = tetheredYokai.includes('yokai_kamaitachi');
   const [timeLeft, setTimeLeft] = useState(matrix.timeLimit + (hasTimeBuff ? 5 : 0) + attunedBonusSeconds);
   const [path, setPath] = useState<number[]>([]);
-  const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
   const [typedName, setTypedName] = useState('');
   const [showSealed, setShowSealed] = useState(false);
-  const [isCleanSeal, setIsCleanSeal] = useState(true);
   const [cascadedNames, setCascadedNames] = useState<string[]>([]);
 
   useEffect(() => {
@@ -816,7 +689,7 @@ const SealingTerminal = ({
     if (phase === 'WARDING' && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     } else if (phase === 'WARDING' && timeLeft <= 0) {
-      executeFinalSeal(false);
+      failSeal();
     }
     return () => clearInterval(timer);
   }, [phase, timeLeft]);
@@ -844,50 +717,15 @@ const SealingTerminal = ({
   }, [phase, suspect.name]);
 
   useEffect(() => {
-    if (phase === 'WARDING' && path.length === matrix.sequence.length) executeFinalSeal(true);
+    if (phase === 'WARDING' && path.length === matrix.sequence.length) completeSeal();
   }, [path.length, phase, matrix.sequence.length]);
 
-  const getSVGCoords = (e: React.PointerEvent) => {
-    if (!svgRef.current) return null;
-    const pt = svgRef.current.createSVGPoint();
-    pt.x = e.clientX; pt.y = e.clientY;
-    return pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
-  };
-
-  const checkNodeHit = (coords: { x: number; y: number }) => {
-    setPath(prevPath => {
-      const nextId = matrix.sequence[prevPath.length];
-      if (nextId === undefined) return prevPath;
-      const targetNode = matrix.nodes.find(n => n.id === nextId)!;
-      if (Math.hypot(coords.x - targetNode.x, coords.y - targetNode.y) < 17) {
-        ThaumaturgicAudio.keyClick();
-        return [...prevPath, targetNode.id];
-      }
-      return prevPath;
+  const handleNodeHit = (nodeId: number) => {
+    setPath(prev => {
+      if (matrix.sequence[prev.length] !== nodeId) return prev;
+      ThaumaturgicAudio.keyClick();
+      return [...prev, nodeId];
     });
-  };
-
-  const startTracing = (e: React.PointerEvent) => {
-    if (phase !== 'WARDING') return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const coords = getSVGCoords(e);
-    if (!coords) return;
-    setCurrentPointer({ x: coords.x, y: coords.y });
-    checkNodeHit(coords);
-  };
-
-  const moveTracing = (e: React.PointerEvent) => {
-    if (phase !== 'WARDING' || !currentPointer) return;
-    const coords = getSVGCoords(e);
-    if (coords) {
-      setCurrentPointer({ x: coords.x, y: coords.y });
-      checkNodeHit(coords);
-    }
-  };
-
-  const stopTracing = (e: React.PointerEvent) => {
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-    setCurrentPointer(null);
   };
 
   const handleAuthSubmit = (e: React.FormEvent) => {
@@ -913,20 +751,19 @@ const SealingTerminal = ({
     setPhase('WARDING');
   };
 
-  const executeFinalSeal = (isClean: boolean) => {
-    setIsCleanSeal(isClean);
+  const completeSeal = () => {
     setPhase('COMPLETE');
-    setCurrentPointer(null);
     sealGoetia(suspect.id);
-    const bonusNames = onSuccessSeal(suspect.id);
-    setCascadedNames(bonusNames);
-    if (isClean) {
-      addToast(`SEALING SUCCESSFUL. Target ${suspect.name} bound to the brass vessel.`, 'SEAL');
-    } else {
-      ThaumaturgicAudio.errorBuzz();
-      addToast(`RITUAL FRACTURE. Global Entropy spiked by +10%.`, 'ALERT');
-      dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 10 });
-    }
+    setCascadedNames(onSuccessSeal(suspect.id));
+    addToast(`SEALING SUCCESSFUL. Target ${suspect.name} bound to the brass vessel.`, 'SEAL');
+  };
+
+  // Running out of time no longer binds the demon: the catalysts are spent and the anchor stays active.
+  const failSeal = () => {
+    setPhase('FAILED');
+    ThaumaturgicAudio.errorBuzz();
+    addToast(`RITUAL FRACTURE. ${suspect.name} broke free! Global Entropy +10%.`, 'ALERT');
+    dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 10 });
   };
 
   return (
@@ -966,6 +803,19 @@ const SealingTerminal = ({
             </button>
           </div>
         )}
+        {phase === 'FAILED' && (
+          <div style={{ textAlign: 'center', padding: '15px 0' }}>
+            <h2 style={{ color: theme.accentRed, letterSpacing: '3px', margin: '0 0 10px 0' }}>! CONTAINMENT COLLAPSED !</h2>
+            <p style={{ fontSize: '0.82rem', color: '#ffb3b3', lineHeight: '1.6' }}>
+              The binding geometry was not completed in time and <strong>{suspect.name}</strong> tore free of the vessel.<br/><br/>
+              <strong>PENALTY:</strong> Catalysts burned | +10.00% Global Entropy.<br/>
+              The anchor is still active — craft fresh catalysts and try again.
+            </p>
+            <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontFamily: theme.fontMono }}>
+              &gt; EMERGENCY DISCONNECT
+            </button>
+          </div>
+        )}
         {phase === 'WARDING' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.85rem' }}>
@@ -981,23 +831,22 @@ const SealingTerminal = ({
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2, pointerEvents: 'none' }}>
                 <SmartGoetiaSigil goetia={suspect} isRevealed={false} size={175} />
               </div>
-              <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
-                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.7" />
-                <polyline points={path.map(nodeId => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="2.0" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
-                {currentPointer && path.length > 0 && path.length < matrix.sequence.length && (
-                  <line x1={matrix.nodes.find(n => n.id === path[path.length - 1])!.x} y1={matrix.nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={theme.textBright} strokeWidth="1.3" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
-                )}
-                {matrix.nodes.map(node => {
-                  const isCompleted = path.includes(node.id);
-                  const isNext = node.id === matrix.sequence[path.length];
-                  return (
-                    <g key={node.id} style={{ pointerEvents: 'none' }}>
-                      <circle cx={node.x} cy={node.y} r={isNext ? "4.2" : "2.4"} fill={isNext ? theme.textBright : isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? '#ffffff' : theme.textTerminal} strokeWidth="0.8" />
-                      {isNext && <circle cx={node.x} cy={node.y} r="7.5" fill="none" stroke={theme.textBright} strokeWidth="1.1" style={{ animation: 'blink 0.8s infinite' }} />}
-                    </g>
-                  );
-                })}
-              </svg>
+              <SigilTracingBoard
+                matrix={matrix}
+                path={path}
+                onNodeHit={handleNodeHit}
+                enabled={phase === 'WARDING'}
+                palette={{
+                  guide: theme.borderTerminal,
+                  trace: theme.textBright,
+                  pointer: theme.textBright,
+                  activeNode: theme.textBright,
+                  idleNode: theme.bgDark,
+                  idleStroke: theme.textTerminal,
+                  nextStroke: '#ffffff',
+                  pulse: theme.textBright
+                }}
+              />
             </div>
           </div>
         )}
@@ -1019,7 +868,6 @@ const SealingTerminal = ({
                     Binding <strong>{suspect.rank} {suspect.name}</strong> automatically collapsed and sealed their vassal spirit(s) in the Codex: <strong>{cascadedNames.join(' & ')}</strong>!
                   </div>
                 )}
-                {!isCleanSeal && <p style={{ color: theme.accentRed, fontSize: '0.78rem', marginTop: '8px' }}>_TIMER EXPIRED: Emergency containment succeeded, but Global Entropy rose by +10%.</p>}
                 <button onClick={onClose} style={{ marginTop: '18px', padding: '10px 20px', width: '100%', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.textBright}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}>
                   &gt; ACKNOWLEDGE_CONTAINMENT
                 </button>
@@ -1048,8 +896,6 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
   const hasTimeBuff = tetheredYokai.includes('yokai_kamaitachi');
   const [timeLeft, setTimeLeft] = useState(60 + (hasTimeBuff ? 15 : 0));
   const [path, setPath] = useState<number[]>([]);
-  const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
   const [isVictory, setIsVictory] = useState(false);
 
   const lieutenants = allGoetia.filter(g => g.allegiance === horseman);
@@ -1072,7 +918,6 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
         ThaumaturgicAudio.scryPing();
         setCurrentMatrixIdx(prev => prev + 1);
         setPath([]);
-        setCurrentPointer(null);
         addToast(`MATRIX ${currentMatrixIdx + 1}/3 LOCKED.`, 'SEAL');
       } else {
         executeResolution(Math.random() * 100 <= winProbability);
@@ -1094,47 +939,12 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
     }
   };
 
-  const getSVGCoords = (e: React.PointerEvent) => {
-    if (!svgRef.current) return null;
-    const pt = svgRef.current.createSVGPoint();
-    pt.x = e.clientX; pt.y = e.clientY;
-    return pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
-  };
-
-  const checkNodeHit = (coords: { x: number; y: number }) => {
-    setPath(prevPath => {
-      const nextId = matrices[currentMatrixIdx].sequence[prevPath.length];
-      if (nextId === undefined) return prevPath;
-      const targetNode = matrices[currentMatrixIdx].nodes.find(n => n.id === nextId)!;
-      if (Math.hypot(coords.x - targetNode.x, coords.y - targetNode.y) < 17) {
-        ThaumaturgicAudio.keyClick();
-        return [...prevPath, targetNode.id];
-      }
-      return prevPath;
+  const handleNodeHit = (nodeId: number) => {
+    setPath(prev => {
+      if (matrices[currentMatrixIdx].sequence[prev.length] !== nodeId) return prev;
+      ThaumaturgicAudio.keyClick();
+      return [...prev, nodeId];
     });
-  };
-
-  const startTracing = (e: React.PointerEvent) => {
-    if (phase !== 'RITUAL') return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const coords = getSVGCoords(e);
-    if (!coords) return;
-    setCurrentPointer({ x: coords.x, y: coords.y });
-    checkNodeHit(coords);
-  };
-
-  const moveTracing = (e: React.PointerEvent) => {
-    if (phase !== 'RITUAL' || !currentPointer) return;
-    const coords = getSVGCoords(e);
-    if (coords) {
-      setCurrentPointer({ x: coords.x, y: coords.y });
-      checkNodeHit(coords);
-    }
-  };
-
-  const stopTracing = (e: React.PointerEvent) => {
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-    setCurrentPointer(null);
   };
 
   const overrideTheme = { bg: '#0f0202', border: '#ff3333', text: '#ff6666', bright: '#ffb3b3' };
@@ -1178,23 +988,26 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
               <span style={{ color: overrideTheme.bright }}>T-MINUS: {timeLeft}s</span>
             </div>
             <div style={{ position: 'relative', width: '290px', height: '290px', border: `2px solid ${overrideTheme.border}`, backgroundColor: 'black', borderRadius: '50%' }}>
-              <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
-                <polygon points={activeMatrix.sequence.map(id => `${activeMatrix.nodes.find(n => n.id === id)!.x},${activeMatrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={overrideTheme.border} strokeWidth="0.9" strokeOpacity="0.7" />
-                <polyline points={path.map(nodeId => `${activeMatrix.nodes.find(n => n.id === nodeId)!.x},${activeMatrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
-                {currentPointer && path.length > 0 && path.length < activeMatrix.sequence.length && (
-                  <line x1={activeMatrix.nodes.find(n => n.id === path[path.length - 1])!.x} y1={activeMatrix.nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={overrideTheme.bright} strokeWidth="1.5" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
-                )}
-                {activeMatrix.nodes.map(node => {
-                  const isCompleted = path.includes(node.id);
-                  const isNext = node.id === activeMatrix.sequence[path.length];
-                  return (
-                    <g key={node.id} style={{ pointerEvents: 'none' }}>
-                      <circle cx={node.x} cy={node.y} r={isNext ? "4.2" : "2.4"} fill={isNext ? '#ffffff' : isCompleted ? '#ffffff' : 'black'} stroke={isNext ? '#ffffff' : overrideTheme.border} strokeWidth="0.8" />
-                      {isNext && <circle cx={node.x} cy={node.y} r="7.5" fill="none" stroke="#ffffff" strokeWidth="1.1" style={{ animation: 'blink 0.8s infinite' }} />}
-                    </g>
-                  );
-                })}
-              </svg>
+              <SigilTracingBoard
+                key={currentMatrixIdx}
+                matrix={activeMatrix}
+                path={path}
+                onNodeHit={handleNodeHit}
+                enabled={phase === 'RITUAL'}
+                palette={{
+                  guide: overrideTheme.border,
+                  guideWidth: 0.9,
+                  guideOpacity: 0.7,
+                  trace: '#ffffff',
+                  traceWidth: 2.2,
+                  pointer: overrideTheme.bright,
+                  pointerWidth: 1.5,
+                  activeNode: '#ffffff',
+                  idleNode: 'black',
+                  idleStroke: overrideTheme.border,
+                  nextStroke: '#ffffff'
+                }}
+              />
             </div>
           </div>
         )}
@@ -1233,11 +1046,6 @@ export default function App() {
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const didDragRef = useRef(false);
 
-  const [microEntropy, setMicroEntropy] = useState<number>(() => {
-    const saved = localStorage.getItem('thaumaturgic_os_micro_entropy_v2');
-    return saved ? parseFloat(saved) || 0 : 0;
-  });
-
   const [contracts, setContracts] = useState<Record<string, SectorContract>>(() => {
     const saved = localStorage.getItem('thaumaturgic_os_contracts_v2');
     if (saved) {
@@ -1245,6 +1053,10 @@ export default function App() {
     }
     return {};
   });
+
+  /** Functional update of one sector's contract, always based on the latest stored value. */
+  const updateContract = (sectorId: string, fn: (c: SectorContract) => SectorContract) =>
+    setContracts(prev => (prev[sectorId] ? { ...prev, [sectorId]: fn(prev[sectorId]) } : prev));
 
   const shownHintsRef = useRef<Record<string, boolean>>((() => {
     const saved = localStorage.getItem('thaumaturgic_os_hints_v1');
@@ -1254,9 +1066,12 @@ export default function App() {
     return {};
   })());
 
-  const [yokaiCharges, setYokaiCharges] = useState<Record<string, number>>({});
-  const [attunedSectors, setAttunedSectors] = useState<Record<string, boolean>>({});
-  const [deducedSigns, setDeducedSigns] = useState<string[]>([]);
+  // Persisted in the save file via the reducer
+  const yokaiCharges = state.yokaiCharges || {};
+  const attunedSectors = state.attunedSectors || {};
+  const deducedSigns = state.deducedSigns || [];
+  const setDeducedSigns = (next: string[] | ((prev: string[]) => string[])) =>
+    dispatch({ type: 'SET_DEDUCED_SIGNS', payload: typeof next === 'function' ? next(deducedSigns) : next });
   const [codexHorsemanFilter, setCodexHorsemanFilter] = useState<'ALL' | 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH'>('ALL');
   const [selectedSuspectId, setSelectedSuspectId] = useState<string>('01_bael');
 
@@ -1308,23 +1123,16 @@ export default function App() {
     });
     shownHintsRef.current = {};
     setContracts({});
-    setMicroEntropy(0);
-    setDeducedSigns([]);
-    setYokaiCharges({});
-    setAttunedSectors({});
     setTerminalLines([]);
+    setActiveSealSuspectId(null);
+    setActiveBanishmentTarget(null);
     resetGame();
   };
 
-  const addMicroEntropy = (delta: number) => {
-    setMicroEntropy(prev => {
-      const next = Math.max(0, +(prev + delta).toFixed(2));
-      localStorage.setItem('thaumaturgic_os_micro_entropy_v2', String(next));
-      return next;
-    });
-  };
+  const addMicroEntropy = (delta: number) => dispatch({ type: 'ADD_MICRO_ENTROPY', payload: delta });
 
-  const totalGlobalEntropy = Math.min(100, +(state.globalEntropy + microEntropy).toFixed(2));
+  const totalGlobalEntropy = getTotalGlobalEntropy(state);
+  const maxHumanity = getMaxHumanity(state);
 
   const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' | 'SEAL' = 'ALERT') => {
     const id = Date.now() + Math.random();
@@ -1372,10 +1180,31 @@ export default function App() {
           'info'
         );
       } else {
-        appendLog(`[+] TETHER ESTABLISHED // ${state.playerName.toUpperCase()} ONLINE.`, 'info');
+        appendLog(`[+] TETHER ESTABLISHED // ${escapeHtml(state.playerName.toUpperCase())} ONLINE.`, 'info');
       }
     }
   }, [state.gameStage, contracts, state.sealedGoetia, state.inventory, dispatch]);
+
+  // Repair saves hit by the old cascade bug: any unsecured sector whose target
+  // demon is already sealed gets a fresh, still-unsealed target.
+  useEffect(() => {
+    if (state.gameStage !== 'ACTIVE') return;
+    if (allGoetia.every(g => state.sealedGoetia.includes(g.id))) return; // nothing left to assign
+    const broken = Object.values(contracts).filter(
+      c => state.sealedGoetia.includes(c.targetGoetiaId) && !state.flags[`sector_secured_${c.sectorId}`]
+    );
+    if (broken.length === 0) return;
+    setContracts(prev => {
+      const next = { ...prev };
+      const used = Object.values(prev).map(c => c.targetGoetiaId);
+      broken.forEach(c => {
+        const fresh = generateSectorContract(c.sectorId, c.sectorLabel, state.sealedGoetia, used);
+        used.push(fresh.targetGoetiaId);
+        next[c.sectorId] = fresh;
+      });
+      return next;
+    });
+  }, [state.gameStage, contracts, state.sealedGoetia, state.flags]);
 
   useEffect(() => {
     if (viewport === 'FIELD_OPS' && consoleScrollRef.current) {
@@ -1443,13 +1272,11 @@ export default function App() {
 
   const handleUnbindYokai = (yokaiId: string, reason = 'Manually severed') => {
     ThaumaturgicAudio.errorBuzz();
-    const updatedTether = state.tetheredYokai.filter(id => id !== yokaiId);
-    dispatch({
-      type: 'LOAD_GAME',
-      payload: { ...state, tetheredYokai: updatedTether, activeContracts: updatedTether }
-    });
+    // Dedicated action: a LOAD_GAME with a copy of `state` here would overwrite
+    // any actions dispatched earlier in the same event handler.
+    dispatch({ type: 'UNBIND_YOKAI', payload: yokaiId });
     const yName = allYokai.find(y => y.id === yokaiId)?.nameEn || yokaiId;
-    appendLog(`[*] DAEMON UNBOUND: <strong style="color:#ff2a55;">${yName}</strong> (${reason}).`, 'warn');
+    appendLog(`[*] DAEMON UNBOUND: <strong style="color:#ff2a55;">${escapeHtml(yName)}</strong> (${escapeHtml(reason)}).`, 'warn');
     addToast(`Unbound: ${yName}`, 'ALERT');
   };
 
@@ -1489,10 +1316,10 @@ export default function App() {
     dispatch({ type: 'MODIFY_HUMANITY', payload: -humCost });
     visualFxRef.current.sonarRings.push({ x: node.x, y: node.y, r: 6, alpha: 1.0 });
 
-    const updatedNodes = currentContract.subNodes.map(n =>
+    const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
       n.id === node.id ? { ...n, status: 'SCANNED' as const } : n
     );
-    setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: node.id, subNodes: updatedNodes } }));
+    updateContract(currentContract.sectorId, c => ({ ...c, selectedSubNodeId: node.id, subNodes: updatedNodes(c.subNodes) }));
 
     const entryHeat = getRoomEntryHeatCost(node);
     const sigDesc =
@@ -1542,13 +1369,10 @@ export default function App() {
     }
     ThaumaturgicAudio.scryPing();
     triggerHudFlash('DECODE');
-    const updatedNodes = currentContract.subNodes.map(n =>
+    const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
       n.id === target.id ? { ...n, patrolActive: false } : n
     );
-    setContracts(prev => ({
-      ...prev,
-      [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: target.id, subNodes: updatedNodes }
-    }));
+    updateContract(currentContract.sectorId, c => ({ ...c, selectedSubNodeId: target.id, subNodes: updatedNodes(c.subNodes) }));
     appendLog(`[✓ DECOY DEPLOYED on <strong>${target.label}</strong>] Phantom signal lured the Malleus Hound Patrol away.`, 'success');
     addToast(`Patrol Cleared in ${target.label}!`, 'SEAL');
   };
@@ -1581,13 +1405,10 @@ export default function App() {
 
     ThaumaturgicAudio.scryPing();
     triggerHudFlash('DECODE');
-    const updatedNodes = currentContract.subNodes.map(n =>
+    const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
       n.id === target.id ? { ...n, hazard: 'NONE' as const } : n
     );
-    setContracts(prev => ({
-      ...prev,
-      [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: target.id, subNodes: updatedNodes }
-    }));
+    updateContract(currentContract.sectorId, c => ({ ...c, selectedSubNodeId: target.id, subNodes: updatedNodes(c.subNodes) }));
 
     if (target.hazard === 'WIRE') {
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -10 } });
@@ -1681,7 +1502,7 @@ export default function App() {
     }
 
     const firstEntry = node.status === 'LOCKED' || node.status === 'SCANNED';
-    const updatedNodes = currentContract.subNodes.map(n =>
+    const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
       n.id === node.id
         ? {
             ...n,
@@ -1692,14 +1513,11 @@ export default function App() {
         : n
     );
 
-    setContracts(prev => ({
-      ...prev,
-      [currentContract.sectorId]: {
-        ...currentContract,
-        activeSubNodeId: node.id,
-        selectedSubNodeId: node.id,
-        subNodes: updatedNodes
-      }
+    updateContract(currentContract.sectorId, c => ({
+      ...c,
+      activeSubNodeId: node.id,
+      selectedSubNodeId: node.id,
+      subNodes: updatedNodes(c.subNodes)
     }));
   };
 
@@ -1718,7 +1536,7 @@ export default function App() {
     }
     ThaumaturgicAudio.sealSuccess();
     triggerHudFlash('DECODE');
-    setAttunedSectors(prev => ({ ...prev, [currentContract.sectorId]: true }));
+    dispatch({ type: 'SET_ATTUNED_SECTOR', payload: currentContract.sectorId });
     appendLog(`[✓ VESSEL ATTUNED AT ANCHOR] Synchronized your Brass Vessel with the conduit frequency (+4s Sealing Rite timer bonus).`, 'success');
     addToast(`Vessel Attuned! +4s Sealing Timer`, 'SEAL');
   };
@@ -1801,17 +1619,14 @@ export default function App() {
       );
     }
 
-    const updatedNodes = currentContract.subNodes.map(n =>
+    const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
       n.id === currentSubNode.id ? { ...n, status: 'CLEARED' as const } : n
     );
 
-    setContracts(prev => ({
-      ...prev,
-      [currentContract.sectorId]: {
-        ...currentContract,
-        subNodes: updatedNodes,
-        discoveredLogs: updatedLogs
-      }
+    updateContract(currentContract.sectorId, c => ({
+      ...c,
+      subNodes: updatedNodes(c.subNodes),
+      discoveredLogs: updatedLogs
     }));
   };
 
@@ -1871,14 +1686,11 @@ export default function App() {
       appendLog(`[📦 SALVAGE COLLECTED] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
     }
 
-    const updatedNodes = currentContract.subNodes.map(n =>
+    const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
       n.id === currentSubNode.id ? { ...n, status: 'CLEARED' as const } : n
     );
 
-    setContracts(prev => ({
-      ...prev,
-      [currentContract.sectorId]: { ...currentContract, subNodes: updatedNodes }
-    }));
+    updateContract(currentContract.sectorId, c => ({ ...c, subNodes: updatedNodes(c.subNodes) }));
   };
 
   const handleInvokeYokaiPower = (yokaiId: string) => {
@@ -1899,8 +1711,8 @@ export default function App() {
       if (!currentContract) return;
       if (state.humanity <= 5) { addToast('Requires 5% Humanity!', 'ALERT'); return; }
       dispatch({ type: 'MODIFY_HUMANITY', payload: -5 });
-      const revealedNodes = currentContract.subNodes.map(n => n.status === 'LOCKED' ? { ...n, status: 'SCANNED' as const } : n);
-      setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, subNodes: revealedNodes } }));
+      const revealedNodes = (nodes: SubGridNode[]) => nodes.map(n => n.status === 'LOCKED' ? { ...n, status: 'SCANNED' as const } : n);
+      updateContract(currentContract.sectorId, c => ({ ...c, subNodes: revealedNodes(c.subNodes) }));
       appendLog(`[👹 ${spec.codeName} // GALE SWEEP] Aerial LiDAR scanned all 6 rooms (-5% HUM)!`, 'success');
     } else if (yokaiId === 'yokai_baku') {
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
@@ -1923,18 +1735,15 @@ export default function App() {
         addToast('Select a reachable adjacent room first!', 'ALERT');
         return;
       }
-      const updatedNodes = currentContract.subNodes.map(n =>
+      const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
         n.id === selectedSubNode.id
           ? { ...n, status: 'ENTERED' as const, hazard: 'NONE' as const, patrolActive: false }
           : n
       );
-      setContracts(prev => ({
-        ...prev,
-        [currentContract.sectorId]: {
-          ...currentContract,
-          activeSubNodeId: selectedSubNode.id,
-          subNodes: updatedNodes
-        }
+      updateContract(currentContract.sectorId, c => ({
+        ...c,
+        activeSubNodeId: selectedSubNode.id,
+        subNodes: updatedNodes(c.subNodes)
       }));
       appendLog(`[👹 ${spec.codeName} // WIND SICKLE] Sliced silently into <strong>${selectedSubNode.label}</strong> (0% Heat, Patrols &amp; Traps disarmed)!`, 'success');
     } else if (yokaiId === 'yokai_amabie') {
@@ -1944,10 +1753,10 @@ export default function App() {
       appendLog(`[👹 ${spec.codeName} // PROPHETIC WARD] Purged -2.50% Global Entropy (-10 Obols).`, 'success');
     } else if (yokaiId === 'yokai_noppera') {
       if (currentContract) {
-        const disarmNodes = currentContract.subNodes.map(n =>
+        const disarmNodes = (nodes: SubGridNode[]) => nodes.map(n =>
           n.patrolActive ? { ...n, patrolActive: false, status: n.status === 'LOCKED' ? ('SCANNED' as const) : n.status } : n
         );
-        setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, subNodes: disarmNodes } }));
+        updateContract(currentContract.sectorId, c => ({ ...c, subNodes: disarmNodes(c.subNodes) }));
       }
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
       appendLog(`[👹 ${spec.codeName} // FACELESS DECOY] Disarmed sector Malleus Patrols and dropped Heat by -15%.`, 'success');
@@ -1955,10 +1764,13 @@ export default function App() {
 
     ThaumaturgicAudio.scryPing();
     const remaining = currentCharges - 1;
-    setYokaiCharges(prev => ({ ...prev, [yokaiId]: remaining }));
+    // The reducer decrements the charge and unbinds the daemon at zero, so the
+    // power's own effects above are never rolled back.
+    dispatch({ type: 'CONSUME_YOKAI_CHARGE', payload: { yokaiId, maxCharges: spec.maxCharges } });
 
     if (remaining <= 0) {
-      handleUnbindYokai(yokaiId, 'All charges expended');
+      appendLog(`[*] DAEMON UNBOUND: <strong style="color:#ff2a55;">${escapeHtml(yName)}</strong> (All charges expended).`, 'warn');
+      addToast(`Unbound: ${yName}`, 'ALERT');
     } else {
       addToast(`${yName}: ${remaining}/${spec.maxCharges} Charges Left`, 'SEAL');
     }
@@ -1971,7 +1783,7 @@ export default function App() {
     const cmd = parts[0].toLowerCase();
     const arg = parts.slice(1).join(' ');
 
-    appendLog(`<span style="color:#62f080;">root@${state.playerName.toLowerCase() || 'operative'}:~#</span> ${trimmed}`, 'command');
+    appendLog(`<span style="color:#62f080;">root@${escapeHtml(state.playerName.toLowerCase() || 'operative')}:~#</span> ${escapeHtml(trimmed)}`, 'command');
 
     if (cmd === 'help' || cmd === '?') {
       appendLog(
@@ -2044,7 +1856,7 @@ export default function App() {
       setTerminalLines([]);
     } else {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Unknown command "${cmd}". Type <code>help</code> or use the buttons below.`, 'error');
+      appendLog(`[-] Unknown command "${escapeHtml(cmd)}". Type <code>help</code> or use the buttons below.`, 'error');
     }
   };
 
@@ -2350,10 +2162,7 @@ export default function App() {
         const ny = node.y * h;
         if (Math.hypot(wx - nx, wy - ny) <= 30) {
           ThaumaturgicAudio.keyClick();
-          setContracts(prev => ({
-            ...prev,
-            [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: node.id }
-          }));
+          updateContract(currentContract.sectorId, c => ({ ...c, selectedSubNodeId: node.id }));
           visualFxRef.current.sonarRings.push({ x: node.x, y: node.y, r: 6, alpha: 0.9 });
           break;
         }
@@ -2387,8 +2196,37 @@ export default function App() {
 
   const handleLogout = () => {
     ThaumaturgicAudio.keyClick();
-    dispatch({ type: 'LOAD_GAME', payload: { ...state, gameStage: 'START_SCREEN' } });
+    dispatch({ type: 'EXIT_TO_MENU' });
   };
+
+  if (state.gameStage === 'GAME_OVER') {
+    const tetherSevered = state.humanity <= 0;
+    return (
+      <div style={{ position: 'fixed', inset: 0, backgroundColor: '#050000', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px', fontFamily: theme.fontMono }}>
+        <div style={{ width: '100%', maxWidth: '520px', padding: '28px', border: `2px solid ${theme.accentRed}`, backgroundColor: '#0f0202', textAlign: 'center', color: '#ffb3b3', boxShadow: '0 0 50px rgba(255, 42, 85, 0.25)' }}>
+          <h1 style={{ color: theme.accentRed, letterSpacing: '5px', fontSize: '1.6rem', margin: '0 0 12px 0' }}>
+            {tetherSevered ? 'TETHER SEVERED' : 'REALITY UNRAVELLED'}
+          </h1>
+          <p style={{ fontSize: '0.84rem', lineHeight: '1.6', margin: '0 0 16px 0' }}>
+            {tetherSevered
+              ? `Operative ${state.playerName.toUpperCase() || 'UNKNOWN'} lost the last of their Humanity. The remote link has gone dark.`
+              : `Global Entropy reached ${totalGlobalEntropy.toFixed(2)}%. The mundane world has frayed beyond repair.`}
+          </p>
+          <div style={{ fontSize: '0.78rem', color: '#a8ccaf', lineHeight: '1.7', marginBottom: '18px' }}>
+            GOETIA SEALED: <strong>{state.sealedGoetia.length}/72</strong><br/>
+            SECTORS SECURED: <strong>{securedSectorsCount}</strong><br/>
+            HORSEMEN BANISHED: <strong>{(['conquest', 'war', 'famine', 'death'] as const).filter(h => state.flags[`banished_${h}`]).length}/4</strong>
+          </div>
+          <button
+            onClick={() => { ThaumaturgicAudio.keyClick(); handleFullReset(); }}
+            style={{ width: '100%', padding: '12px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontFamily: theme.fontMono, letterSpacing: '2px' }}
+          >
+            &gt; PURGE TETHER &amp; START A NEW OPERATIVE
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (state.gameStage === 'START_SCREEN') {
     return (
@@ -2920,7 +2758,10 @@ export default function App() {
               ) : (
                 (() => {
                   const sealCost = selectedSuspect.sealCost || {};
-                  const canAfford = Object.entries(sealCost).every(([item, amt]) => (state.inventory[item] || 0) >= amt);
+                  const hasCatalysts = Object.entries(sealCost).every(([item, amt]) => (state.inventory[item] || 0) >= amt);
+                  // Sealing must happen inside a live sector (previously the Safehouse let you seal anything)
+                  const inLiveSector = !!currentContract && !isSectorSecured(currentContract.sectorId);
+                  const canAfford = hasCatalysts && inLiveSector;
                   return (
                     <button
                       onClick={() => setActiveSealSuspectId(selectedSuspect.id)}
@@ -2935,7 +2776,11 @@ export default function App() {
                         boxShadow: canAfford ? '0 0 15px rgba(255, 42, 85, 0.35)' : 'none'
                       }}
                     >
-                      {canAfford ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}` : `> CRAFT CATALYSTS IN [F4] SAFEHOUSE FIRST`}
+                      {!inLiveSector
+                        ? `> DEPLOY TO AN UNSECURED SECTOR FIRST`
+                        : hasCatalysts
+                          ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}`
+                          : `> CRAFT CATALYSTS IN [F4] SAFEHOUSE FIRST`}
                     </button>
                   );
                 })()
@@ -3103,8 +2948,7 @@ export default function App() {
                             return;
                           }
                           ThaumaturgicAudio.sealSuccess();
-                          draftContract(yokai.id, yokai.draftCost);
-                          setYokaiCharges(prev => ({ ...prev, [yokai.id]: spec.maxCharges }));
+                          draftContract(yokai.id, yokai.draftCost, spec.maxCharges);
                           addToast(`Bound ${yokai.nameEn}!`, 'SEAL');
                         }}
                         disabled={!canAfford}
@@ -3192,12 +3036,13 @@ export default function App() {
               <button
                 onClick={() => {
                   ThaumaturgicAudio.sealSuccess();
-                  dispatch({ type: 'MODIFY_HUMANITY', payload: 30 });
-                  dispatch({ type: 'ADVANCE_TIME', payload: 4 });
+                  dispatch({ type: 'REST_AT_SAFEHOUSE', payload: { heal: 30, time: 4 } });
                   addMicroEntropy(0.05);
-                  addToast(`Restored +30% Humanity (+0.05% Global Entropy).`, 'SEAL');
+                  addToast(state.tetheredYokai.includes('yokai_baku')
+                    ? `Baku devoured your nightmares: Humanity fully restored (+0.05% Global Entropy).`
+                    : `Restored +30% Humanity (+0.05% Global Entropy).`, 'SEAL');
                 }}
-                disabled={state.humanity >= 100}
+                disabled={state.humanity >= maxHumanity}
                 className="macro-chip"
                 style={{ width: '100%', padding: '10px', fontWeight: 'bold' }}
               >
@@ -3368,8 +3213,8 @@ export default function App() {
 
       {activeSealSuspectId && (() => {
         const suspect = allGoetia.find(g => g.id === activeSealSuspectId);
-        if (!suspect) return null;
-        const actualAnchorId = currentContract?.targetGoetiaId || suspect.id;
+        if (!suspect || !currentContract) return null;
+        const actualAnchorId = currentContract.targetGoetiaId;
         const attunedBonus = (currentContract && attunedSectors[currentContract.sectorId]) ? 4 : 0;
         return (
           <SealingTerminal
@@ -3394,10 +3239,18 @@ export default function App() {
               let cascadeMsg = '';
               const cascadedNamesList: string[] = [];
               if (['King', 'Prince', 'Duke'].includes(suspect.rank)) {
+                // Never cascade-seal a demon that anchors another unsecured sector:
+                // that sector would be left with no sealable target (softlock).
+                const reservedTargets = new Set(
+                  Object.values(contracts)
+                    .filter(c => c.sectorId !== state.currentNode && !isSectorSecured(c.sectorId))
+                    .map(c => c.targetGoetiaId)
+                );
                 const vassals = allGoetia.filter(
                   g => g.allegiance === suspect.allegiance &&
                   g.id !== sealedId &&
                   !state.sealedGoetia.includes(g.id) &&
+                  !reservedTargets.has(g.id) &&
                   !['King', 'Prince'].includes(g.rank)
                 );
                 const cascadeTargets = vassals.slice(0, suspect.rank === 'King' ? 2 : 1);
@@ -3412,10 +3265,7 @@ export default function App() {
 
               setDeducedSigns([]);
               if (currentContract) {
-                setContracts(prev => ({
-                  ...prev,
-                  [currentContract.sectorId]: { ...currentContract, discoveredLogs: [] }
-                }));
+                updateContract(currentContract.sectorId, c => ({ ...c, discoveredLogs: [] }));
               }
 
               appendLog(

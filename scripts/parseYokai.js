@@ -5,10 +5,14 @@ import { fileURLToPath } from 'url';
 // 1. Establish bulletproof absolute pathing
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const repoRoot = path.resolve(__dirname, '..');
 
-const targetPath = path.join(__dirname, 'data_ingest', '01_Yokai.txt');
-const outDir = path.join(__dirname, 'src', 'content', 'yokai');
-const outFile = path.join(outDir, 'index.ts');
+const targetPath = path.join(repoRoot, 'data_ingest', '01_Yokai.txt');
+const outDir = path.join(repoRoot, 'data_ingest', 'generated');
+// Writes a JSON scaffold to data_ingest/generated/. The hand-curated
+// src/content/yokai/index.ts (titles, costs, clue fingerprints) is never
+// overwritten — copy across anything you need by hand.
+const outFile = path.join(outDir, 'yokai.json');
 
 console.log('🚀 Starting Yokai parser with dynamic cost generation...');
 
@@ -77,7 +81,7 @@ try {
   console.log(`🔨 Successfully parsed ${yokaiList.length} Yokai and Shikigami.`);
 
   // 3. Format the TypeScript output with the Vite strict-mode 'import type'
-  const outputTs = `import type { YokaiContract } from './types';\n\nexport const allYokai: YokaiContract[] = ${JSON.stringify(yokaiList, null, 2)};\n`;
+  const outputJson = JSON.stringify(yokaiList, null, 2) + '\n';
 
   // 4. Ensure output directory exists and write the file
   if (!fs.existsSync(outDir)) {
@@ -85,9 +89,10 @@ try {
       fs.mkdirSync(outDir, { recursive: true });
   }
 
-  fs.writeFileSync(outFile, outputTs);
+  fs.writeFileSync(outFile, outputJson);
   console.log(`🏁 SUCCESS: Yokai parsed and written to ${outFile}`);
 
 } catch (error) {
   console.error('🔥 FATAL ERROR:', error);
+  process.exitCode = 1;
 }
