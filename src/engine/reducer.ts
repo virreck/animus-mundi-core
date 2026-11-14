@@ -23,6 +23,7 @@ export type GameAction =
   | { type: 'CONSUME_YOKAI_CHARGE'; payload: { yokaiId: string; maxCharges: number } }
   | { type: 'MODIFY_FACTION'; payload: { factionId: string; amount: number } }
   | { type: 'MODIFY_HUMANITY'; payload: number }
+  | { type: 'MODIFY_INK'; payload: number }
   | { type: 'REST_AT_SAFEHOUSE'; payload: { heal: number; time: number } }
   | { type: 'ADD_LEAD'; payload: { id: string; text: string } }
   | { type: 'SET_FLAG'; payload: { flagId: string; value: boolean } }
@@ -192,6 +193,9 @@ function baseReducer(state: GameState, action: GameAction): GameState {
 
       return newState;
     }
+
+    case 'MODIFY_INK':
+      return { ...state, ink: Math.max(0, (state.ink || 0) + action.payload) };
 
     case 'REST_AT_SAFEHOUSE': {
       // ADVANCE_TIME applies Baku's double-time + Obol toll
