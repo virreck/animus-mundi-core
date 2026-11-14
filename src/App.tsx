@@ -25,7 +25,6 @@ interface TerminalEntry {
 type ViewportMode = 'FIELD_OPS' | 'CODEX' | 'KAGE_NO_SHO' | 'SAFEHOUSE_ALTAR' | 'HORSEMEN' | 'DOSSIER' | 'MANUAL';
 type FontScale = 'SM' | 'MD' | 'LG';
 type ControlMode = 'PALETTE' | 'CLI';
-type PaletteCategory = 'INFILTRATE' | 'COUNTERS' | 'FORENSICS' | 'INQUISITION';
 
 const FONT_ZOOM_MAP: Record<FontScale, number> = { SM: 1, MD: 1.1, LG: 1.2 };
 
@@ -362,7 +361,7 @@ function generateSealMatrix() {
       sequence.push(current);
     }
   }
-  const timeLimit = Math.ceil((sequence.length - 1) * 1.25);
+  const timeLimit = Math.ceil((sequence.length - 1) * 1.45) + 4;
   return { id: `${isBound ? "BOUND_" : "LESSER_"}${config.name}_PROTOCOL`, timeLimit, nodes, sequence };
 }
 
@@ -384,7 +383,7 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
     <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
       <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <div style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>SYNDICATE FIELD CODEX // THAUMATURGIC OS v4.11</div>
+          <div style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>SYNDICATE FIELD CODEX // THAUMATURGIC OS v4.12</div>
           <h2 style={{ margin: '2px 0 0 0', color: theme.textBright, letterSpacing: '2px', fontSize: '1.15rem' }}>OPERATIVE FIELD MANUAL &amp; PROTOCOL INDEX</h2>
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -402,14 +401,14 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
             <p>
               Every Goetian demon has a <strong>unique 3-phenomenon fingerprint</strong>. Decode all 3 clues in a sector to isolate the exact demon in <strong>[F2] CODEX</strong>:
             </p>
-            <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'grid', gridTemplateColumns: '140px 160px 1fr', rowGap: '10px', columnGap: '12px', marginTop: '12px' }}>
+            <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'grid', gridTemplateColumns: '150px 160px 1fr', rowGap: '10px', columnGap: '12px', marginTop: '12px' }}>
               <strong style={{ color: theme.accentAmber }}>scan [1-6]</strong>
               <span style={{ color: '#a8ccaf' }}>[RECON]</span>
-              <span>Scans an adjacent room from outside, revealing if a Malleus Patrol or Threshold Trap is waiting inside.</span>
+              <span>Scans a reachable room from outside, revealing if a Malleus Patrol or Threshold Trap is waiting inside.</span>
 
               <strong style={{ color: theme.accentAmber }}>enter [1-6]</strong>
               <span style={{ color: '#a8ccaf' }}>[MOVEMENT]</span>
-              <span>Steps inside an adjacent room. Always disarm patrols/traps after scanning before you step inside!</span>
+              <span>Steps inside a reachable room. Walking into an active trap or patrol without disarming it first triggers heavy Humanity &amp; Heat penalties!</span>
 
               <strong style={{ color: theme.textBright }}>vox</strong>
               <span style={{ color: theme.textBright }}>[AUDIO CLUES]</span>
@@ -423,9 +422,9 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
               <span style={{ color: theme.textBright }}>[ASTRAL CLUES]</span>
               <span>Reads thermal, optical, &amp; spatial shifts: light refraction, dead scripts, star drift, mind fog, -18°C stasis, and 1,200°C scorching.</span>
 
-              <strong style={{ color: theme.accentCyan }}>loot</strong>
-              <span style={{ color: '#a8ccaf' }}>[SHRINE / CACHE]</span>
-              <span>Collects salvage and awakens Kami Shrines in rooms without a clue signal.</span>
+              <strong style={{ color: theme.accentCyan }}>loot / attune</strong>
+              <span style={{ color: '#a8ccaf' }}>[SHRINE / ANCHOR]</span>
+              <span><code>loot</code> awakens Kami Shrines &amp; collects salvage. Running <code>attune</code> inside Room 6 ([ANCHOR]) grants +4s on your Sealing Rite timer!</span>
             </div>
           </div>
         )}
@@ -434,26 +433,26 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
           <div style={{ maxWidth: '940px' }}>
             <h3 style={{ color: theme.accentCyan, marginTop: 0 }}>PRE-ENTRY COUNTERMEASURES (DISARM BEFORE ENTERING!)</h3>
             <p>
-              When you run <code>scan [1-6]</code> on an adjacent room, the terminal reports any Malleus Patrol or Trap waiting inside. <strong>You can neutralize them from outside before entering the room</strong>:
+              When you run <code>scan [1-6]</code> on a reachable room, the terminal reports any Malleus Patrol or Trap waiting inside. <strong>You can pass a room number (e.g., <code>degauss 2</code>) to disarm it from outside before entering</strong>:
             </p>
-            <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'grid', gridTemplateColumns: '140px 210px 1fr', rowGap: '10px', columnGap: '12px', marginTop: '12px' }}>
-              <strong style={{ color: theme.accentRed }}>decoy</strong>
+            <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'grid', gridTemplateColumns: '160px 210px 1fr', rowGap: '10px', columnGap: '12px', marginTop: '12px' }}>
+              <strong style={{ color: theme.accentRed }}>decoy [1-6]</strong>
               <span style={{ color: theme.accentRed }}>Malleus Hound Patrol</span>
-              <span>Lures the Inquisition patrol out of the scanned room so you can enter without taking ambush damage.</span>
+              <span>Lures the Inquisition patrol out of the room so you can enter without taking ambush damage.</span>
 
-              <strong style={{ color: theme.accentCyan }}>degauss</strong>
+              <strong style={{ color: theme.accentCyan }}>degauss [1-6]</strong>
               <span style={{ color: theme.accentAmber }}>Aethyric Static Field</span>
               <span>Symptom: Electromagnetic static screech scrambling forensic instruments.</span>
 
-              <strong style={{ color: theme.accentCyan }}>bypass</strong>
+              <strong style={{ color: theme.accentCyan }}>bypass [1-6]</strong>
               <span style={{ color: theme.accentAmber }}>Malleus Laser Tripwire</span>
               <span>Symptom: Encrypted Inquisition laser tripwires spanning the doorway threshold (-10% Heat when bypassed).</span>
 
-              <strong style={{ color: theme.accentCyan }}>purge</strong>
+              <strong style={{ color: theme.accentCyan }}>purge [1-6]</strong>
               <span style={{ color: theme.accentAmber }}>Toxic Brimstone Miasma</span>
               <span>Symptom: Choking, spore-laden sulfur vapor blanketing the chamber floor.</span>
 
-              <strong style={{ color: theme.accentCyan }}>dispel</strong>
+              <strong style={{ color: theme.accentCyan }}>dispel [1-6]</strong>
               <span style={{ color: theme.accentAmber }}>Goetic Blood-Hex Ward</span>
               <span>Symptom: Pulsing crimson sigils sealing the room architecture against intrusion.</span>
             </div>
@@ -476,7 +475,7 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
           <div style={{ maxWidth: '940px' }}>
             <h3 style={{ color: theme.accentRed, marginTop: 0 }}>THE ORDO MALLEUS &amp; 100% HEAT LOCKDOWNS</h3>
             <p>
-              The <strong>Ordo Malleus</strong> monitors ley-line spikes using mobile direction-finding vans and witch-hound packs. Every room entry raises <strong>Inquisition Heat (0%–100%)</strong>:
+              The <strong>Ordo Malleus</strong> monitors ley-line spikes using mobile direction-finding vans and witch-hound packs. Every room entry raises <strong>Inquisition Heat (0%–100%)</strong> based on the room's Ward Level (<strong>+8%</strong>, <strong>+16%</strong>, or <strong>+24%</strong> on first entry; <strong>+2%</strong> when backtracking):
             </p>
             <ul>
               <li><strong>75%–99% Heat:</strong> Malleus strike teams sweep the perimeter. The CRT display flickers crimson.</li>
@@ -584,7 +583,7 @@ const StartScreen = ({
 
         <div style={{ padding: '16px 24px 22px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-            <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.11</span>
+            <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.12</span>
             <button
               onClick={onOpenManual}
               style={{
@@ -676,26 +675,39 @@ interface SealingTerminalProps {
   suspect: typeof allGoetia[0];
   actualAnchorId: string;
   sealCost: Record<string, number>;
+  attunedBonusSeconds: number;
   onClose: () => void;
-  onSuccessSeal: (goetiaId: string) => void;
+  onSuccessSeal: (goetiaId: string) => string[];
   dispatch: React.Dispatch<GameAction>;
   sealGoetia: (id: string) => void;
   addToast: (msg: string, type: 'INTEL'|'ITEM'|'ALERT'|'SEAL') => void;
   tetheredYokai: string[];
 }
 
-const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccessSeal, dispatch, sealGoetia, addToast, tetheredYokai }: SealingTerminalProps) => {
+const SealingTerminal = ({
+  suspect,
+  actualAnchorId,
+  sealCost,
+  attunedBonusSeconds,
+  onClose,
+  onSuccessSeal,
+  dispatch,
+  sealGoetia,
+  addToast,
+  tetheredYokai
+}: SealingTerminalProps) => {
   const [matrix] = useState(() => generateSealMatrix());
   const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE' | 'MISIDENTIFIED'>('AUTH');
   const [nameInput, setNameInput] = useState('');
   const hasTimeBuff = tetheredYokai.includes('yokai_kamaitachi');
-  const [timeLeft, setTimeLeft] = useState(matrix.timeLimit + (hasTimeBuff ? 5 : 0));
+  const [timeLeft, setTimeLeft] = useState(matrix.timeLimit + (hasTimeBuff ? 5 : 0) + attunedBonusSeconds);
   const [path, setPath] = useState<number[]>([]);
   const [currentPointer, setCurrentPointer] = useState<{x: number, y: number} | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [typedName, setTypedName] = useState('');
   const [showSealed, setShowSealed] = useState(false);
   const [isCleanSeal, setIsCleanSeal] = useState(true);
+  const [cascadedNames, setCascadedNames] = useState<string[]>([]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval>;
@@ -740,17 +752,27 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
     return pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
   };
 
+  // Supports BOTH continuous dragging AND clicking node-to-node!
+  const checkNodeHit = (coords: { x: number; y: number }) => {
+    setPath(prevPath => {
+      const nextId = matrix.sequence[prevPath.length];
+      if (nextId === undefined) return prevPath;
+      const targetNode = matrix.nodes.find(n => n.id === nextId)!;
+      if (Math.hypot(coords.x - targetNode.x, coords.y - targetNode.y) < 17) {
+        ThaumaturgicAudio.keyClick();
+        return [...prevPath, targetNode.id];
+      }
+      return prevPath;
+    });
+  };
+
   const startTracing = (e: React.PointerEvent) => {
     if (phase !== 'WARDING') return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const coords = getSVGCoords(e);
     if (!coords) return;
     setCurrentPointer({ x: coords.x, y: coords.y });
-    setPath(() => {
-      const firstId = matrix.sequence[0];
-      const firstNode = matrix.nodes.find(n => n.id === firstId)!;
-      return Math.hypot(coords.x - firstNode.x, coords.y - firstNode.y) < 20 ? [firstId] : [];
-    });
+    checkNodeHit(coords);
   };
 
   const moveTracing = (e: React.PointerEvent) => {
@@ -758,23 +780,13 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
     const coords = getSVGCoords(e);
     if (coords) {
       setCurrentPointer({ x: coords.x, y: coords.y });
-      setPath(prevPath => {
-        const nextId = matrix.sequence[prevPath.length];
-        if (nextId === undefined) return prevPath;
-        const targetNode = matrix.nodes.find(n => n.id === nextId)!;
-        if (Math.hypot(coords.x - targetNode.x, coords.y - targetNode.y) < 15) {
-          ThaumaturgicAudio.keyClick();
-          return [...prevPath, targetNode.id];
-        }
-        return prevPath;
-      });
+      checkNodeHit(coords);
     }
   };
 
   const stopTracing = (e: React.PointerEvent) => {
-    e.currentTarget.releasePointerCapture(e.pointerId);
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     setCurrentPointer(null);
-    setPath(prevPath => (prevPath.length > 0 && prevPath.length < matrix.sequence.length) ? [] : prevPath);
   };
 
   const handleAuthSubmit = (e: React.FormEvent) => {
@@ -805,7 +817,8 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
     setPhase('COMPLETE');
     setCurrentPointer(null);
     sealGoetia(suspect.id);
-    onSuccessSeal(suspect.id);
+    const bonusNames = onSuccessSeal(suspect.id);
+    setCascadedNames(bonusNames);
     if (isClean) {
       addToast(`SEALING SUCCESSFUL. Target ${suspect.name} bound to the brass vessel.`, 'SEAL');
     } else {
@@ -817,7 +830,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '12px' }}>
-      <div style={{ width: '100%', maxWidth: '500px', padding: '26px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, boxShadow: `0 0 30px rgba(98, 240, 128, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal, animation: showSealed ? 'heavyImpactShake 0.34s ease-out both' : 'none' }}>
+      <div style={{ width: '100%', maxWidth: '520px', padding: '26px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, boxShadow: `0 0 30px rgba(98, 240, 128, 0.2)`, fontFamily: theme.fontMono, color: theme.textTerminal, animation: showSealed ? 'heavyImpactShake 0.34s ease-out both' : 'none' }}>
         {phase !== 'COMPLETE' && (
           <h3 style={{ margin: '0 0 15px 0', borderBottom: `1px dashed ${theme.borderTerminal}`, paddingBottom: '8px', color: theme.textBright }}>
             &gt; ROOT_ACCESS // VESSEL_SEALING_PROTOCOL
@@ -829,8 +842,12 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
               HYPOTHESIS LOCKED: <strong style={{ color: theme.textBright }}>{suspect.name.toUpperCase()}</strong> ({suspect.rank} of {suspect.allegiance}).<br/>
               <span style={{ color: theme.accentAmber }}>WARNING: If this entity is NOT the true Anchor of the current Sector, your catalysts will burn and spike Global Entropy (+15%).</span>
             </p>
+            <div style={{ padding: '10px', marginBottom: '12px', backgroundColor: '#030604', border: `1px solid ${theme.textBright}`, fontSize: '0.76rem', color: '#ffffff', lineHeight: '1.5' }}>
+              <strong style={{ color: theme.textBright }}>HOW TO COMPLETE THE SEALING RITE:</strong><br/>
+              Once you commit, a timer starts. <strong>Click and drag continuously</strong> (or click node-to-node) starting from the <strong>pulsing green ring</strong>, following the ring as it jumps along the geometry until all lines are lit!
+            </div>
             <input autoFocus type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder={`TYPE "${suspect.name.toUpperCase()}" TO COMMIT`} style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }} />
-            <button type="submit" style={{ marginTop: '12px', padding: '10px', width: '100%', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>&gt; BURN CATALYSTS &amp; ENGAGE SEAL</button>
+            <button type="submit" style={{ marginTop: '12px', padding: '10px', width: '100%', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>&gt; BURN CATALYSTS &amp; START SEALING RITE</button>
             <button type="button" onClick={onClose} style={{ marginTop: '8px', padding: '10px', width: '100%', backgroundColor: 'transparent', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer' }}>&gt; ABORT</button>
           </form>
         )}
@@ -848,25 +865,28 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
         )}
         {phase === 'WARDING' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.85rem' }}>
-              <span style={{ color: theme.accentRed, fontWeight: 'bold', animation: 'blink 1s infinite' }}>! CONNECTION VOLATILE</span>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.85rem' }}>
+              <span style={{ color: theme.textBright, fontWeight: 'bold' }}>STEP {path.length}/{matrix.sequence.length}</span>
               <span style={{ color: timeLeft <= 5 ? theme.accentRed : theme.textBright, fontWeight: 'bold' }}>00:{timeLeft.toString().padStart(2, '0')}</span>
+            </div>
+            <div style={{ width: '100%', textAlign: 'center', padding: '6px', marginBottom: '10px', backgroundColor: '#030504', border: `1px dashed ${theme.textBright}`, color: '#ffffff', fontSize: '0.75rem' }}>
+              Trace or click the <strong style={{ color: theme.textBright }}>PULSING GREEN TARGET NODE</strong> to weave the containment sigil!
             </div>
             <div style={{ position: 'relative', width: '280px', height: '280px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
               <img src={`/seals/${suspect.id}.png`} alt="Target Seal" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '170px', height: '170px', opacity: 0.3, pointerEvents: 'none', filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' }} />
               <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
-                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.6" />
-                <polyline points={path.map(nodeId => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+                <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.7" />
+                <polyline points={path.map(nodeId => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="2.0" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
                 {currentPointer && path.length > 0 && path.length < matrix.sequence.length && (
-                  <line x1={matrix.nodes.find(n => n.id === path[path.length - 1])!.x} y1={matrix.nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={theme.textTerminal} strokeWidth="1.2" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
+                  <line x1={matrix.nodes.find(n => n.id === path[path.length - 1])!.x} y1={matrix.nodes.find(n => n.id === path[path.length - 1])!.y} x2={currentPointer.x} y2={currentPointer.y} stroke={theme.textBright} strokeWidth="1.3" strokeDasharray="2 2" style={{ pointerEvents: 'none' }} />
                 )}
                 {matrix.nodes.map(node => {
                   const isCompleted = path.includes(node.id);
-                  const isNext = node.id === matrix.sequence[path.length] || (path.length === 0 && node.id === matrix.sequence[0]);
+                  const isNext = node.id === matrix.sequence[path.length];
                   return (
                     <g key={node.id} style={{ pointerEvents: 'none' }}>
-                      <circle cx={node.x} cy={node.y} r={isNext ? "3.5" : "2"} fill={isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? theme.textBright : theme.textTerminal} strokeWidth="0.6" />
-                      {isNext && <circle cx={node.x} cy={node.y} r="5.5" fill="none" stroke={theme.textBright} strokeWidth="0.6" style={{ animation: 'blink 1s infinite' }} />}
+                      <circle cx={node.x} cy={node.y} r={isNext ? "4.2" : "2.4"} fill={isNext ? theme.textBright : isCompleted ? theme.textBright : theme.bgDark} stroke={isNext ? '#ffffff' : theme.textTerminal} strokeWidth="0.8" />
+                      {isNext && <circle cx={node.x} cy={node.y} r="7.5" fill="none" stroke={theme.textBright} strokeWidth="1.1" style={{ animation: 'blink 0.8s infinite' }} />}
                     </g>
                   );
                 })}
@@ -876,7 +896,7 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
         )}
         {phase === 'COMPLETE' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-            <img src={`/seals/${suspect.id}.png`} alt="Goetian Seal" style={{ width: '180px', height: '180px', marginBottom: '18px', filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' }} />
+            <img src={`/seals/${suspect.id}.png`} alt="Goetian Seal" style={{ width: '165px', height: '165px', marginBottom: '14px', filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' }} />
             <h2 style={{ color: theme.textBright, letterSpacing: '6px', minHeight: '35px', margin: '0' }}>{typedName}</h2>
             {showSealed && (
               <>
@@ -886,8 +906,14 @@ const SealingTerminal = ({ suspect, actualAnchorId, sealCost, onClose, onSuccess
                 <p style={{ fontSize: '0.78rem', color: '#a8ccaf', marginTop: '12px' }}>
                   +5% Banishment Probability toward <strong>{suspect.allegiance}</strong> | Sector Permanently Secured!
                 </p>
-                {!isCleanSeal && <p style={{ color: theme.textMuted, fontSize: '0.8rem', marginTop: '6px' }}>_CONTAINMENT FAILURE: GLOBAL ENTROPY SPIKED (+10%).</p>}
-                <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.textBright}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}>
+                {cascadedNames.length > 0 && (
+                  <div style={{ marginTop: '8px', padding: '10px', backgroundColor: 'rgba(255, 184, 0, 0.12)', border: `1px solid ${theme.accentAmber}`, color: theme.accentAmber, fontSize: '0.75rem', lineHeight: '1.45' }}>
+                    <strong>⚡ FEUDAL RESONANCE CASCADE:</strong><br/>
+                    Because <strong>{suspect.name}</strong> is a high-ranking <strong>{suspect.rank}</strong> of {suspect.allegiance}, binding them automatically collapsed and sealed their vassal spirit(s) in the Codex: <strong>{cascadedNames.join(' & ')}</strong>!
+                  </div>
+                )}
+                {!isCleanSeal && <p style={{ color: theme.accentRed, fontSize: '0.78rem', marginTop: '8px' }}>_TIMER EXPIRED: Emergency containment succeeded, but Global Entropy rose by +10%.</p>}
+                <button onClick={onClose} style={{ marginTop: '18px', padding: '10px 20px', width: '100%', backgroundColor: theme.bgDark, color: theme.textBright, border: `1px solid ${theme.textBright}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}>
                   &gt; ACKNOWLEDGE_CONTAINMENT
                 </button>
               </>
@@ -968,17 +994,26 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
     return pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
   };
 
+  const checkNodeHit = (coords: { x: number; y: number }) => {
+    setPath(prevPath => {
+      const nextId = matrices[currentMatrixIdx].sequence[prevPath.length];
+      if (nextId === undefined) return prevPath;
+      const targetNode = matrices[currentMatrixIdx].nodes.find(n => n.id === nextId)!;
+      if (Math.hypot(coords.x - targetNode.x, coords.y - targetNode.y) < 17) {
+        ThaumaturgicAudio.keyClick();
+        return [...prevPath, targetNode.id];
+      }
+      return prevPath;
+    });
+  };
+
   const startTracing = (e: React.PointerEvent) => {
     if (phase !== 'RITUAL') return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const coords = getSVGCoords(e);
     if (!coords) return;
     setCurrentPointer({ x: coords.x, y: coords.y });
-    setPath(() => {
-      const firstId = matrices[currentMatrixIdx].sequence[0];
-      const firstNode = matrices[currentMatrixIdx].nodes.find(n => n.id === firstId)!;
-      return Math.hypot(coords.x - firstNode.x, coords.y - firstNode.y) < 20 ? [firstId] : [];
-    });
+    checkNodeHit(coords);
   };
 
   const moveTracing = (e: React.PointerEvent) => {
@@ -986,23 +1021,13 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
     const coords = getSVGCoords(e);
     if (coords) {
       setCurrentPointer({ x: coords.x, y: coords.y });
-      setPath(prevPath => {
-        const nextId = matrices[currentMatrixIdx].sequence[prevPath.length];
-        if (nextId === undefined) return prevPath;
-        const targetNode = matrices[currentMatrixIdx].nodes.find(n => n.id === nextId)!;
-        if (Math.hypot(coords.x - targetNode.x, coords.y - targetNode.y) < 15) {
-          ThaumaturgicAudio.keyClick();
-          return [...prevPath, targetNode.id];
-        }
-        return prevPath;
-      });
+      checkNodeHit(coords);
     }
   };
 
   const stopTracing = (e: React.PointerEvent) => {
-    e.currentTarget.releasePointerCapture(e.pointerId);
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     setCurrentPointer(null);
-    setPath(prev => (prev.length > 0 && prev.length < matrices[currentMatrixIdx].sequence.length) ? [] : prev);
   };
 
   const overrideTheme = { bg: '#0f0202', border: '#ff3333', text: '#ff6666', bright: '#ffb3b3' };
@@ -1041,9 +1066,12 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
         )}
         {phase === 'RITUAL' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.95rem', fontWeight: 'bold' }}>
-              <span style={{ color: overrideTheme.bright }}>MATRIX: {currentMatrixIdx + 1}/3</span>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.95rem', fontWeight: 'bold' }}>
+              <span style={{ color: overrideTheme.bright }}>MATRIX: {currentMatrixIdx + 1}/3 (STEP {path.length}/{activeMatrix.sequence.length})</span>
               <span style={{ color: overrideTheme.bright }}>T-MINUS: {timeLeft}s</span>
+            </div>
+            <div style={{ width: '100%', textAlign: 'center', padding: '5px', marginBottom: '10px', backgroundColor: '#1a0404', border: `1px dashed ${overrideTheme.border}`, color: '#ffffff', fontSize: '0.74rem' }}>
+              Drag or click the <strong style={{ color: '#ffffff' }}>PULSING TARGET NODE</strong> to complete all 3 sigil matrices!
             </div>
             <div style={{ position: 'relative', width: '290px', height: '290px', border: `2px solid ${overrideTheme.border}`, backgroundColor: 'black', borderRadius: '50%' }}>
               <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
@@ -1054,11 +1082,11 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
                 )}
                 {activeMatrix.nodes.map(node => {
                   const isCompleted = path.includes(node.id);
-                  const isNext = node.id === activeMatrix.sequence[path.length] || (path.length === 0 && node.id === activeMatrix.sequence[0]);
+                  const isNext = node.id === activeMatrix.sequence[path.length];
                   return (
                     <g key={node.id} style={{ pointerEvents: 'none' }}>
-                      <circle cx={node.x} cy={node.y} r={isNext ? "4" : "2.4"} fill={isCompleted ? '#ffffff' : 'black'} stroke={isNext ? '#ffffff' : overrideTheme.border} strokeWidth="0.8" />
-                      {isNext && <circle cx={node.x} cy={node.y} r="6" fill="none" stroke="#ffffff" strokeWidth="0.7" style={{ animation: 'blink 1s infinite' }} />}
+                      <circle cx={node.x} cy={node.y} r={isNext ? "4.2" : "2.4"} fill={isNext ? '#ffffff' : isCompleted ? '#ffffff' : 'black'} stroke={isNext ? '#ffffff' : overrideTheme.border} strokeWidth="0.8" />
+                      {isNext && <circle cx={node.x} cy={node.y} r="7.5" fill="none" stroke="#ffffff" strokeWidth="1.1" style={{ animation: 'blink 0.8s infinite' }} />}
                     </g>
                   );
                 })}
@@ -1091,7 +1119,6 @@ export default function App() {
   const [mapViewMode, setMapViewMode] = useState<'SUB_GRID' | 'GEO_TRACKER'>('SUB_GRID');
   const [fontScale, setFontScale] = useState<FontScale>('MD');
   const [controlMode, setControlMode] = useState<ControlMode>('PALETTE');
-  const [paletteCat, setPaletteCat] = useState<PaletteCategory>('INFILTRATE');
   const [showManual, setShowManual] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [hudFlash, setHudFlash] = useState<'NONE' | 'DAMAGE' | 'DECODE'>('NONE');
@@ -1116,6 +1143,7 @@ export default function App() {
   });
 
   const [yokaiCharges, setYokaiCharges] = useState<Record<string, number>>({});
+  const [attunedSectors, setAttunedSectors] = useState<Record<string, boolean>>({});
   const [deducedSigns, setDeducedSigns] = useState<string[]>([]);
   const [codexHorsemanFilter, setCodexHorsemanFilter] = useState<'ALL' | 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH'>('ALL');
   const [selectedSuspectId, setSelectedSuspectId] = useState<string>('01_bael');
@@ -1144,7 +1172,6 @@ export default function App() {
     setTimeout(() => setHudFlash('NONE'), 420);
   };
 
-  // Full Save & State Purge (Guarantees New Operative Starts 100% Fresh)
   const handleFullReset = () => {
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith('thaumaturgic_os')) localStorage.removeItem(k);
@@ -1153,6 +1180,7 @@ export default function App() {
     setMicroEntropy(0);
     setDeducedSigns([]);
     setYokaiCharges({});
+    setAttunedSectors({});
     setTerminalLines([]);
     resetGame();
   };
@@ -1209,11 +1237,12 @@ export default function App() {
 
       appendLog(
         `<div style="border-left:2px solid #62f080;padding-left:10px;margin:4px 0;">` +
-        `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.11 — STREAMLINED FIELD PROTOCOL</div>` +
+        `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.12 — FIELD INFILTRATION PROTOCOL</div>` +
         `<div style="color:#a8ccaf;line-height:1.5;">` +
         `1. <strong>RECON BEFORE ENTERING:</strong> Run <code style="color:#ffb800;">scan 1</code> to check Room 1 for Traps or Malleus Patrols.<br/>` +
-        `2. <strong>DISARM FROM OUTSIDE:</strong> If a scanned room has a Patrol (<code style="color:#ff2a55;">decoy</code>) or Trap (<code style="color:#00f3ff;">degauss</code>, <code style="color:#00f3ff;">bypass</code>, <code style="color:#00f3ff;">purge</code>, <code style="color:#00f3ff;">dispel</code>), neutralize it before running <code style="color:#ffb800;">enter</code>!<br/>` +
-        `3. <strong>DECODE CLUES:</strong> Once inside, match <code style="color:#62f080;">vox</code> (Audio), <code style="color:#62f080;">assay</code> (Matter), or <code style="color:#62f080;">auspex</code> (Astral/Thermal) to the room's clue signal.` +
+        `2. <strong>DISARM FROM OUTSIDE:</strong> Disarm Patrols (<code style="color:#ff2a55;">decoy 1</code>) or Traps (<code style="color:#00f3ff;">degauss</code>, <code style="color:#00f3ff;">bypass</code>, <code style="color:#00f3ff;">purge</code>, <code style="color:#00f3ff;">dispel</code>) <em>before</em> running <code style="color:#ffb800;">enter</code> to avoid trap damage!<br/>` +
+        `3. <strong>DECODE 3 CLUES:</strong> Inside a room, match <code style="color:#62f080;">vox</code> (Audio), <code style="color:#62f080;">assay</code> (Matter), or <code style="color:#62f080;">auspex</code> (Astral/Thermal) to the room's clue symptom.<br/>` +
+        `4. <strong>SHIKIGAMI DAEMONS ([F3] KAGE):</strong> Bind a spirit in <strong>[F3] KAGE</strong> to cut Scan Humanity costs in half (-2% HUM) and unlock active Heat-venting powers!` +
         `</div></div>`,
         'info'
       );
@@ -1238,6 +1267,22 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Auto-select the top matching demon in [F2] CODEX whenever filters change!
+  const filteredCodexGoetia = allGoetia.filter(g => {
+    if (codexHorsemanFilter !== 'ALL' && g.allegiance !== codexHorsemanFilter) return false;
+    if (deducedSigns.length === 0) return true;
+    const uniqueSigns = getUniqueGoetiaSigns(g.id);
+    return deducedSigns.every(tag => uniqueSigns.includes(tag));
+  });
+
+  useEffect(() => {
+    if (filteredCodexGoetia.length > 0 && !filteredCodexGoetia.some(g => g.id === selectedSuspectId)) {
+      setSelectedSuspectId(filteredCodexGoetia[0].id);
+    } else if (deducedSigns.length > 0 && filteredCodexGoetia.length === 1 && selectedSuspectId !== filteredCodexGoetia[0].id) {
+      setSelectedSuspectId(filteredCodexGoetia[0].id);
+    }
+  }, [deducedSigns, codexHorsemanFilter, filteredCodexGoetia, selectedSuspectId]);
+
   const currentContract = contracts[state.currentNode];
   const currentSubNode = currentContract?.subNodes.find(n => n.id === currentContract.activeSubNodeId) || null;
   const selectedSubNode = currentContract?.subNodes.find(n => n.id === currentContract.selectedSubNodeId) || null;
@@ -1245,7 +1290,7 @@ export default function App() {
 
   const resolveTargetRoom = (arg?: string): SubGridNode | null => {
     if (!currentContract) return null;
-    if (!arg) return selectedSubNode;
+    if (!arg || !arg.trim()) return selectedSubNode || currentSubNode;
     const num = parseInt(arg.trim(), 10);
     if (!isNaN(num)) return currentContract.subNodes.find(n => n.index === num) || null;
     return currentContract.subNodes.find(n => n.label.toLowerCase().includes(arg.toLowerCase())) || null;
@@ -1254,6 +1299,12 @@ export default function App() {
   const isAdjacentOrEntry = (targetNode: SubGridNode): boolean => {
     if (!currentSubNode) return targetNode.index === 1;
     return currentSubNode.connections.includes(targetNode.id);
+  };
+
+  // Calculates the exact Heat cost of entering a room so the player is never surprised
+  const getRoomEntryHeatCost = (node: SubGridNode): number => {
+    const firstEntry = node.status === 'LOCKED' || node.status === 'SCANNED';
+    return firstEntry ? node.wardLevel * 8 : 2;
   };
 
   const handleUnbindYokai = (yokaiId: string, reason = 'Manually severed') => {
@@ -1288,7 +1339,8 @@ export default function App() {
     }
     if (!isAdjacentOrEntry(node)) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Cannot scan <strong>${node.label}</strong>—not adjacent to your current position.`, 'error');
+      const reachableList = currentContract.subNodes.filter(n => isAdjacentOrEntry(n)).map(n => `Room ${n.index}`).join(', ');
+      appendLog(`[-] Cannot scan <strong>${node.label}</strong>—not connected to your current position (${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}). Reachable rooms: <strong>${reachableList}</strong>.`, 'error');
       return;
     }
 
@@ -1308,26 +1360,33 @@ export default function App() {
     );
     setContracts(prev => ({ ...prev, [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: node.id, subNodes: updatedNodes } }));
 
+    const entryHeat = getRoomEntryHeatCost(node);
     const sigDesc =
       node.nodeType === 'ANOMALY' ? '<span style="color:#62f080;">[CLUE SIGNAL DETECTED]</span>' :
       node.nodeType === 'SHRINE' ? '<span style="color:#00f3ff;">[DORMANT KAMI SHRINE]</span>' :
       node.nodeType === 'PATROL' ? '<span style="color:#ff2a55;">[MALLEUS HOUND PATROL INSIDE!]</span>' :
       '<span style="color:#ffb800;">[GOETIAN CONDUIT ANCHOR]</span>';
 
-    let warningTxt = '';
+    let warningTxt = `<br/><span style="color:#a8ccaf;">• Entry Ward Cost: <strong>+${entryHeat}% Heat</strong> when you run <code>enter ${node.index}</code>.</span>`;
     if (node.patrolActive) {
-      warningTxt = `<br/><span style="color:#ff2a55;">⚠️ THRESHOLD ALERT: Malleus Hound Patrol inside! Run <code>decoy</code> BEFORE entering to lure them away safely.</span>`;
+      warningTxt += `<br/><span style="color:#ff2a55;">⚠️ THRESHOLD ALERT: Malleus Hound Patrol inside! Run <code>decoy ${node.index}</code> BEFORE entering to lure them away safely.</span>`;
     } else if (node.hazard !== 'NONE') {
-      warningTxt = `<br/><span style="color:#00f3ff;">⚠️ THRESHOLD TRAP: "${HAZARD_MANIFEST[node.hazard].symptom}" — Disarm BEFORE entering (<code>degauss</code> / <code>bypass</code> / <code>purge</code> / <code>dispel</code>).</span>`;
+      warningTxt += `<br/><span style="color:#00f3ff;">⚠️ THRESHOLD TRAP: "${HAZARD_MANIFEST[node.hazard].symptom}" — Disarm BEFORE entering (<code>degauss ${node.index}</code> / <code>bypass ${node.index}</code> / <code>purge ${node.index}</code> / <code>dispel ${node.index}</code>).</span>`;
+    } else {
+      warningTxt += `<br/><span style="color:#62f080;">✓ Threshold clear of traps. Safe to run <code>enter ${node.index}</code>.</span>`;
     }
 
     appendLog(`[📡 SCAN] <strong>${node.label}</strong> (-${humCost}% HUM): ${sigDesc}${warningTxt}`, 'info');
   };
 
-  const getCounterTargetRoom = (): SubGridNode | null => {
+  // Resolves an explicit room number if typed (e.g. `degauss 2`), or falls back to selected/current room
+  const resolveCounterTarget = (arg?: string): SubGridNode | null => {
     if (!currentContract) return null;
-    if (selectedSubNode && selectedSubNode.status === 'SCANNED' && isAdjacentOrEntry(selectedSubNode)) {
-      if (selectedSubNode.patrolActive || selectedSubNode.hazard !== 'NONE') return selectedSubNode;
+    if (arg && arg.trim()) {
+      return resolveTargetRoom(arg);
+    }
+    if (selectedSubNode && selectedSubNode.status !== 'LOCKED' && (selectedSubNode.patrolActive || selectedSubNode.hazard !== 'NONE')) {
+      return selectedSubNode;
     }
     if (currentSubNode && (currentSubNode.patrolActive || currentSubNode.hazard !== 'NONE')) {
       return currentSubNode;
@@ -1335,11 +1394,13 @@ export default function App() {
     return selectedSubNode || currentSubNode;
   };
 
-  const handleDecoyPatrol = () => {
+  const handleDecoyPatrol = (arg?: string) => {
     if (!currentContract) return;
-    const target = getCounterTargetRoom();
-    if (!target || !target.patrolActive) {
-      appendLog(`[i] No active Malleus Patrol detected on your scanned target or current room.`, 'system');
+    const target = resolveCounterTarget(arg);
+    if (!target) return;
+
+    if (!target.patrolActive) {
+      appendLog(`[i] No active Malleus Patrol in <strong>${target.label}</strong>. (Specify a room number like <code>decoy 4</code> or click a room on the map.)`, 'system');
       return;
     }
     ThaumaturgicAudio.scryPing();
@@ -1349,23 +1410,23 @@ export default function App() {
     );
     setContracts(prev => ({
       ...prev,
-      [currentContract.sectorId]: { ...currentContract, subNodes: updatedNodes }
+      [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: target.id, subNodes: updatedNodes }
     }));
-    appendLog(`[✓ DECOY DEPLOYED] Phantom signal lured the Malleus Hound Patrol out of <strong>${target.label}</strong>! Safe to <code>enter ${target.index}</code>.`, 'success');
-    addToast(`Malleus Patrol Lured Away!`, 'SEAL');
+    appendLog(`[✓ DECOY DEPLOYED on <strong>${target.label}</strong>] Phantom signal lured the Malleus Hound Patrol away! Safe to <code>enter ${target.index}</code> (+${getRoomEntryHeatCost(target)}% Heat).`, 'success');
+    addToast(`Patrol Cleared in ${target.label}!`, 'SEAL');
   };
 
-  const handleAttemptTrapCounter = (cmdUsed: string) => {
+  const handleAttemptTrapCounter = (cmdUsed: string, arg?: string) => {
     if (!currentContract) return;
-    const target = getCounterTargetRoom();
+    const target = resolveCounterTarget(arg);
     if (!target) return;
 
     if (target.status === 'LOCKED') {
-      appendLog(`[-] Scan <strong>${target.label}</strong> first (<code>scan ${target.index}</code>) to inspect its threshold trap.`, 'warn');
+      appendLog(`[-] Scan <strong>${target.label}</strong> first (<code>scan ${target.index}</code>) before attempting to disarm its threshold.`, 'warn');
       return;
     }
     if (target.hazard === 'NONE') {
-      appendLog(`[i] No threshold trap active on <strong>${target.label}</strong>.`, 'system');
+      appendLog(`[i] No active trap in <strong>${target.label}</strong>. (Tip: Type the room number, e.g. <code>${cmdUsed} 2</code>, or click the room on the map first.)`, 'system');
       return;
     }
 
@@ -1376,7 +1437,7 @@ export default function App() {
       const shockHum = state.tetheredYokai.includes('yokai_baku') ? -3 : -6;
       dispatch({ type: 'MODIFY_HUMANITY', payload: shockHum });
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 8 } });
-      appendLog(`[!] WRONG COUNTER-MEASURE! Running <code>${cmdUsed}</code> against <strong>${hazardSpec.label}</strong> caused a feedback shock (${shockHum}% HUM, +8% Heat)!`, 'error');
+      appendLog(`[!] WRONG COUNTER-MEASURE on <strong>${target.label}</strong>! Running <code>${cmdUsed}</code> against <strong>${hazardSpec.label}</strong> caused a feedback shock (${shockHum}% HUM, +8% Heat)!`, 'error');
       addToast(`Wrong Counter-Command! ${shockHum}% HUM`, 'ALERT');
       return;
     }
@@ -1388,13 +1449,22 @@ export default function App() {
     );
     setContracts(prev => ({
       ...prev,
-      [currentContract.sectorId]: { ...currentContract, subNodes: updatedNodes }
+      [currentContract.sectorId]: { ...currentContract, selectedSubNodeId: target.id, subNodes: updatedNodes }
     }));
 
     if (target.hazard === 'WIRE') {
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -10 } });
     }
-    appendLog(`[✓ TRAP DISARMED on ${target.label}] ${hazardSpec.clearMsg}`, 'success');
+    appendLog(`[✓ TRAP DISARMED on <strong>${target.label}</strong>] ${hazardSpec.clearMsg}`, 'success');
+
+    // Immediately show the room's clue symptom if the player is inside or has scanned it!
+    if (target.rawSignalSymptom && target.status !== 'CLEARED') {
+      if (currentSubNode && currentSubNode.id === target.id) {
+        appendLog(`[🔎 CLUE SIGNAL REVEALED in <strong>${target.label}</strong>] <em>"${target.rawSignalSymptom}"</em> — Run matching forensic tool: <code>vox</code> (Audio), <code>assay</code> (Matter), or <code>auspex</code> (Astral/Thermal).`, 'info');
+      } else {
+        appendLog(`[✓ THRESHOLD SAFE] Ready to run <code>enter ${target.index}</code> (+${getRoomEntryHeatCost(target)}% Heat).`, 'info');
+      }
+    }
     addToast(`Disarmed: ${hazardSpec.label}`, 'SEAL');
   };
 
@@ -1418,7 +1488,8 @@ export default function App() {
     }
     if (!isAdjacentOrEntry(node)) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] <strong>${node.label}</strong> is not connected to your current room.`, 'error');
+      const reachableList = currentContract.subNodes.filter(n => isAdjacentOrEntry(n)).map(n => `Room ${n.index}`).join(', ');
+      appendLog(`[-] <strong>${node.label}</strong> is not connected to your current room (${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}). Connected rooms: <strong>${reachableList}</strong>.`, 'error');
       return;
     }
 
@@ -1426,9 +1497,9 @@ export default function App() {
     addMicroEntropy(0.01);
     visualFxRef.current.sonarRings.push({ x: node.x, y: node.y, r: 8, alpha: 1.0 });
 
-    const firstEntry = node.status === 'LOCKED' || node.status === 'SCANNED';
-    let heatGain = firstEntry ? node.wardLevel * 8 : 2;
+    let heatGain = getRoomEntryHeatCost(node);
     let patrolClearedOnImpact = false;
+    let trapClearedOnImpact = false;
 
     if (node.patrolActive) {
       heatGain += 20;
@@ -1437,16 +1508,35 @@ export default function App() {
       triggerHudFlash('DAMAGE');
       appendLog(`[!] WALKED INTO MALLEUS PATROL in <strong>${node.label}</strong>! Witch-hounds ambushed your tether (-12% HUM, +${heatGain}% Heat)! (Tip: Run <code>scan</code> then <code>decoy</code> before entering!)`, 'error');
       addToast(`Malleus Ambush! -12% Humanity`, 'ALERT');
+    } else if (node.hazard !== 'NONE') {
+      // Entering a room while its trap is still live triggers immediate trap damage & disarms it on impact!
+      const trapName = HAZARD_MANIFEST[node.hazard].label;
+      const trapHumPenalty = state.tetheredYokai.includes('yokai_baku') ? -4 : -8;
+      heatGain += 10;
+      trapClearedOnImpact = true;
+      dispatch({ type: 'MODIFY_HUMANITY', payload: trapHumPenalty });
+      triggerHudFlash('DAMAGE');
+      appendLog(`[💥 THRESHOLD TRAP TRIGGERED in <strong>${node.label}</strong>!] You walked through a live <strong>${trapName}</strong> without disarming it from outside (${trapHumPenalty}% HUM, +${heatGain}% Total Heat)!`, 'error');
+      addToast(`Triggered ${trapName}! (${trapHumPenalty}% HUM)`, 'ALERT');
     } else {
       appendLog(`[⚡ ENTER] Moved into <strong>${node.label}</strong> (+${heatGain}% Inquisition Heat).`, 'info');
     }
 
-    if (node.hazard !== 'NONE') {
-      appendLog(`[⚠️ TRAP STILL ACTIVE] <em>"${HAZARD_MANIFEST[node.hazard].symptom}"</em> — Disarm it (<code>degauss</code> / <code>bypass</code> / <code>purge</code> / <code>dispel</code>) before scanning for clues!`, 'warn');
-    } else if (node.rawSignalSymptom && node.status !== 'CLEARED') {
-      appendLog(`[🔎 CLUE SIGNAL DETECTED] <em>"${node.rawSignalSymptom}"</em> — Run matching forensic tool: <code>vox</code> (Audio), <code>assay</code> (Matter), or <code>auspex</code> (Astral/Thermal).`, 'info');
+    if (node.nodeType === 'ANCHOR') {
+      appendLog(
+        `<div style="border-left:2px solid #ffb800;padding-left:8px;margin:4px 0;color:#ffb800;">` +
+        `<strong>[⚡ GOETIAN CONDUIT ANCHOR REACHED]</strong> This chamber is the epicenter of the demon's tear in reality. Decode the room's clue signal, and type <code style="color:#62f080;">attune</code> to calibrate your Brass Vessel for a <strong>+4s timer bonus</strong> on this sector's Sealing Rite!` +
+        `</div>`,
+        'warn'
+      );
+    }
+
+    if (node.rawSignalSymptom && node.status !== 'CLEARED') {
+      appendLog(`[🔎 CLUE SIGNAL IN <strong>${node.label}</strong>] <em>"${node.rawSignalSymptom}"</em> — Run matching forensic tool: <code>vox</code> (Audio), <code>assay</code> (Matter), or <code>auspex</code> (Astral/Thermal).`, 'info');
     } else if (node.nodeType === 'SHRINE' && node.status !== 'CLEARED') {
-      appendLog(`[⛩️ KAMI SHRINE] Dormant spirit altar found. Run <code>loot</code> to awaken the Shikigami and collect salvage.`, 'info');
+      appendLog(`[⛩️ KAMI SHRINE] Dormant spirit altar found. Run <code>loot</code> to awaken the Shikigami daemon and collect salvage.`, 'info');
+    } else if (!node.rawSignalSymptom && node.status !== 'CLEARED') {
+      appendLog(`[📦 SALVAGE CACHE] Room clear of traps. Run <code>loot</code> to collect raw salvage.`, 'info');
     }
 
     const newHeat = Math.min(100, currentHeat + heatGain);
@@ -1458,12 +1548,14 @@ export default function App() {
       appendLog(`<div style="background:rgba(255,42,85,0.2);border:1px solid #ff2a55;padding:8px;color:#ff2a55;font-weight:bold;">[🚨 100% INQUISITION HEAT — SECTOR LOCKDOWN!] Type <code>spoof</code> or <code>bribe</code> to lift cordon.</div>`, 'error');
     }
 
+    const firstEntry = node.status === 'LOCKED' || node.status === 'SCANNED';
     const updatedNodes = currentContract.subNodes.map(n =>
       n.id === node.id
         ? {
             ...n,
             status: firstEntry ? ('ENTERED' as const) : n.status,
-            patrolActive: patrolClearedOnImpact ? false : n.patrolActive
+            patrolActive: patrolClearedOnImpact ? false : n.patrolActive,
+            hazard: trapClearedOnImpact ? ('NONE' as const) : n.hazard
           }
         : n
     );
@@ -1477,6 +1569,26 @@ export default function App() {
         subNodes: updatedNodes
       }
     }));
+  };
+
+  const handleAttuneAnchor = () => {
+    if (!currentContract || !currentSubNode) {
+      appendLog(`[-] Enter a room first.`, 'error');
+      return;
+    }
+    if (currentSubNode.nodeType !== 'ANCHOR') {
+      appendLog(`[-] You can only run <code>attune</code> inside Room 6 (the <strong>[ANCHOR]</strong> chamber).`, 'warn');
+      return;
+    }
+    if (attunedSectors[currentContract.sectorId]) {
+      appendLog(`[i] Brass Vessel is already attuned to ${currentContract.sectorLabel} (+4s Sealing Rite bonus active).`, 'system');
+      return;
+    }
+    ThaumaturgicAudio.sealSuccess();
+    triggerHudFlash('DECODE');
+    setAttunedSectors(prev => ({ ...prev, [currentContract.sectorId]: true }));
+    appendLog(`[✓ VESSEL ATTUNED AT ANCHOR] Synchronized your Brass Vessel with the conduit frequency! You gain <strong>+4 seconds</strong> on the Sealing Rite timer in this sector.`, 'success');
+    addToast(`Vessel Attuned! +4s Sealing Timer`, 'SEAL');
   };
 
   const handleRunForensicTool = (toolCmd: string, expectedChannel: ForensicChannel, toolLabel: string) => {
@@ -1532,13 +1644,13 @@ export default function App() {
       });
       appendLog(
         `<div style="background:rgba(98,240,128,0.09);border-left:3px solid #62f080;padding:8px 10px;margin:4px 0;">` +
-        `<div style="color:#62f080;font-weight:bold;">[✓ ${toolLabel} // CLUE DECODED AT ${currentSubNode.label}]</div>` +
+        `<div style="color:#62f080;font-weight:bold;">[✓ ${toolLabel} // CLUE ${updatedLogs.length}/3 DECODED AT ${currentSubNode.label}]</div>` +
         `<div style="color:#ffffff;margin-top:4px;">"${currentSubNode.forensicText}"</div>` +
         `<div style="color:#ffb800;font-size:0.75rem;margin-top:4px;">-&gt; Logged to <strong>[F2] CODEX</strong>!</div>` +
         `</div>`,
         'success'
       );
-      addToast(`Clue Decoded via ${toolLabel}!`, 'INTEL');
+      addToast(`Clue ${updatedLogs.length}/3 Decoded!`, 'INTEL');
     }
 
     if (currentSubNode.salvageDrop) {
@@ -1546,6 +1658,18 @@ export default function App() {
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
       appendLog(`[📦 SALVAGE] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
+    }
+
+    // Guided Milestone Banner when all 3 clues are found!
+    if (updatedLogs.length >= 3) {
+      appendLog(
+        `<div style="background:rgba(255,184,0,0.14);border:1px solid #ffb800;padding:10px;margin:6px 0;color:#ffb800;">` +
+        `<strong>🎯 [3/3 CLUES DECODED — CASE READY FOR DEDUCTION!]</strong><br/>` +
+        `Press <strong>[F2] CODEX</strong> (or type <code>codex</code>) to tick off your 3 phenomena and identify the demon, then craft its catalysts in <strong>[F4] SAFEHOUSE</strong>!` +
+        `</div>`,
+        'warn'
+      );
+      addToast(`3/3 Clues Found! Press [F2] CODEX`, 'SEAL');
     }
 
     const updatedNodes = currentContract.subNodes.map(n =>
@@ -1598,8 +1722,14 @@ export default function App() {
       const yokai = allYokai.find(y => y.id === currentSubNode.shrineYokaiId);
       if (yokai && yokai.unlockFlag) {
         dispatch({ type: 'SET_FLAG', payload: { flagId: yokai.unlockFlag, value: true } });
-        appendLog(`[⛩️ KAMI SHRINE AWAKENED] Synchronized spirit daemon <strong style="color:#00f3ff;">${yokai.nameEn}</strong>!`, 'success');
-        addToast(`Shikigami Unlocked: ${yokai.nameEn}`, 'SEAL');
+        appendLog(
+          `<div style="border-left:3px solid #00f3ff;padding-left:10px;margin:4px 0;color:#00f3ff;">` +
+          `<strong>[⛩️ KAMI SHRINE AWAKENED: ${yokai.nameEn.toUpperCase()}]</strong><br/>` +
+          `Open <strong>[F3] KAGE</strong> to bind up to 2 Shikigami daemons! Bound daemons cut your <code>scan</code> Humanity cost in half (-2% HUM) and grant active powers like venting -30% Heat or radar-sweeping all rooms.` +
+          `</div>`,
+          'success'
+        );
+        addToast(`Shikigami Unlocked: ${yokai.nameEn} (Check [F3] KAGE)`, 'SEAL');
       }
     }
 
@@ -1659,7 +1789,7 @@ export default function App() {
     } else if (yokaiId === 'yokai_kamaitachi') {
       if (!currentContract || !selectedSubNode) return;
       if (!isAdjacentOrEntry(selectedSubNode)) {
-        addToast('Select an adjacent room (or Room 1) first!', 'ALERT');
+        addToast('Select a reachable adjacent room first!', 'ALERT');
         return;
       }
       const updatedNodes = currentContract.subNodes.map(n =>
@@ -1715,8 +1845,8 @@ export default function App() {
     if (cmd === 'help' || cmd === '?') {
       appendLog(
         `<div style="background:rgba(31,61,38,0.25);border:1px solid #1f3d26;padding:10px;line-height:1.55;">` +
-        `<strong style="color:#62f080;">1. RECON &amp; ENTRY:</strong> <code style="color:#ffb800;">scan [1-6]</code> | <code style="color:#ffb800;">enter [1-6]</code> | <code style="color:#ffb800;">loot</code><br/>` +
-        `<strong style="color:#00f3ff;">2. PRE-ENTRY COUNTERS:</strong> <code style="color:#ff2a55;">decoy</code> (Malleus Patrol) | <code style="color:#00f3ff;">degauss</code> | <code style="color:#00f3ff;">bypass</code> | <code style="color:#00f3ff;">purge</code> | <code style="color:#00f3ff;">dispel</code><br/>` +
+        `<strong style="color:#62f080;">1. RECON &amp; ENTRY:</strong> <code style="color:#ffb800;">scan [1-6]</code> | <code style="color:#ffb800;">enter [1-6]</code> | <code style="color:#ffb800;">loot</code> | <code style="color:#ffb800;">attune</code> (at Anchor)<br/>` +
+        `<strong style="color:#00f3ff;">2. PRE-ENTRY COUNTERS:</strong> <code style="color:#ff2a55;">decoy [1-6]</code> | <code style="color:#00f3ff;">degauss [1-6]</code> | <code style="color:#00f3ff;">bypass [1-6]</code> | <code style="color:#00f3ff;">purge [1-6]</code> | <code style="color:#00f3ff;">dispel [1-6]</code><br/>` +
         `<strong style="color:#62f080;">3. FORENSIC SUITE:</strong> <code style="color:#62f080;">vox</code> (Audio) | <code style="color:#62f080;">assay</code> (Matter/Bio) | <code style="color:#62f080;">auspex</code> (Astral/Thermal)<br/>` +
         `<strong style="color:#ff2a55;">4. INQUISITION HEAT:</strong> <code style="color:#ff2a55;">spoof</code> (-15 Obols: -25% Heat) | <code style="color:#ff2a55;">bribe</code> (-25 Obols: -45% Heat)` +
         `</div>`,
@@ -1728,10 +1858,12 @@ export default function App() {
       handleEnterRoom(resolveTargetRoom(arg));
     } else if (cmd === 'loot' || cmd === 'extract') {
       handleLootRoom(false);
+    } else if (cmd === 'attune') {
+      handleAttuneAnchor();
     } else if (cmd === 'decoy') {
-      handleDecoyPatrol();
+      handleDecoyPatrol(arg);
     } else if (['degauss', 'bypass', 'purge', 'purify', 'dispel'].includes(cmd)) {
-      handleAttemptTrapCounter(cmd === 'purify' ? 'purge' : cmd);
+      handleAttemptTrapCounter(cmd === 'purify' ? 'purge' : cmd, arg);
     } else if (cmd === 'vox') {
       handleRunForensicTool('vox', 'AUDIO', 'VOX SPECTROGRAM');
     } else if (cmd === 'assay' || cmd === 'reagent') {
@@ -1781,7 +1913,7 @@ export default function App() {
       setTerminalLines([]);
     } else {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Unknown command "${cmd}". Type <code>help</code> or use <code>MODE: PALETTE</code>.`, 'error');
+      appendLog(`[-] Unknown command "${cmd}". Type <code>help</code> or use the buttons below.`, 'error');
     }
   };
 
@@ -1833,20 +1965,52 @@ export default function App() {
           if (mapViewMode === 'SUB_GRID' && currentContract) {
             const sectorSecured = isSectorSecured(currentContract.sectorId);
 
+            // If at Perimeter Tether, draw a glowing entry line into Room 1
+            if (!currentContract.activeSubNodeId) {
+              const r1 = currentContract.subNodes[0];
+              if (r1) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.setLineDash([5, 4]);
+                ctx.moveTo(0.03 * w, r1.y * h);
+                ctx.lineTo(r1.x * w, r1.y * h);
+                ctx.strokeStyle = 'rgba(98, 240, 128, 0.85)';
+                ctx.lineWidth = 2.4;
+                ctx.stroke();
+                ctx.fillStyle = '#62f080';
+                ctx.font = 'bold 10px "Courier New", monospace';
+                ctx.fillText('START ->', 0.06 * w, r1.y * h - 8);
+                ctx.restore();
+              }
+            }
+
+            // Draw Room Connections (Bright & Dashed for Currently Reachable Paths!)
             currentContract.subNodes.forEach(node => {
               node.connections.forEach(tid => {
                 const target = currentContract.subNodes.find(n => n.id === tid);
-                if (!target) return;
+                if (!target || node.index > target.index) return;
+                const isActivePath =
+                  currentContract.activeSubNodeId === node.id ||
+                  currentContract.activeSubNodeId === target.id;
+
+                ctx.save();
                 ctx.beginPath();
+                if (isActivePath && !sectorSecured) {
+                  ctx.setLineDash([6, 4]);
+                  ctx.strokeStyle = 'rgba(98, 240, 128, 0.85)';
+                  ctx.lineWidth = 2.6;
+                } else {
+                  ctx.strokeStyle = sectorSecured
+                    ? 'rgba(98, 240, 128, 0.55)'
+                    : node.status !== 'LOCKED' && target.status !== 'LOCKED'
+                    ? 'rgba(98, 240, 128, 0.35)'
+                    : 'rgba(74, 124, 89, 0.18)';
+                  ctx.lineWidth = 1.4;
+                }
                 ctx.moveTo(node.x * w, node.y * h);
                 ctx.lineTo(target.x * w, target.y * h);
-                ctx.strokeStyle = sectorSecured
-                  ? 'rgba(98, 240, 128, 0.55)'
-                  : node.status !== 'LOCKED' && target.status !== 'LOCKED'
-                  ? 'rgba(98, 240, 128, 0.4)'
-                  : 'rgba(74, 124, 89, 0.22)';
-                ctx.lineWidth = 1.6;
                 ctx.stroke();
+                ctx.restore();
               });
             });
 
@@ -1855,12 +2019,23 @@ export default function App() {
               const ny = node.y * h;
               const isCurrent = node.id === currentContract.activeSubNodeId;
               const isSelected = node.id === currentContract.selectedSubNodeId;
+              const isReachable = isAdjacentOrEntry(node) && !isCurrent;
+              const entryHeat = getRoomEntryHeatCost(node);
 
               let color = '#ff2a55';
               if (sectorSecured || node.status === 'CLEARED') color = '#62f080';
               else if (node.status === 'SCANNED') {
                 color = node.patrolActive ? '#ff2a55' : node.nodeType === 'SHRINE' ? '#00f3ff' : '#ffb800';
               } else if (node.status === 'ENTERED') color = '#ffb800';
+
+              // Outer Reachable Halo
+              if (isReachable && !sectorSecured) {
+                ctx.beginPath();
+                ctx.arc(nx, ny, 23, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(98, 240, 128, 0.45)';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+              }
 
               ctx.save();
               ctx.translate(nx, ny);
@@ -1874,7 +2049,7 @@ export default function App() {
               }
               ctx.closePath();
               ctx.strokeStyle = isSelected ? '#ffffff' : color;
-              ctx.lineWidth = isSelected ? 2.4 : 1.5;
+              ctx.lineWidth = isSelected ? 2.5 : 1.6;
               ctx.stroke();
               ctx.restore();
 
@@ -1891,21 +2066,30 @@ export default function App() {
               ctx.fillStyle = isSelected ? '#ffffff' : '#a8ccaf';
               ctx.fillText(node.label, nx, ny + 30);
 
-              let subBadge = sectorSecured ? '[SECURED]' : `[${node.status}]`;
-              if (!sectorSecured && node.status === 'SCANNED') {
-                subBadge = node.patrolActive ? '[! PATROL !]' : node.nodeType === 'SHRINE' ? '[SHRINE]' : node.nodeType === 'ANCHOR' ? '[ANCHOR]' : '[CLUE SIGNAL]';
+              let subBadge = sectorSecured ? '[SECURED]' : isCurrent ? '[YOU ARE HERE]' : `[${node.status} // +${entryHeat}% HEAT]`;
+              if (!sectorSecured && !isCurrent && node.status === 'SCANNED') {
+                const typeTag = node.patrolActive ? '! PATROL !' : node.nodeType === 'SHRINE' ? 'SHRINE' : node.nodeType === 'ANCHOR' ? 'ANCHOR' : 'CLUE';
+                subBadge = `[${typeTag} // +${entryHeat}% HEAT]`;
               }
               ctx.font = '10px "Courier New", monospace';
-              ctx.fillStyle = color;
+              ctx.fillStyle = isCurrent ? '#62f080' : color;
               ctx.fillText(subBadge, nx, ny + 42);
+
+              if (isReachable && !sectorSecured) {
+                ctx.fillStyle = '#62f080';
+                ctx.font = 'bold 9px "Courier New", monospace';
+                ctx.fillText('● REACHABLE', nx, ny + 53);
+              }
 
               if (node.status !== 'LOCKED' && !sectorSecured) {
                 if (node.patrolActive) {
                   ctx.fillStyle = '#ff2a55';
-                  ctx.fillText(`! PATROL: RUN DECOY !`, nx, ny - 22);
+                  ctx.font = 'bold 10px "Courier New", monospace';
+                  ctx.fillText(`! PATROL: DECOY ${node.index} !`, nx, ny - 23);
                 } else if (node.hazard !== 'NONE') {
                   ctx.fillStyle = '#00f3ff';
-                  ctx.fillText(`! TRAP: ${node.hazard} !`, nx, ny - 22);
+                  ctx.font = 'bold 10px "Courier New", monospace';
+                  ctx.fillText(`! TRAP: ${node.hazard} !`, nx, ny - 23);
                 }
               }
             });
@@ -2106,21 +2290,9 @@ export default function App() {
     ? currentContract.discoveredLogs.length
     : 0;
 
-  // Uses 100% Unique 3-Clue Demon Fingerprints!
-  const filteredCodexGoetia = allGoetia.filter(g => {
-    if (codexHorsemanFilter !== 'ALL' && g.allegiance !== codexHorsemanFilter) return false;
-    if (deducedSigns.length === 0) return true;
-    const uniqueSigns = getUniqueGoetiaSigns(g.id);
-    return deducedSigns.every(tag => uniqueSigns.includes(tag));
-  });
-
   const selectedSuspect = allGoetia.find(g => g.id === selectedSuspectId) || allGoetia[0];
   const securedSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorSecured(s.id)).length;
-
-  // Determine what to display in the Live Room Telemetry Bar (Selected Scanned Room vs Current Entered Room)
-  const telemetryNode = (selectedSubNode && selectedSubNode.status === 'SCANNED' && isAdjacentOrEntry(selectedSubNode))
-    ? selectedSubNode
-    : currentSubNode;
+  const selectedRoomHeatCost = selectedSubNode ? getRoomEntryHeatCost(selectedSubNode) : 8;
 
   return (
     <div
@@ -2167,7 +2339,7 @@ export default function App() {
           50% { opacity: 0.72; }
           52% { opacity: 0.95; }
         }
-        @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideDownTop { from { transform: translateY(-120%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes sigilGlitch {
           0%, 100% { transform: translate(0, 0) scale(1); filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) blur(2.5px); }
           50% { transform: translate(2px, -2px) scale(1.03); filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(70%) blur(3.5px); }
@@ -2189,7 +2361,7 @@ export default function App() {
         }
         .macro-chip {
           background: rgba(98, 240, 128, 0.07); border: 1px solid #1f3d26; color: #62f080;
-          padding: 5px 10px; font-family: inherit; font-size: 0.73rem; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+          padding: 4px 9px; font-family: inherit; font-size: 0.72rem; cursor: pointer; white-space: nowrap; transition: all 0.15s;
         }
         .macro-chip:hover:not(:disabled) { background: rgba(98, 240, 128, 0.22); border-color: #62f080; }
         .macro-chip:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -2223,7 +2395,13 @@ export default function App() {
       <header style={{ minHeight: '46px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', overflowX: 'auto', zIndex: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
           <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}>[F1] FIELD_OPS</button>
-          <button className={`viewport-tab ${viewport === 'CODEX' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('CODEX'); }}>[F2] CODEX ({activeSectorClueCount})</button>
+          <button
+            className={`viewport-tab ${viewport === 'CODEX' ? 'active' : ''}`}
+            onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('CODEX'); }}
+            style={activeSectorClueCount >= 3 && viewport !== 'CODEX' ? { borderColor: theme.accentAmber, color: theme.accentAmber, boxShadow: '0 0 8px rgba(255,184,0,0.4)' } : undefined}
+          >
+            [F2] CODEX ({activeSectorClueCount}/3)
+          </button>
           <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}>[F3] KAGE ({state.tetheredYokai.length}/2)</button>
           <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}>[F4] SAFEHOUSE</button>
           <button className={`viewport-tab ${viewport === 'HORSEMEN' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('HORSEMEN'); }} style={viewport !== 'HORSEMEN' ? { borderColor: theme.accentRed, color: theme.accentRed } : undefined}>[F5] HORSEMEN</button>
@@ -2316,42 +2494,63 @@ export default function App() {
                 style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none', cursor: 'grab' }}
               />
 
-              <div style={{ backgroundColor: 'rgba(5,7,6,0.95)', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', zIndex: 10, fontSize: '0.73rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* DUAL-LINE LIVE TELEMETRY BAR: PINS CURRENT ROOM CLUE + SELECTED TARGET ROOM INFO */}
+              <div style={{ backgroundColor: 'rgba(5,7,6,0.96)', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', zIndex: 10, fontSize: '0.72rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
                   <span>
-                    SELECTED ROOM: <strong style={{ color: theme.textBright }}>{selectedSubNode?.label || 'NONE'}</strong> [{selectedSubNode?.status}]
+                    SELECTED TARGET: <strong style={{ color: theme.textBright }}>{selectedSubNode?.label || 'NONE'}</strong> [{selectedSubNode?.status}]
+                    {selectedSubNode && selectedSubNode.id !== currentSubNode?.id && (
+                      <span style={{ color: isAdjacentOrEntry(selectedSubNode) ? theme.accentAmber : theme.accentRed, marginLeft: '6px' }}>
+                        ({isAdjacentOrEntry(selectedSubNode) ? `REACHABLE // +${selectedRoomHeatCost}% HEAT TO ENTER` : 'NOT ADJACENT'})
+                      </span>
+                    )}
                   </span>
-                  <span style={{ color: theme.accentAmber }}>
-                    CLUES DECODED: <strong>{activeSectorClueCount}/3</strong>
-                  </span>
+                  {activeSectorClueCount >= 3 ? (
+                    <button onClick={() => { ThaumaturgicAudio.scryPing(); setViewport('CODEX'); }} className="macro-chip macro-chip-amber" style={{ padding: '2px 8px', fontWeight: 'bold' }}>
+                      🎯 3/3 CLUES FOUND — OPEN [F2] CODEX &rarr;
+                    </button>
+                  ) : (
+                    <span style={{ color: theme.accentAmber }}>CLUES DECODED: <strong>{activeSectorClueCount}/3</strong></span>
+                  )}
                 </div>
-                {telemetryNode ? (
-                  <div style={{ color: telemetryNode.patrolActive ? theme.accentRed : telemetryNode.hazard !== 'NONE' ? theme.accentCyan : telemetryNode.status === 'CLEARED' ? theme.textBright : '#ffffff' }}>
-                    {telemetryNode.patrolActive
-                      ? `⚠️ [${telemetryNode.label}] MALLEUS PATROL INSIDE! Run 'decoy' before entering!`
-                      : telemetryNode.hazard !== 'NONE'
-                      ? `⚠️ [${telemetryNode.label}] TRAP SYMPTOM: "${HAZARD_MANIFEST[telemetryNode.hazard].symptom}"`
-                      : telemetryNode.status === 'CLEARED'
-                      ? `✓ [${telemetryNode.label}] Room cleared. Select an adjacent room to scan or enter.`
-                      : telemetryNode.status === 'SCANNED'
-                      ? `✓ [${telemetryNode.label}] Threshold clear. Safe to run 'enter ${telemetryNode.index}'.`
-                      : telemetryNode.rawSignalSymptom
-                      ? `🔎 [${telemetryNode.label}] CLUE SIGNAL: "${telemetryNode.rawSignalSymptom}" (Run vox / assay / auspex)`
-                      : `⛩️ [${telemetryNode.label}] Shrine / Salvage ready. Run 'loot' to collect.`}
+
+                {/* Current Room Status (Never disappears when clicking other rooms!) */}
+                {currentSubNode ? (
+                  <div style={{ color: currentSubNode.hazard !== 'NONE' ? theme.accentCyan : currentSubNode.status === 'CLEARED' ? theme.textBright : '#ffffff' }}>
+                    <strong>CURRENT ROOM ({currentSubNode.label}): </strong>
+                    {currentSubNode.hazard !== 'NONE'
+                      ? `⚠️ TRAP ACTIVE: "${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"`
+                      : currentSubNode.status === 'CLEARED'
+                      ? `✓ Cleared.${currentSubNode.nodeType === 'ANCHOR' && !attunedSectors[currentContract?.sectorId || ''] ? " (Run 'attune' for +4s Sealing Timer bonus!)" : ' Click a connected green-linked room to continue.'}`
+                      : currentSubNode.rawSignalSymptom
+                      ? `🔎 CLUE SIGNAL: "${currentSubNode.rawSignalSymptom}" (Run vox / assay / auspex)`
+                      : `⛩️ Shrine / Salvage ready. Run 'loot' to collect.`}
                   </div>
                 ) : (
                   <div style={{ color: '#a8ccaf' }}>
-                    Stationed at Perimeter Tether. Run <strong>scan 1</strong> then <strong>enter 1</strong> to begin.
+                    <strong>CURRENT POS:</strong> Perimeter Tether. Run <code>scan 1</code> then <code>enter 1</code> (+8% Heat) to enter the sub-grid.
+                  </div>
+                )}
+
+                {/* If a different Scanned Room is selected, show its Trap/Patrol status too */}
+                {selectedSubNode && selectedSubNode.id !== currentSubNode?.id && selectedSubNode.status === 'SCANNED' && (
+                  <div style={{ color: selectedSubNode.patrolActive ? theme.accentRed : selectedSubNode.hazard !== 'NONE' ? theme.accentCyan : theme.textBright }}>
+                    <strong>SCANNED TARGET ({selectedSubNode.label}): </strong>
+                    {selectedSubNode.patrolActive
+                      ? `⚠️ MALLEUS PATROL INSIDE! Run 'decoy ${selectedSubNode.index}' before entering!`
+                      : selectedSubNode.hazard !== 'NONE'
+                      ? `⚠️ THRESHOLD TRAP: "${HAZARD_MANIFEST[selectedSubNode.hazard].symptom}" — Disarm before entering!`
+                      : `✓ Threshold clear. Safe to run 'enter ${selectedSubNode.index}' (+${selectedRoomHeatCost}% Heat).`}
                   </div>
                 )}
               </div>
             </div>
 
-            <div style={{ minHeight: '94px', flexShrink: 0, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '0.73rem', flexWrap: 'wrap' }}>
+            <div style={{ minHeight: '90px', flexShrink: 0, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '0.73rem', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 240px' }}>
                 <div style={{ color: theme.textBright, fontWeight: 'bold', marginBottom: '4px' }}>ACTIVE SHIKIGAMI DAEMONS ({state.tetheredYokai.length}/2)</div>
                 {state.tetheredYokai.length === 0 ? (
-                  <div style={{ color: theme.textMuted }}>No Daemons bound. Open <strong style={{ color: theme.textBright }}>[F3] KAGE</strong> to bind Shikigami.</div>
+                  <div style={{ color: theme.textMuted }}>No Daemons bound. Open <strong style={{ color: theme.textBright }}>[F3] KAGE</strong> to halve Scan costs (-2% HUM) &amp; unlock field powers.</div>
                 ) : (
                   <div style={{ display: 'flex', gap: '6px' }}>
                     {state.tetheredYokai.map(yid => {
@@ -2399,49 +2598,35 @@ export default function App() {
               <div ref={terminalEndRef} />
             </div>
 
+            {/* ALWAYS-VISIBLE 3-ROW TACTICAL COMMAND DECK (NO HIDDEN SUB-TABS!) */}
             {controlMode === 'PALETTE' && (
-              <div style={{ backgroundColor: '#060a07', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    <button onClick={() => setPaletteCat('INFILTRATE')} className={`macro-chip ${paletteCat === 'INFILTRATE' ? 'macro-chip-amber' : ''}`} style={{ padding: '3px 7px', fontSize: '0.68rem' }}>1. RECON &amp; ENTRY</button>
-                    <button onClick={() => setPaletteCat('COUNTERS')} className={`macro-chip ${paletteCat === 'COUNTERS' ? 'macro-chip-cyan' : ''}`} style={{ padding: '3px 7px', fontSize: '0.68rem' }}>2. PRE-ENTRY COUNTERS</button>
-                    <button onClick={() => setPaletteCat('FORENSICS')} className={`macro-chip ${paletteCat === 'FORENSICS' ? 'macro-chip-amber' : ''}`} style={{ padding: '3px 7px', fontSize: '0.68rem' }}>3. FORENSIC SUITE</button>
-                    <button onClick={() => setPaletteCat('INQUISITION')} className={`macro-chip ${paletteCat === 'INQUISITION' ? 'macro-chip-danger' : ''}`} style={{ padding: '3px 7px', fontSize: '0.68rem' }}>4. INQUISITION</button>
-                  </div>
-                  <span style={{ fontSize: '0.66rem', color: theme.textMuted }}>TARGET: RM #{selectedSubNode?.index || 1}</span>
+              <div style={{ backgroundColor: '#060a07', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.66rem', color: theme.accentAmber, fontWeight: 'bold', width: '74px' }}>1. RECON:</span>
+                  <button onClick={() => processCliCommand(`scan ${selectedSubNode?.index || 1}`)} className="macro-chip">📡 scan {selectedSubNode?.index || 1}</button>
+                  <button onClick={() => processCliCommand(`enter ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-amber">⚡ enter {selectedSubNode?.index || 1} (+{selectedRoomHeatCost}% Heat)</button>
+                  <button onClick={() => processCliCommand('loot')} className="macro-chip">📦 loot</button>
+                  {currentSubNode?.nodeType === 'ANCHOR' && (
+                    <button onClick={() => processCliCommand('attune')} className="macro-chip macro-chip-amber">⚡ attune (+4s Seal)</button>
+                  )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {paletteCat === 'INFILTRATE' && (
-                    <>
-                      <button onClick={() => processCliCommand(`scan ${selectedSubNode?.index || 1}`)} className="macro-chip">📡 scan {selectedSubNode?.index || 1}</button>
-                      <button onClick={() => processCliCommand(`enter ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-amber">⚡ enter {selectedSubNode?.index || 1}</button>
-                      <button onClick={() => processCliCommand('loot')} className="macro-chip">📦 loot (Shrine/Salvage)</button>
-                      <button onClick={() => processCliCommand('status')} className="macro-chip">📋 status</button>
-                    </>
-                  )}
-                  {paletteCat === 'COUNTERS' && (
-                    <>
-                      <button onClick={() => processCliCommand('decoy')} className="macro-chip macro-chip-danger">🐕 decoy (Lure Patrol)</button>
-                      <button onClick={() => processCliCommand('degauss')} className="macro-chip macro-chip-cyan">degauss (Static)</button>
-                      <button onClick={() => processCliCommand('bypass')} className="macro-chip macro-chip-cyan">bypass (Wire)</button>
-                      <button onClick={() => processCliCommand('purge')} className="macro-chip macro-chip-cyan">purge (Miasma)</button>
-                      <button onClick={() => processCliCommand('dispel')} className="macro-chip macro-chip-cyan">dispel (Hex)</button>
-                    </>
-                  )}
-                  {paletteCat === 'FORENSICS' && (
-                    <>
-                      <button onClick={() => processCliCommand('vox')} className="macro-chip">🎙️ vox (Audio Clues)</button>
-                      <button onClick={() => processCliCommand('assay')} className="macro-chip">🧪 assay (Matter Clues)</button>
-                      <button onClick={() => processCliCommand('auspex')} className="macro-chip">👁️ auspex (Astral/Thermal Clues)</button>
-                    </>
-                  )}
-                  {paletteCat === 'INQUISITION' && (
-                    <>
-                      <button onClick={() => processCliCommand('spoof')} className="macro-chip macro-chip-danger">📡 spoof (-15 Obols: -25% Heat)</button>
-                      <button onClick={() => processCliCommand('bribe')} className="macro-chip macro-chip-danger">🪙 bribe (-25 Obols: -45% Heat)</button>
-                    </>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.66rem', color: theme.accentCyan, fontWeight: 'bold', width: '74px' }}>2. DISARM:</span>
+                  <button onClick={() => processCliCommand(`decoy ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-danger">🐕 decoy {selectedSubNode?.index || 1}</button>
+                  <button onClick={() => processCliCommand(`degauss ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-cyan">degauss {selectedSubNode?.index || 1}</button>
+                  <button onClick={() => processCliCommand(`bypass ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-cyan">bypass {selectedSubNode?.index || 1}</button>
+                  <button onClick={() => processCliCommand(`purge ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-cyan">purge {selectedSubNode?.index || 1}</button>
+                  <button onClick={() => processCliCommand(`dispel ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-cyan">dispel {selectedSubNode?.index || 1}</button>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.66rem', color: theme.textBright, fontWeight: 'bold', width: '74px' }}>3. TOOLS:</span>
+                  <button onClick={() => processCliCommand('vox')} className="macro-chip">🎙️ vox (Audio)</button>
+                  <button onClick={() => processCliCommand('assay')} className="macro-chip">🧪 assay (Matter)</button>
+                  <button onClick={() => processCliCommand('auspex')} className="macro-chip">👁️ auspex (Astral)</button>
+                  <button onClick={() => processCliCommand('spoof')} className="macro-chip macro-chip-danger">📡 spoof (-15 Ob)</button>
+                  <button onClick={() => processCliCommand('bribe')} className="macro-chip macro-chip-danger">🪙 bribe (-25 Ob)</button>
                 </div>
               </div>
             )}
@@ -2460,7 +2645,7 @@ export default function App() {
                 ref={cliInputRef}
                 value={cliInput}
                 onChange={e => setCliInput(e.target.value)}
-                placeholder="Type command (scan 1, decoy, enter 1, vox, assay, auspex, help)..."
+                placeholder="Type command (scan 1, degauss 2, enter 1, vox, assay, auspex, help)..."
                 style={{ flex: 1, backgroundColor: 'transparent', color: theme.textBright, border: 'none', outline: 'none', fontFamily: theme.fontMono, fontSize: '0.8rem' }}
               />
               <button type="submit" className="macro-chip">EXEC</button>
@@ -2569,21 +2754,79 @@ export default function App() {
             </div>
           </section>
 
-          <section className="codex-col" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', justifyContent: 'space-between', overflowY: 'auto' }}>
+          {/* DOSSIER PANEL: SEALING BUTTON MOVED NEAR TOP SO BADGES/TOASTS NEVER COVER IT */}
+          <section className="codex-col" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px 14px 48px 14px', overflowY: 'auto' }}>
             <div>
               <div style={{ fontSize: '0.7rem', color: theme.accentAmber }}>ARS GOETIA DOSSIER // #{selectedSuspect.manifestId.toString().padStart(2, '0')} ({selectedSuspect.allegiance})</div>
               <h2 style={{ margin: '4px 0', color: theme.textBright }}>{selectedSuspect.name.toUpperCase()}</h2>
               <div style={{ fontSize: '0.78rem', color: '#ffffff', fontWeight: 'bold', marginBottom: '10px' }}>{selectedSuspect.rank} — "{selectedSuspect.title}"</div>
 
+              {/* TOP-MOUNTED SEALING RITE ACTION BUTTON */}
+              {state.sealedGoetia.includes(selectedSuspect.id) ? (
+                <div style={{ padding: '10px', marginBottom: '12px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold' }}>
+                  [ ENTITY SEALED IN VESSEL ]
+                </div>
+              ) : (
+                <div style={{ marginBottom: '12px' }}>
+                  {(() => {
+                    const sealCost = selectedSuspect.sealCost || {};
+                    const canAfford = Object.entries(sealCost).every(([item, amt]) => (state.inventory[item] || 0) >= amt);
+                    return (
+                      <button
+                        onClick={() => setActiveSealSuspectId(selectedSuspect.id)}
+                        disabled={!canAfford}
+                        style={{
+                          width: '100%', padding: '12px',
+                          backgroundColor: canAfford ? theme.accentRed : '#1a1a1a',
+                          color: canAfford ? 'white' : theme.textMuted,
+                          border: `1px solid ${canAfford ? '#ff6680' : theme.borderTerminal}`,
+                          cursor: canAfford ? 'pointer' : 'not-allowed',
+                          fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.8rem',
+                          boxShadow: canAfford ? '0 0 15px rgba(255, 42, 85, 0.35)' : 'none'
+                        }}
+                      >
+                        {canAfford ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}` : `> CRAFT CATALYSTS IN [F4] SAFEHOUSE FIRST`}
+                      </button>
+                    );
+                  })()}
+                </div>
+              )}
+
+              <div style={{ marginBottom: '10px', padding: '8px', border: `1px solid ${theme.accentRed}`, backgroundColor: '#030504' }}>
+                <div style={{ fontSize: '0.72rem', color: theme.accentRed, fontWeight: 'bold', marginBottom: '4px' }}>REQUIRED BINDING CATALYSTS:</div>
+                {Object.entries(selectedSuspect.sealCost || {}).map(([item, amt]) => {
+                  const have = state.inventory[item] || 0;
+                  return (
+                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem' }}>
+                      <span style={{ color: '#ffffff' }}>{formatLabel(item)} x{amt}</span>
+                      <span style={{ color: have >= amt ? theme.textBright : theme.accentRed, fontWeight: 'bold' }}>(Have: {have}/{amt})</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginBottom: '10px', padding: '8px', border: `1px dashed ${theme.borderTerminal}`, backgroundColor: '#030504' }}>
+                <div style={{ fontSize: '0.72rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '4px' }}>UNIQUE 3-SIGN FINGERPRINT:</div>
+                {getUniqueGoetiaSigns(selectedSuspect.id).map(tag => {
+                  const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
+                  const isToggled = deducedSigns.includes(tag);
+                  return (
+                    <div key={tag} style={{ fontSize: '0.72rem', color: isToggled ? theme.textBright : '#a8ccaf' }}>
+                      {isToggled ? '✓ ' : '• '} <strong>{def?.label || formatLabel(tag)}</strong>
+                    </div>
+                  );
+                })}
+              </div>
+
               {(() => {
                 const isTargetSealed = state.sealedGoetia.includes(selectedSuspect.id);
                 return (
-                  <div style={{ position: 'relative', width: '130px', height: '130px', margin: '0 auto 10px auto', backgroundColor: '#030504', border: `1px solid ${isTargetSealed ? theme.accentRed : theme.borderTerminal}`, display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', width: '125px', height: '125px', margin: '0 auto 10px auto', backgroundColor: '#030504', border: `1px solid ${isTargetSealed ? theme.accentRed : theme.borderTerminal}`, display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
                     <img
                       src={`/seals/${selectedSuspect.id}.png`}
                       alt={selectedSuspect.name}
                       style={{
-                        width: '108px', height: '108px',
+                        width: '104px', height: '104px',
                         opacity: isTargetSealed ? 0.85 : 0.22,
                         filter: isTargetSealed ? 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)' : undefined,
                         animation: isTargetSealed ? 'none' : 'sigilGlitch 2.2s infinite steps(2)'
@@ -2601,61 +2844,7 @@ export default function App() {
               <p style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5', padding: '8px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}` }}>
                 {selectedSuspect.description}
               </p>
-
-              <div style={{ marginTop: '10px', padding: '8px', border: `1px dashed ${theme.borderTerminal}`, backgroundColor: '#030504' }}>
-                <div style={{ fontSize: '0.72rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '4px' }}>UNIQUE 3-SIGN FINGERPRINT:</div>
-                {getUniqueGoetiaSigns(selectedSuspect.id).map(tag => {
-                  const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
-                  const isToggled = deducedSigns.includes(tag);
-                  return (
-                    <div key={tag} style={{ fontSize: '0.72rem', color: isToggled ? theme.textBright : '#a8ccaf' }}>
-                      {isToggled ? '✓ ' : '• '} <strong>{def?.label || formatLabel(tag)}</strong>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{ marginTop: '10px', padding: '8px', border: `1px solid ${theme.accentRed}`, backgroundColor: '#030504' }}>
-                <div style={{ fontSize: '0.72rem', color: theme.accentRed, fontWeight: 'bold', marginBottom: '4px' }}>REQUIRED BINDING CATALYSTS:</div>
-                {Object.entries(selectedSuspect.sealCost || {}).map(([item, amt]) => {
-                  const have = state.inventory[item] || 0;
-                  return (
-                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem' }}>
-                      <span style={{ color: '#ffffff' }}>{formatLabel(item)} x{amt}</span>
-                      <span style={{ color: have >= amt ? theme.textBright : theme.accentRed, fontWeight: 'bold' }}>({have}/{amt})</span>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
-
-            {state.sealedGoetia.includes(selectedSuspect.id) ? (
-              <div style={{ padding: '10px', marginTop: '10px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold' }}>
-                [ ENTITY SEALED IN VESSEL ]
-              </div>
-            ) : (
-              <div style={{ marginTop: '10px' }}>
-                {(() => {
-                  const sealCost = selectedSuspect.sealCost || {};
-                  const canAfford = Object.entries(sealCost).every(([item, amt]) => (state.inventory[item] || 0) >= amt);
-                  return (
-                    <button
-                      onClick={() => setActiveSealSuspectId(selectedSuspect.id)}
-                      disabled={!canAfford}
-                      style={{
-                        width: '100%', padding: '12px',
-                        backgroundColor: canAfford ? theme.accentRed : '#1a1a1a',
-                        color: canAfford ? 'white' : theme.textMuted,
-                        border: 'none', cursor: canAfford ? 'pointer' : 'not-allowed',
-                        fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.78rem'
-                      }}
-                    >
-                      {canAfford ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}` : `> SYNTHESIZE CATALYSTS IN [F4] SAFEHOUSE`}
-                    </button>
-                  );
-                })()}
-              </div>
-            )}
           </section>
         </main>
       )}
@@ -2666,7 +2855,7 @@ export default function App() {
             <div>
               <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.88rem' }}>KAGE-NO-SHO // SHIKIGAMI KERNEL INTERCEPTORS (MAX 2 BOUND)</div>
               <div style={{ color: '#a8ccaf', fontSize: '0.74rem', marginTop: '2px' }}>
-                Bind up to 2 Shikigami Daemons into your Thaumaturgic OS. Each daemon provides a continuous Passive Hook and finite Active Invocations.
+                Bind up to 2 Shikigami Daemons into your Thaumaturgic OS. Having any daemon bound cuts your <code>scan</code> Humanity cost in half (-2% HUM instead of -5% HUM) and unlocks finite Active Invocations in the field.
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2910,7 +3099,7 @@ export default function App() {
                         const isSealed = state.sealedGoetia.includes(g.id);
                         return (
                           <div key={g.id} onClick={() => { setSelectedSuspectId(g.id); setViewport('CODEX'); }} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 4px', fontSize: '0.68rem', cursor: 'pointer', color: isSealed ? theme.textBright : '#a8ccaf', textDecoration: isSealed ? 'line-through' : 'none' }}>
-                            <span>#{g.manifestId.toString().padStart(2, '0')} {g.name}</span>
+                            <span>#{g.manifestId.toString().padStart(2, '0')} {g.name} ({g.rank})</span>
                             <span style={{ color: isSealed ? theme.textBright : theme.accentRed }}>{isSealed ? 'SEALED' : 'ACTIVE'}</span>
                           </div>
                         );
@@ -3004,11 +3193,13 @@ export default function App() {
         const suspect = allGoetia.find(g => g.id === activeSealSuspectId);
         if (!suspect) return null;
         const actualAnchorId = currentContract?.targetGoetiaId || suspect.id;
+        const attunedBonus = (currentContract && attunedSectors[currentContract.sectorId]) ? 4 : 0;
         return (
           <SealingTerminal
             suspect={suspect}
             actualAnchorId={actualAnchorId}
             sealCost={suspect.sealCost || {}}
+            attunedBonusSeconds={attunedBonus}
             onClose={() => setActiveSealSuspectId(null)}
             onSuccessSeal={(sealedId) => {
               dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 45 } });
@@ -3023,6 +3214,7 @@ export default function App() {
               }
 
               let cascadeMsg = '';
+              const cascadedNamesList: string[] = [];
               if (['King', 'Prince', 'Duke'].includes(suspect.rank)) {
                 const vassals = allGoetia.filter(
                   g => g.allegiance === suspect.allegiance &&
@@ -3032,8 +3224,11 @@ export default function App() {
                 );
                 const cascadeTargets = vassals.slice(0, suspect.rank === 'King' ? 2 : 1);
                 if (cascadeTargets.length > 0) {
-                  cascadeTargets.forEach(v => sealGoetia(v.id));
-                  cascadeMsg = `<br/><span style="color:#ffb800;">⚡ SOLOMONIC RESONANCE CASCADE: Binding ${suspect.rank} ${suspect.name} collapsed the feudal tether of ${cascadeTargets.map(v => `#${v.manifestId} ${v.name} (${v.rank})`).join(' & ')} into the Brass Vessel!</span>`;
+                  cascadeTargets.forEach(v => {
+                    sealGoetia(v.id);
+                    cascadedNamesList.push(`#${v.manifestId.toString().padStart(2, '0')} ${v.name.toUpperCase()} (${v.rank})`);
+                  });
+                  cascadeMsg = `<br/><span style="color:#ffb800;">⚡ SOLOMONIC RESONANCE CASCADE: Binding ${suspect.rank} ${suspect.name} automatically collapsed the feudal tether of ${cascadedNamesList.join(' & ')} into the Brass Vessel!</span>`;
                 }
               }
 
@@ -3052,6 +3247,7 @@ export default function App() {
                 `</div>`,
                 'success'
               );
+              return cascadedNamesList;
             }}
             dispatch={dispatch}
             sealGoetia={sealGoetia}
@@ -3072,22 +3268,24 @@ export default function App() {
         />
       )}
 
-      <div style={{ position: 'fixed', bottom: '48px', right: '16px', display: 'flex', flexDirection: 'column', gap: '6px', zIndex: 1000, pointerEvents: 'none' }}>
+      {/* TOP-CENTER HUD TOASTS (NEVER COVERS BOTTOM-RIGHT BUTTONS OR NETLIFY BADGES) */}
+      <div style={{ position: 'fixed', top: '52px', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1000, pointerEvents: 'none' }}>
         {toasts.map(toast => (
           <div
             key={toast.id}
             style={{
               pointerEvents: 'auto',
-              animation: 'slideInRight 0.25s ease-out forwards',
-              backgroundColor: theme.bgPanel,
+              animation: 'slideDownTop 0.22s ease-out forwards',
+              backgroundColor: 'rgba(9, 13, 10, 0.96)',
               color: theme.textBright,
               border: `1px solid ${theme.borderTerminal}`,
               borderLeft: `4px solid ${toast.type === 'INTEL' ? theme.textBright : toast.type === 'ITEM' ? theme.accentAmber : theme.accentRed}`,
-              padding: '9px 14px',
+              padding: '8px 16px',
               fontFamily: theme.fontMono,
               fontSize: '0.76rem',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.85)',
-              maxWidth: '300px'
+              boxShadow: '0 4px 16px rgba(0,0,0,0.9)',
+              maxWidth: '420px',
+              textAlign: 'center'
             }}
           >
             {toast.message}
