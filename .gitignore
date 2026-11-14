@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Parser scaffolds (scripts/parse*.js)
+data_ingest/generated/

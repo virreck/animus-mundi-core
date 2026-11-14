@@ -34,10 +34,35 @@ export interface GameState {
   identifiedGoetia: GoetiaId[];
   sealedGoetia: GoetiaId[];
   
+  /** @deprecated Legacy mirror of `tetheredYokai`, kept so old saves still load. */
   activeContracts: YokaiId[];
   ink: number;
 
-  tetheredYokai: string[];
+  tetheredYokai: YokaiId[];
+
+  // --- STATE THAT USED TO LIVE OUTSIDE THE SAVE FILE ---
+  /** Low-precision entropy drift (travel, room entries, rests). Added to `globalEntropy` for display & game-over checks. */
+  microEntropy: number;
+  /** Remaining active-invocation charges per bound Yokai. */
+  yokaiCharges: Record<YokaiId, number>;
+  /** Sectors whose anchor has been attuned (+4s sealing bonus). */
+  attunedSectors: Record<NodeId, boolean>;
+  /** Phenomena the player has ticked in the Codex for the current case. */
+  deducedSigns: string[];
+}
+
+/** Humanity at or below this ends the run. */
+export const HUMANITY_FLOOR = 0;
+/** Combined global entropy at or above this ends the run. */
+export const ENTROPY_CEILING = 100;
+
+export function getTotalGlobalEntropy(state: Pick<GameState, 'globalEntropy' | 'microEntropy'>): number {
+  return Math.min(ENTROPY_CEILING, +((state.globalEntropy || 0) + (state.microEntropy || 0)).toFixed(2));
+}
+
+export function getMaxHumanity(state: Pick<GameState, 'tetheredYokai'>): number {
+  // Zashiki-warashi permanently lowers your max humanity while bound
+  return (state.tetheredYokai || []).includes('yokai_zashiki') ? 85 : 100;
 }
 
 export const initialGameState: GameState = {
@@ -62,5 +87,35 @@ export const initialGameState: GameState = {
   sealedGoetia: [],
   activeContracts: [],
   tetheredYokai: [],
-  ink: 0
+  ink: 0,
+  microEntropy: 0,
+  yokaiCharges: {},
+  attunedSectors: {},
+  deducedSigns: []
 };
+
+/**
+ * Fills in any fields missing from an older save so the rest of the engine
+ * can rely on them being present.
+ */
+export function normalizeLoadedState(raw: Partial<GameState>, legacyMicroEntropy = 0): GameState {
+  const tethered = raw.tetheredYokai || raw.activeContracts || [];
+  return {
+    ...initialGameState,
+    ...raw,
+    tetheredYokai: tethered,
+    activeContracts: tethered,
+    sectorEntropy: raw.sectorEntropy || {},
+    inventory: raw.inventory || {},
+    intelLog: raw.intelLog || [],
+    flags: raw.flags || {},
+    activeLeads: raw.activeLeads || [],
+    factions: { ...initialGameState.factions, ...(raw.factions || {}) },
+    identifiedGoetia: raw.identifiedGoetia || [],
+    sealedGoetia: raw.sealedGoetia || [],
+    microEntropy: typeof raw.microEntropy === 'number' ? raw.microEntropy : legacyMicroEntropy,
+    yokaiCharges: raw.yokaiCharges || {},
+    attunedSectors: raw.attunedSectors || {},
+    deducedSigns: raw.deducedSigns || []
+  };
+}

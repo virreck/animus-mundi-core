@@ -258,6 +258,17 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
 // Guarantees every single one of the 72 Goetia has a 100% unique 3-phenomenon fingerprint
 const UNIQUE_SIGNS_CACHE: Record<string, string[]> = {};
 
+// Dev-only content sanity check: every clue a demon requires must be a real phenomenon,
+// otherwise it can't be decoded or ticked in the Codex.
+if (import.meta.env.DEV) {
+  const knownTags = new Set(PHENOMENON_CATALOG.map(p => p.tag));
+  allGoetia.forEach(g => {
+    (g.requiredIntel || []).forEach(tag => {
+      if (!knownTags.has(tag)) console.warn(`[content] ${g.id} requires unknown phenomenon "${tag}"`);
+    });
+  });
+}
+
 export function getUniqueGoetiaSigns(goetiaId: string): string[] {
   if (Object.keys(UNIQUE_SIGNS_CACHE).length === 0) {
     const usedSignatures = new Set<string>();
