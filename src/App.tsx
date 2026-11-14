@@ -16,6 +16,17 @@ import {
   type ForensicChannel
 } from './engine/sectorGenerator';
 import { generateSealMatrix } from './engine/sealMatrix';
+import { SECTOR_QUIRKS, getSectorQuirk } from './engine/sectorGenerator';
+import {
+  type EvidenceLog,
+  AMBIGUITY_GROUPS,
+  COURT_RESONANCE,
+  RANK_RESONANCE,
+  REFINE_COST,
+  DEEP_ATTUNE_COST,
+  isAmbiguous,
+  scoreSuspect
+} from './engine/evidence';
 import { ThaumaturgicAudio } from './ui/audio';
 import { SigilTracingBoard } from './ui/components/SigilTracingBoard';
 
@@ -241,7 +252,7 @@ const YOKAI_DAEMON_SPECS: Record<string, {
     passiveHook: 'PASSIVE HOOK: Reduces Room Scan cost to -2% HUM.',
     activeLabel: 'GALE SWEEP',
     maxCharges: 2,
-    activeDesc: 'Spends 5% Humanity to radar-scan the entire sub-grid, revealing all 6 rooms at once.',
+    activeDesc: 'Spends 5% Humanity to radar-scan the entire sub-grid, revealing every room at once.',
     loreNote: 'Mountain crow-tengu bound to high-frequency microwave telemetry relays.'
   },
   yokai_baku: {
@@ -378,14 +389,20 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
           <div style={{ maxWidth: '940px' }}>
             <h3 style={{ color: theme.textBright, marginTop: 0 }}>STEP-BY-STEP ROOM INFILTRATION &amp; 3-TOOL FORENSICS</h3>
             <p>
-              Every Goetian demon has a <strong>unique 3-phenomenon fingerprint</strong>. Decode all 3 clues in a sector to isolate the exact demon in <strong>[F2] CODEX</strong>:
+              Every Goetian demon has a <strong>unique 3-phenomenon fingerprint</strong>, but field instruments are rarely clean. Most readings come back <strong>degraded</strong>: they narrow a clue to two or three possible phenomena instead of one. Build a case from several kinds of evidence, then use <strong>[F2] CODEX</strong> to see which suspects still fit:
             </p>
+            <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
+              <li><strong>Readings</strong> — 3 clue rooms per sector. <code>refine [#]</code> resolves a degraded reading from anywhere in the sector (-{REFINE_COST.humanity}% HUM, +heat).</li>
+              <li><strong>Witness</strong> — one room holds a civilian who saw the entity. <code>interview</code> them for a redacted statement, then compare it against the Lemegeton entries in the Codex.</li>
+              <li><strong>Anchor resonance</strong> — <code>attune</code> at the [ANCHOR] reveals the demon's Horseman <strong>court</strong> (+4s Sealing bonus). Attune again for a deep reading of its <strong>rank</strong> (-{DEEP_ATTUNE_COST.humanity}% HUM, +heat).</li>
+              <li><strong>Sector conditions</strong> — some sectors are surveilled, hallowed, storm-wracked, heavily warded or have an unusually lucid witness. Layouts change every contract (5–8 rooms).</li>
+            </ul>
             <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'grid', gridTemplateColumns: '150px 160px 1fr', rowGap: '10px', columnGap: '12px', marginTop: '12px' }}>
-              <strong style={{ color: theme.accentAmber }}>scan [1-6]</strong>
+              <strong style={{ color: theme.accentAmber }}>scan [#]</strong>
               <span style={{ color: '#a8ccaf' }}>[RECON]</span>
               <span>Scans a reachable room from outside, revealing if a Malleus Patrol or Threshold Trap is waiting inside.</span>
 
-              <strong style={{ color: theme.accentAmber }}>enter [1-6]</strong>
+              <strong style={{ color: theme.accentAmber }}>enter [#]</strong>
               <span style={{ color: '#a8ccaf' }}>[MOVEMENT]</span>
               <span>Steps inside a reachable room. Walking into an active trap or patrol without disarming it first triggers heavy Humanity &amp; Heat penalties!</span>
 
@@ -401,9 +418,17 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
               <span style={{ color: theme.textBright }}>[ASTRAL CLUES]</span>
               <span>Reads thermal, optical, &amp; spatial shifts: light refraction, dead scripts, star drift, mind fog, -18°C stasis, and 1,200°C scorching.</span>
 
+              <strong style={{ color: theme.textBright }}>refine [#]</strong>
+              <span style={{ color: theme.textBright }}>[RESOLVE READING]</span>
+              <span>Re-processes a degraded reading so it points to a single phenomenon. Costs Humanity &amp; Heat — sometimes it's cheaper to reason around it.</span>
+
+              <strong style={{ color: theme.accentCyan }}>interview</strong>
+              <span style={{ color: '#a8ccaf' }}>[WITNESS]</span>
+              <span>Takes a statement from the sector's witness. Parts are redacted or forgotten; match what survives to a demon's description.</span>
+
               <strong style={{ color: theme.accentCyan }}>loot / attune</strong>
               <span style={{ color: '#a8ccaf' }}>[SHRINE / ANCHOR]</span>
-              <span><code>loot</code> awakens Kami Shrines &amp; collects salvage. Running <code>attune</code> inside Room 6 ([ANCHOR]) grants +4s on your Sealing Rite timer!</span>
+              <span><code>loot</code> awakens Kami Shrines &amp; collects salvage. <code>attune</code> inside the [ANCHOR] reads the demon's court (+4s Sealing bonus); a second, deep attunement reads its rank.</span>
             </div>
           </div>
         )}
@@ -412,26 +437,26 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
           <div style={{ maxWidth: '940px' }}>
             <h3 style={{ color: theme.accentCyan, marginTop: 0 }}>PRE-ENTRY COUNTERMEASURES (DISARM BEFORE ENTERING!)</h3>
             <p>
-              When you run <code>scan [1-6]</code> on a reachable room, the terminal reports any Malleus Patrol or Trap waiting inside. <strong>You can pass a room number (e.g., <code>degauss 2</code>) to disarm it from outside before entering</strong>:
+              When you run <code>scan [#]</code> on a reachable room, the terminal reports any Malleus Patrol or Trap waiting inside. <strong>You can pass a room number (e.g., <code>degauss 2</code>) to disarm it from outside before entering</strong>:
             </p>
             <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'grid', gridTemplateColumns: '160px 210px 1fr', rowGap: '10px', columnGap: '12px', marginTop: '12px' }}>
-              <strong style={{ color: theme.accentRed }}>decoy [1-6]</strong>
+              <strong style={{ color: theme.accentRed }}>decoy [#]</strong>
               <span style={{ color: theme.accentRed }}>Malleus Hound Patrol</span>
               <span>Lures the Inquisition patrol out of the room so you can enter without taking ambush damage.</span>
 
-              <strong style={{ color: theme.accentCyan }}>degauss [1-6]</strong>
+              <strong style={{ color: theme.accentCyan }}>degauss [#]</strong>
               <span style={{ color: theme.accentAmber }}>Aethyric Static Field</span>
               <span>Symptom: Electromagnetic static screech scrambling forensic instruments.</span>
 
-              <strong style={{ color: theme.accentCyan }}>bypass [1-6]</strong>
+              <strong style={{ color: theme.accentCyan }}>bypass [#]</strong>
               <span style={{ color: theme.accentAmber }}>Malleus Laser Tripwire</span>
               <span>Symptom: Encrypted Inquisition laser tripwires spanning the doorway threshold (-10% Heat when bypassed).</span>
 
-              <strong style={{ color: theme.accentCyan }}>purge [1-6]</strong>
+              <strong style={{ color: theme.accentCyan }}>purge [#]</strong>
               <span style={{ color: theme.accentAmber }}>Toxic Brimstone Miasma</span>
               <span>Symptom: Choking, spore-laden sulfur vapor blanketing the chamber floor.</span>
 
-              <strong style={{ color: theme.accentCyan }}>dispel [1-6]</strong>
+              <strong style={{ color: theme.accentCyan }}>dispel [#]</strong>
               <span style={{ color: theme.accentAmber }}>Goetic Blood-Hex Ward</span>
               <span>Symptom: Pulsing crimson sigils sealing the room architecture against intrusion.</span>
             </div>
@@ -1083,6 +1108,7 @@ export default function App() {
     dispatch({ type: 'SET_DEDUCED_SIGNS', payload: typeof next === 'function' ? next(deducedSigns) : next });
   const [codexHorsemanFilter, setCodexHorsemanFilter] = useState<'ALL' | 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH'>('ALL');
   const [selectedSuspectId, setSelectedSuspectId] = useState<string>('01_bael');
+  const [showRuledOut, setShowRuledOut] = useState(false);
 
   const [activeSealSuspectId, setActiveSealSuspectId] = useState<string | null>(null);
   const [activeBanishmentTarget, setActiveBanishmentTarget] = useState<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH' | null>(null);
@@ -1191,7 +1217,8 @@ export default function App() {
           `<div style="color:#a8ccaf;line-height:1.5;">` +
           `1. <strong>RECON:</strong> Run <code style="color:#ffb800;">scan 1</code> to inspect Room 1 before entering.<br/>` +
           `2. <strong>DISARM:</strong> Clear Patrols (<code style="color:#ff2a55;">decoy</code>) or Traps (<code style="color:#00f3ff;">degauss</code>, <code style="color:#00f3ff;">bypass</code>, <code style="color:#00f3ff;">purge</code>, <code style="color:#00f3ff;">dispel</code>) from outside before running <code style="color:#ffb800;">enter</code>.<br/>` +
-          `3. <strong>DECODE:</strong> Inside a room, match <code style="color:#62f080;">vox</code> (Audio), <code style="color:#62f080;">assay</code> (Matter), or <code style="color:#62f080;">auspex</code> (Astral/Thermal) to the clue signal.` +
+          `3. <strong>DECODE:</strong> Inside a room, match <code style="color:#62f080;">vox</code> (Audio), <code style="color:#62f080;">assay</code> (Matter), or <code style="color:#62f080;">auspex</code> (Astral/Thermal) to the clue signal. Degraded readings can be <code style="color:#62f080;">refine</code>d.<br/>` +
+          `4. <strong>BUILD THE CASE:</strong> <code style="color:#00f3ff;">interview</code> the witness and <code style="color:#ffb800;">attune</code> at the [ANCHOR], then check which suspects still fit in <strong>[F2] CODEX</strong>.` +
           `</div></div>`,
           'info'
         );
@@ -1207,10 +1234,16 @@ export default function App() {
     if (state.gameStage !== 'ACTIVE') return;
     const unavailable = [...state.sealedGoetia, ...(state.releasedGoetia || [])];
     if (allGoetia.every(g => unavailable.includes(g.id))) return; // nothing left to assign
+    const isClosed = (id: string) => !!state.flags[`sector_secured_${id}`] || !!state.flags[`sector_failed_${id}`];
     const broken = Object.values(contracts).filter(
       c => state.sealedGoetia.includes(c.targetGoetiaId) && !state.flags[`sector_secured_${c.sectorId}`]
     );
-    if (broken.length === 0) return;
+    // Untouched sectors generated by an older version (fixed 6-room layout, no witness, no quirk)
+    // are rebuilt around the same demon so they get the new layout and evidence.
+    const legacy = Object.values(contracts).filter(
+      c => c.quirk === undefined && !c.activeSubNodeId && c.discoveredLogs.length === 0 && !isClosed(c.sectorId) && !broken.includes(c)
+    );
+    if (broken.length === 0 && legacy.length === 0) return;
     setContracts(prev => {
       const next = { ...prev };
       const used = Object.values(prev).map(c => c.targetGoetiaId);
@@ -1218,6 +1251,9 @@ export default function App() {
         const fresh = generateSectorContract(c.sectorId, c.sectorLabel, unavailable, used);
         used.push(fresh.targetGoetiaId);
         next[c.sectorId] = fresh;
+      });
+      legacy.forEach(c => {
+        next[c.sectorId] = generateSectorContract(c.sectorId, c.sectorLabel, unavailable, used, c.targetGoetiaId);
       });
       return next;
     });
@@ -1249,25 +1285,38 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const filteredCodexGoetia = allGoetia.filter(g => {
-    if (codexHorsemanFilter !== 'ALL' && g.allegiance !== codexHorsemanFilter) return false;
-    if (deducedSigns.length === 0) return true;
-    const uniqueSigns = getUniqueGoetiaSigns(g.id);
-    return deducedSigns.every(tag => uniqueSigns.includes(tag));
-  });
-
-  useEffect(() => {
-    if (filteredCodexGoetia.length > 0 && !filteredCodexGoetia.some(g => g.id === selectedSuspectId)) {
-      setSelectedSuspectId(filteredCodexGoetia[0].id);
-    } else if (deducedSigns.length > 0 && filteredCodexGoetia.length === 1 && selectedSuspectId !== filteredCodexGoetia[0].id) {
-      setSelectedSuspectId(filteredCodexGoetia[0].id);
-    }
-  }, [deducedSigns, codexHorsemanFilter, filteredCodexGoetia, selectedSuspectId]);
-
   const currentContract = contracts[state.currentNode];
   const currentSubNode = currentContract?.subNodes.find(n => n.id === currentContract.activeSubNodeId) || null;
   const selectedSubNode = currentContract?.subNodes.find(n => n.id === currentContract.selectedSubNodeId) || null;
   const currentHeat = state.sectorEntropy[state.currentNode] || 0;
+
+  // --- CODEX: suspects ranked by how well they fit this sector's evidence ---
+  const caseEvidence: EvidenceLog[] = currentContract && !isSectorClosed(currentContract.sectorId) ? currentContract.discoveredLogs : [];
+  const suspectFit = (g: typeof allGoetia[0]) => scoreSuspect(g, getUniqueGoetiaSigns(g.id), caseEvidence);
+  const rankedCodexGoetia = allGoetia
+    .filter(g => {
+      if (codexHorsemanFilter !== 'ALL' && g.allegiance !== codexHorsemanFilter) return false;
+      if (deducedSigns.length === 0) return true;
+      const uniqueSigns = getUniqueGoetiaSigns(g.id);
+      return deducedSigns.every(tag => uniqueSigns.includes(tag));
+    })
+    .map(g => ({ g, fit: suspectFit(g) }))
+    .sort((a, b) =>
+      Number(a.fit.contradicted) - Number(b.fit.contradicted) ||
+      b.fit.matched - a.fit.matched ||
+      a.g.manifestId - b.g.manifestId
+    );
+  const consistentCount = rankedCodexGoetia.filter(r => !r.fit.contradicted).length;
+  const filteredCodexGoetia = rankedCodexGoetia
+    .filter(r => showRuledOut || !r.fit.contradicted)
+    .map(r => r.g);
+
+  useEffect(() => {
+    // Keep a valid selection, but never auto-pick "the answer" for the player
+    if (filteredCodexGoetia.length > 0 && !filteredCodexGoetia.some(g => g.id === selectedSuspectId)) {
+      setSelectedSuspectId(filteredCodexGoetia[0].id);
+    }
+  }, [filteredCodexGoetia, selectedSuspectId]);
 
   const resolveTargetRoom = (arg?: string): SubGridNode | null => {
     if (!currentContract) return null;
@@ -1282,9 +1331,20 @@ export default function App() {
     return currentSubNode.connections.includes(targetNode.id);
   };
 
+  const currentQuirk = getSectorQuirk(currentContract);
+  /** Applies the current sector's quirk multiplier to a heat gain (losses pass through). */
+  const scaleHeat = (amount: number) =>
+    amount > 0 ? Math.max(1, Math.round(amount * SECTOR_QUIRKS[currentQuirk].heatMultiplier)) : amount;
+  /** Adds (quirk-scaled) heat to the current sector and returns the amount applied. */
+  const addSectorHeat = (amount: number) => {
+    const applied = scaleHeat(amount);
+    dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: applied } });
+    return applied;
+  };
+
   const getRoomEntryHeatCost = (node: SubGridNode): number => {
     const firstEntry = node.status === 'LOCKED' || node.status === 'SCANNED';
-    return firstEntry ? node.wardLevel * 8 : 2;
+    return scaleHeat(firstEntry ? node.wardLevel * 8 : 2);
   };
 
   const handleUnbindYokai = (yokaiId: string, reason = 'Manually severed') => {
@@ -1353,6 +1413,7 @@ export default function App() {
       node.nodeType === 'ANOMALY' ? '<span style="color:#62f080;">[CLUE SIGNAL DETECTED]</span>' :
       node.nodeType === 'SHRINE' ? '<span style="color:#00f3ff;">[DORMANT KAMI SHRINE]</span>' :
       node.nodeType === 'PATROL' ? '<span style="color:#ff2a55;">[MALLEUS HOUND PATROL INSIDE!]</span>' :
+      node.nodeType === 'WITNESS' ? '<span style="color:#00f3ff;">[CIVILIAN WITNESS — LIFE SIGNS]</span>' :
       '<span style="color:#ffb800;">[GOETIAN CONDUIT ANCHOR]</span>';
 
     let warningTxt = `<br/><span style="color:#a8ccaf;">• Entry Ward Cost: <strong>+${entryHeat}% Heat</strong></span>`;
@@ -1426,8 +1487,8 @@ export default function App() {
       triggerHudFlash('DAMAGE');
       const shockHum = state.tetheredYokai.includes('yokai_baku') ? -3 : -6;
       dispatch({ type: 'MODIFY_HUMANITY', payload: shockHum });
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 8 } });
-      appendLog(`[!] WRONG COUNTER-MEASURE on <strong>${target.label}</strong>! Running <code>${cmdUsed}</code> against <strong>${hazardSpec.label}</strong> caused a feedback shock (${shockHum}% HUM, +8% Heat)!`, 'error');
+      const shockHeat = addSectorHeat(8);
+      appendLog(`[!] WRONG COUNTER-MEASURE on <strong>${target.label}</strong>! Running <code>${cmdUsed}</code> against <strong>${hazardSpec.label}</strong> caused a feedback shock (${shockHum}% HUM, +${shockHeat}% Heat)!`, 'error');
       addToast(`Wrong Counter-Command! ${shockHum}% HUM`, 'ALERT');
       return;
     }
@@ -1485,7 +1546,7 @@ export default function App() {
     let trapClearedOnImpact = false;
 
     if (node.patrolActive) {
-      heatGain += 20;
+      heatGain += scaleHeat(20);
       patrolClearedOnImpact = true;
       dispatch({ type: 'MODIFY_HUMANITY', payload: -12 });
       triggerHudFlash('DAMAGE');
@@ -1494,7 +1555,7 @@ export default function App() {
     } else if (node.hazard !== 'NONE') {
       const trapName = HAZARD_MANIFEST[node.hazard].label;
       const trapHumPenalty = state.tetheredYokai.includes('yokai_baku') ? -4 : -8;
-      heatGain += 10;
+      heatGain += scaleHeat(10);
       trapClearedOnImpact = true;
       dispatch({ type: 'MODIFY_HUMANITY', payload: trapHumPenalty });
       triggerHudFlash('DAMAGE');
@@ -1507,7 +1568,7 @@ export default function App() {
     if (node.nodeType === 'ANCHOR' && consumeFirstTimeHint('anchor_intro')) {
       appendLog(
         `<div style="border-left:2px solid #ffb800;padding-left:8px;margin:4px 0;color:#ffb800;">` +
-        `<strong>[⚡ GOETIAN CONDUIT ANCHOR REACHED]</strong> This chamber is the epicenter of the demon's tear in reality. Decode the room's clue signal, and type <code style="color:#62f080;">attune</code> to calibrate your Brass Vessel for a <strong>+4s timer bonus</strong> on this sector's Sealing Rite!` +
+        `<strong>[⚡ GOETIAN CONDUIT ANCHOR REACHED]</strong> This chamber is the epicenter of the demon's tear in reality. Type <code style="color:#62f080;">attune</code> to read which Horseman's <strong>court</strong> it serves (and gain <strong>+4s</strong> on this sector's Sealing Rite). Attune a second time for a costly deep reading of its <strong>rank</strong>.` +
         `</div>`,
         'warn'
       );
@@ -1520,6 +1581,8 @@ export default function App() {
       appendLog(`[🔎 CLUE SIGNAL IN <strong>${node.label}</strong>] <em>"${node.rawSignalSymptom}"</em>${toolHint}`, 'info');
     } else if (node.nodeType === 'SHRINE' && node.status !== 'CLEARED') {
       appendLog(`[⛩️ KAMI SHRINE] Dormant spirit altar found.`, 'info');
+    } else if (node.nodeType === 'WITNESS' && node.status !== 'CLEARED') {
+      appendLog(`[🗣 WITNESS] Someone is huddled in the corner, staring at nothing. Run <code>interview</code> to take their statement.`, 'info');
     }
 
     const newHeat = Math.min(100, currentHeat + heatGain);
@@ -1551,6 +1614,19 @@ export default function App() {
     }));
   };
 
+  /** Evidence already gathered in the current sector, by kind. */
+  const sectorEvidence = (kind: EvidenceLog['kind']) => (currentContract?.discoveredLogs || []).filter(l => l.kind === kind);
+
+  const addEvidence = (log: EvidenceLog) => {
+    if (!currentContract) return;
+    updateContract(currentContract.sectorId, c => ({
+      ...c,
+      discoveredLogs: c.discoveredLogs.some(l => l.id === log.id) ? c.discoveredLogs : [...c.discoveredLogs, log]
+    }));
+  };
+
+  // The anchor is where the demon's tether is strongest. A first attunement reads its COURT
+  // (and calibrates the vessel for +4s); a second, costlier deep attunement reads its RANK.
   const handleAttuneAnchor = () => {
     if (!currentContract || !currentSubNode) {
       appendLog(`[-] Enter a room first.`, 'error');
@@ -1558,18 +1634,152 @@ export default function App() {
     }
     if (blockIfSectorLost()) return;
     if (currentSubNode.nodeType !== 'ANCHOR') {
-      appendLog(`[-] You can only run <code>attune</code> inside Room 6 (the <strong>[ANCHOR]</strong> chamber).`, 'warn');
+      appendLog(`[-] You can only run <code>attune</code> inside the <strong>[ANCHOR]</strong> chamber.`, 'warn');
       return;
     }
-    if (attunedSectors[currentContract.sectorId]) {
-      appendLog(`[i] Brass Vessel is already attuned to ${currentContract.sectorLabel} (+4s Sealing Rite bonus active).`, 'system');
+    if (currentSubNode.hazard !== 'NONE') {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[!] The anchor's threshold trap is still live — disarm it before attuning.`, 'error');
       return;
     }
-    ThaumaturgicAudio.sealSuccess();
+    const target = allGoetia.find(g => g.id === currentContract.targetGoetiaId);
+    if (!target) return;
+    const hasCourt = sectorEvidence('COURT').length > 0;
+    const hasRank = sectorEvidence('RANK').length > 0;
+
+    if (!hasCourt) {
+      ThaumaturgicAudio.sealSuccess();
+      triggerHudFlash('DECODE');
+      dispatch({ type: 'SET_ATTUNED_SECTOR', payload: currentContract.sectorId });
+      addEvidence({ id: `${currentContract.sectorId}_court`, kind: 'COURT', value: target.allegiance, nodeLabel: currentSubNode.label, channel: 'RESONANCE', text: COURT_RESONANCE[target.allegiance] });
+      appendLog(
+        `<div style="border-left:3px solid #ffb800;padding-left:10px;margin:4px 0;color:#ffb800;">` +
+        `<strong>[⚡ VESSEL ATTUNED — COURT RESONANCE]</strong><br/>${COURT_RESONANCE[target.allegiance]}<br/>` +
+        `<span style="color:#a8ccaf;">+4s Sealing Rite bonus. Run <code>attune</code> again for a deep reading of the anchor's rank (-${DEEP_ATTUNE_COST.humanity}% HUM, +heat).</span>` +
+        `</div>`,
+        'success'
+      );
+      addToast(`Court identified: ${target.allegiance} (+4s Seal)`, 'INTEL');
+      return;
+    }
+    if (!hasRank) {
+      if (state.humanity <= DEEP_ATTUNE_COST.humanity) {
+        ThaumaturgicAudio.errorBuzz();
+        appendLog(`[-] A deep attunement needs more than ${DEEP_ATTUNE_COST.humanity}% Humanity.`, 'error');
+        return;
+      }
+      ThaumaturgicAudio.heavyStampImpact();
+      triggerHudFlash('DAMAGE');
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -DEEP_ATTUNE_COST.humanity });
+      const heat = addSectorHeat(DEEP_ATTUNE_COST.heat);
+      addEvidence({ id: `${currentContract.sectorId}_rank`, kind: 'RANK', value: target.rank, nodeLabel: currentSubNode.label, channel: 'RESONANCE', text: RANK_RESONANCE[target.rank] });
+      appendLog(
+        `<div style="border-left:3px solid #ff2a55;padding-left:10px;margin:4px 0;color:#ffb3b3;">` +
+        `<strong>[⚡ DEEP ATTUNEMENT — RANK RESONANCE]</strong> (-${DEEP_ATTUNE_COST.humanity}% HUM, +${heat}% Heat)<br/>${RANK_RESONANCE[target.rank]}` +
+        `</div>`,
+        'warn'
+      );
+      addToast(`Rank identified: ${target.rank.toUpperCase()}`, 'INTEL');
+      return;
+    }
+    appendLog(`[i] The anchor has nothing more to tell you. Court and rank are logged in the [F2] CODEX.`, 'system');
+  };
+
+  const handleInterviewWitness = () => {
+    if (!currentContract || !currentSubNode) {
+      appendLog(`[-] Enter a room first.`, 'error');
+      return;
+    }
+    if (blockIfSectorLost()) return;
+    if (currentSubNode.nodeType !== 'WITNESS' || !currentSubNode.witnessText) {
+      appendLog(`[-] There's nobody here to interview. Witnesses show as <strong>[WITNESS]</strong> on the sub-grid.`, 'warn');
+      return;
+    }
+    if (currentSubNode.status === 'CLEARED') {
+      appendLog(`[i] You've already taken this statement. It's in the [F2] CODEX.`, 'system');
+      return;
+    }
+    if (currentSubNode.hazard !== 'NONE') {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[!] The witness won't talk while <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> — disarm the room first.`, 'error');
+      return;
+    }
+    ThaumaturgicAudio.typewriterClack();
     triggerHudFlash('DECODE');
-    dispatch({ type: 'SET_ATTUNED_SECTOR', payload: currentContract.sectorId });
-    appendLog(`[✓ VESSEL ATTUNED AT ANCHOR] Synchronized your Brass Vessel with the conduit frequency (+4s Sealing Rite timer bonus).`, 'success');
-    addToast(`Vessel Attuned! +4s Sealing Timer`, 'SEAL');
+    addEvidence({
+      id: `${currentSubNode.id}_witness`,
+      kind: 'WITNESS',
+      nodeLabel: currentSubNode.label,
+      channel: 'WITNESS',
+      witness: currentSubNode.witnessName,
+      text: currentSubNode.witnessText
+    });
+    appendLog(
+      `<div style="background:rgba(0,243,255,0.07);border-left:3px solid #00f3ff;padding:8px 10px;margin:4px 0;">` +
+      `<div style="color:#00f3ff;font-weight:bold;">[🗣 WITNESS STATEMENT — ${escapeHtml(currentSubNode.witnessName || 'UNNAMED')}]</div>` +
+      `<div style="color:#ffffff;margin-top:4px;">"${escapeHtml(currentSubNode.witnessText)}"</div>` +
+      `<div style="color:#a8ccaf;margin-top:4px;font-size:0.9em;">Compare it against suspect descriptions in the [F2] CODEX.</div>` +
+      `</div>`,
+      'success'
+    );
+    addToast('Witness statement taken', 'INTEL');
+    if (currentSubNode.salvageDrop) {
+      const { itemId, amount, obols } = currentSubNode.salvageDrop;
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
+      appendLog(`[📦 The witness pressed something into your hand] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
+    }
+    const roomId = currentSubNode.id;
+    updateContract(currentContract.sectorId, c => ({
+      ...c,
+      subNodes: c.subNodes.map(n => (n.id === roomId ? { ...n, status: 'CLEARED' as const } : n))
+    }));
+  };
+
+  // Re-process a degraded reading to pin it to a single phenomenon. Works from anywhere in the sector.
+  const handleRefineReading = (arg?: string) => {
+    if (!currentContract) return;
+    if (blockIfSectorLost()) return;
+    const readings = sectorEvidence('PHENOMENON');
+    const pending = readings.filter(isAmbiguous);
+    if (pending.length === 0) {
+      appendLog(readings.length === 0 ? `[-] No forensic readings to refine yet.` : `[i] All readings in this sector are already resolved.`, 'system');
+      return;
+    }
+    const num = parseInt((arg || '').trim(), 10);
+    const log = !isNaN(num) ? readings[num - 1] : pending[pending.length - 1];
+    if (!log || !isAmbiguous(log)) {
+      appendLog(`[-] Reading ${escapeHtml(arg || '')} isn't degraded. Degraded readings: ${pending.map(l => `#${readings.indexOf(l) + 1}`).join(', ')}.`, 'warn');
+      return;
+    }
+    if (currentHeat >= 100) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT). Can't run signal processing under a cordon.`, 'error');
+      return;
+    }
+    if (state.humanity <= REFINE_COST.humanity) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(`[-] Refining a reading needs more than ${REFINE_COST.humanity}% Humanity.`, 'error');
+      return;
+    }
+    const tag = log.trueTag || log.candidates![0];
+    const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
+    const preciseText = def ? def.forensicReports[Math.floor(Math.random() * def.forensicReports.length)] : log.text;
+    ThaumaturgicAudio.scryPing();
+    dispatch({ type: 'MODIFY_HUMANITY', payload: -REFINE_COST.humanity });
+    const heat = addSectorHeat(REFINE_COST.heat);
+    updateContract(currentContract.sectorId, c => ({
+      ...c,
+      discoveredLogs: c.discoveredLogs.map(l => (l.id === log.id ? { ...l, candidates: [tag], text: preciseText } : l))
+    }));
+    appendLog(
+      `<div style="border-left:3px solid #62f080;padding-left:10px;margin:4px 0;">` +
+      `<div style="color:#62f080;font-weight:bold;">[✓ READING #${readings.indexOf(log) + 1} REFINED → ${escapeHtml(def?.label || tag)}] (-${REFINE_COST.humanity}% HUM, +${heat}% Heat)</div>` +
+      `<div style="color:#ffffff;margin-top:4px;">"${escapeHtml(preciseText)}"</div>` +
+      `</div>`,
+      'success'
+    );
+    addToast(`Reading resolved: ${def?.label || tag}`, 'INTEL');
   };
 
   const handleRunForensicTool = (toolCmd: string, expectedChannel: ForensicChannel, toolLabel: string) => {
@@ -1593,12 +1803,16 @@ export default function App() {
       triggerHudFlash('DAMAGE');
       const shockHum = state.tetheredYokai.includes('yokai_baku') ? -3 : -6;
       dispatch({ type: 'MODIFY_HUMANITY', payload: shockHum });
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 10 } });
-      appendLog(`[!] TRAP INTERFERENCE! Running <code>${toolCmd}</code> while <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> is active caused feedback damage (${shockHum}% HUM, +10% Heat)!`, 'error');
+      const shockHeat = addSectorHeat(10);
+      appendLog(`[!] TRAP INTERFERENCE! Running <code>${toolCmd}</code> while <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> is active caused feedback damage (${shockHum}% HUM, +${shockHeat}% Heat)!`, 'error');
       addToast(`Trap Blocked Scan! Disarm First!`, 'ALERT');
       return;
     }
 
+    if (currentSubNode.nodeType === 'WITNESS') {
+      appendLog(`[i] Instruments pick up nothing but a frightened heartbeat. Run <code>interview</code> to take the witness's statement.`, 'system');
+      return;
+    }
     if (!currentSubNode.signalChannel) {
       handleLootRoom(true);
       return;
@@ -1606,32 +1820,39 @@ export default function App() {
 
     if (currentSubNode.signalChannel !== expectedChannel) {
       ThaumaturgicAudio.errorBuzz();
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 5 } });
-      appendLog(`[-] WRONG INSTRUMENT: <strong>${toolLabel}</strong> (<code>${toolCmd}</code>) returned static against: <em>"${currentSubNode.rawSignalSymptom}"</em> (+5% Heat).`, 'warn');
-      addToast(`Wrong Forensic Tool! (+5% Heat)`, 'ALERT');
+      const wrongHeat = addSectorHeat(5);
+      appendLog(`[-] WRONG INSTRUMENT: <strong>${toolLabel}</strong> (<code>${toolCmd}</code>) returned static against: <em>"${currentSubNode.rawSignalSymptom}"</em> (+${wrongHeat}% Heat).`, 'warn');
+      addToast(`Wrong Forensic Tool! (+${wrongHeat}% Heat)`, 'ALERT');
       return;
     }
 
     ThaumaturgicAudio.sealSuccess();
     triggerHudFlash('DECODE');
     addMicroEntropy(0.01);
-    const updatedLogs = [...currentContract.discoveredLogs];
-
-    if (currentSubNode.forensicText) {
-      updatedLogs.push({
-        id: `${currentSubNode.id}_log`,
-        nodeLabel: currentSubNode.label,
-        text: currentSubNode.forensicText,
-        channel: expectedChannel
-      });
+    const group = currentSubNode.ambiguityGroupId ? AMBIGUITY_GROUPS.find(g => g.id === currentSubNode.ambiguityGroupId) : undefined;
+    const readingCount = sectorEvidence('PHENOMENON').length + 1;
+    const newLog: EvidenceLog | null = currentSubNode.signTag ? {
+      id: `${currentSubNode.id}_log`,
+      kind: 'PHENOMENON',
+      nodeLabel: currentSubNode.label,
+      channel: expectedChannel,
+      trueTag: currentSubNode.signTag,
+      candidates: group ? group.tags : [currentSubNode.signTag],
+      text: group ? group.report : currentSubNode.forensicText || ''
+    } : null;
+    if (newLog) {
+      const options = (newLog.candidates || []).map(t => PHENOMENON_CATALOG.find(p => p.tag === t)?.label || t);
       appendLog(
-        `<div style="background:rgba(98,240,128,0.09);border-left:3px solid #62f080;padding:8px 10px;margin:4px 0;">` +
-        `<div style="color:#62f080;font-weight:bold;">[✓ ${toolLabel} // CLUE ${updatedLogs.length}/3 DECODED AT ${currentSubNode.label}]</div>` +
-        `<div style="color:#ffffff;margin-top:4px;">"${currentSubNode.forensicText}"</div>` +
+        `<div style="background:rgba(98,240,128,0.09);border-left:3px solid ${group ? '#ffb800' : '#62f080'};padding:8px 10px;margin:4px 0;">` +
+        `<div style="color:${group ? '#ffb800' : '#62f080'};font-weight:bold;">[${group ? '≈' : '✓'} ${toolLabel} // READING ${readingCount}/3 AT ${currentSubNode.label}${group ? ' — DEGRADED' : ''}]</div>` +
+        `<div style="color:#ffffff;margin-top:4px;">"${escapeHtml(newLog.text)}"</div>` +
+        (group
+          ? `<div style="color:#a8ccaf;margin-top:4px;font-size:0.9em;">Could be: <strong>${options.join(' / ')}</strong>. Run <code>refine ${readingCount}</code> to resolve it (-${REFINE_COST.humanity}% HUM, +heat), or work around it.</div>`
+          : '') +
         `</div>`,
         'success'
       );
-      addToast(`Clue ${updatedLogs.length}/3 Decoded!`, 'INTEL');
+      addToast(group ? `Reading ${readingCount}/3: degraded signal` : `Reading ${readingCount}/3 decoded!`, 'INTEL');
     }
 
     if (currentSubNode.salvageDrop) {
@@ -1641,11 +1862,11 @@ export default function App() {
       appendLog(`[📦 SALVAGE] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
     }
 
-    if (updatedLogs.length >= 3 && consumeFirstTimeHint('three_clues_ready')) {
+    if (readingCount >= 3 && consumeFirstTimeHint('three_clues_ready')) {
       appendLog(
         `<div style="background:rgba(255,184,0,0.14);border:1px solid #ffb800;padding:10px;margin:6px 0;color:#ffb800;">` +
-        `<strong>🎯 [3/3 CLUES DECODED — CASE READY FOR DEDUCTION!]</strong><br/>` +
-        `Press <strong>[F2] CODEX</strong> to tick off your 3 phenomena and identify the demon, then craft its catalysts in <strong>[F4] SAFEHOUSE</strong>!` +
+        `<strong>🎯 [3/3 READINGS TAKEN — OPEN THE CASE FILE]</strong><br/>` +
+        `Press <strong>[F2] CODEX</strong> to see which suspects fit your evidence. Narrow it down with the witness statement, anchor <code>attune</code> readings, or <code>refine</code>, then craft catalysts in <strong>[F4] SAFEHOUSE</strong>.` +
         `</div>`,
         'warn'
       );
@@ -1658,7 +1879,7 @@ export default function App() {
     updateContract(currentContract.sectorId, c => ({
       ...c,
       subNodes: updatedNodes(c.subNodes),
-      discoveredLogs: updatedLogs
+      discoveredLogs: newLog && !c.discoveredLogs.some(l => l.id === newLog.id) ? [...c.discoveredLogs, newLog] : c.discoveredLogs
     }));
   };
 
@@ -1682,8 +1903,12 @@ export default function App() {
       ThaumaturgicAudio.errorBuzz();
       triggerHudFlash('DAMAGE');
       dispatch({ type: 'MODIFY_HUMANITY', payload: -6 });
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: 10 } });
-      appendLog(`[!] TRAP BLOCKED LOOTING: <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> (-6% HUM, +10% Heat)!`, 'error');
+      const lootHeat = addSectorHeat(10);
+      appendLog(`[!] TRAP BLOCKED LOOTING: <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> (-6% HUM, +${lootHeat}% Heat)!`, 'error');
+      return;
+    }
+    if (currentSubNode.nodeType === 'WITNESS') {
+      appendLog(`[i] A shaken witness is huddled here. Run <code>interview</code> to take their statement.`, 'system');
       return;
     }
     if (!bypassSignalCheck && currentSubNode.signalChannel) {
@@ -1746,7 +1971,7 @@ export default function App() {
       dispatch({ type: 'MODIFY_HUMANITY', payload: -5 });
       const revealedNodes = (nodes: SubGridNode[]) => nodes.map(n => n.status === 'LOCKED' ? { ...n, status: 'SCANNED' as const } : n);
       updateContract(currentContract.sectorId, c => ({ ...c, subNodes: revealedNodes(c.subNodes) }));
-      appendLog(`[👹 ${spec.codeName} // GALE SWEEP] Aerial LiDAR scanned all 6 rooms (-5% HUM)!`, 'success');
+      appendLog(`[👹 ${spec.codeName} // GALE SWEEP] Aerial LiDAR scanned every room (-5% HUM)!`, 'success');
     } else if (yokaiId === 'yokai_baku') {
       dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
       dispatch({ type: 'MODIFY_HUMANITY', payload: 20 });
@@ -1821,9 +2046,9 @@ export default function App() {
     if (cmd === 'help' || cmd === '?') {
       appendLog(
         `<div style="background:rgba(31,61,38,0.25);border:1px solid #1f3d26;padding:10px;line-height:1.55;">` +
-        `<strong style="color:#62f080;">1. RECON &amp; ENTRY:</strong> <code style="color:#ffb800;">scan [1-6]</code> | <code style="color:#ffb800;">enter [1-6]</code> | <code style="color:#ffb800;">loot</code> | <code style="color:#ffb800;">attune</code> (at Anchor)<br/>` +
-        `<strong style="color:#00f3ff;">2. PRE-ENTRY COUNTERS:</strong> <code style="color:#ff2a55;">decoy [1-6]</code> | <code style="color:#00f3ff;">degauss [1-6]</code> | <code style="color:#00f3ff;">bypass [1-6]</code> | <code style="color:#00f3ff;">purge [1-6]</code> | <code style="color:#00f3ff;">dispel [1-6]</code><br/>` +
-        `<strong style="color:#62f080;">3. FORENSIC SUITE:</strong> <code style="color:#62f080;">vox</code> (Audio) | <code style="color:#62f080;">assay</code> (Matter/Bio) | <code style="color:#62f080;">auspex</code> (Astral/Thermal)<br/>` +
+        `<strong style="color:#62f080;">1. RECON &amp; ENTRY:</strong> <code style="color:#ffb800;">scan [#]</code> | <code style="color:#ffb800;">enter [#]</code> | <code style="color:#ffb800;">loot</code> | <code style="color:#ffb800;">interview</code> (Witness) | <code style="color:#ffb800;">attune</code> (Anchor: court, then rank)<br/>` +
+        `<strong style="color:#00f3ff;">2. PRE-ENTRY COUNTERS:</strong> <code style="color:#ff2a55;">decoy [#]</code> | <code style="color:#00f3ff;">degauss [#]</code> | <code style="color:#00f3ff;">bypass [#]</code> | <code style="color:#00f3ff;">purge [#]</code> | <code style="color:#00f3ff;">dispel [#]</code><br/>` +
+        `<strong style="color:#62f080;">3. FORENSIC SUITE:</strong> <code style="color:#62f080;">vox</code> (Audio) | <code style="color:#62f080;">assay</code> (Matter/Bio) | <code style="color:#62f080;">auspex</code> (Astral/Thermal) | <code style="color:#62f080;">refine [#]</code> (resolve a degraded reading)<br/>` +
         `<strong style="color:#ff2a55;">4. INQUISITION HEAT:</strong> <code style="color:#ff2a55;">spoof</code> (-15 Obols: -25% Heat) | <code style="color:#ff2a55;">bribe</code> (-25 Obols: -45% Heat)` +
         `</div>`,
         'info'
@@ -1836,6 +2061,10 @@ export default function App() {
       handleLootRoom(false);
     } else if (cmd === 'attune') {
       handleAttuneAnchor();
+    } else if (cmd === 'interview' || cmd === 'question' || cmd === 'talk') {
+      handleInterviewWitness();
+    } else if (cmd === 'refine' || cmd === 'enhance') {
+      handleRefineReading(arg);
     } else if (cmd === 'decoy') {
       handleDecoyPatrol(arg);
     } else if (['degauss', 'bypass', 'purge', 'purify', 'dispel'].includes(cmd)) {
@@ -2045,7 +2274,7 @@ export default function App() {
 
               let subBadge = sectorFailed ? '[LOST]' : sectorSecured ? '[SECURED]' : isCurrent ? '[YOU ARE HERE]' : `[${node.status} // +${entryHeat}% HEAT]`;
               if (!sectorSecured && !isCurrent && node.status === 'SCANNED') {
-                const typeTag = node.patrolActive ? '! PATROL !' : node.nodeType === 'SHRINE' ? 'SHRINE' : node.nodeType === 'ANCHOR' ? 'ANCHOR' : 'CLUE';
+                const typeTag = node.patrolActive ? '! PATROL !' : node.nodeType === 'SHRINE' ? 'SHRINE' : node.nodeType === 'ANCHOR' ? 'ANCHOR' : node.nodeType === 'WITNESS' ? 'WITNESS' : 'CLUE';
                 subBadge = `[${typeTag} // +${entryHeat}% HEAT]`;
               }
               ctx.font = '10px "Courier New", monospace';
@@ -2226,6 +2455,10 @@ export default function App() {
             travelTo(sec.id);
             setMapViewMode('SUB_GRID');
             appendLog(`[*] ROUTED TETHER TO SECTOR: <strong style="color:#62f080;">${sec.label}</strong> (${sec.region}). (+0.02% Global Entropy)`, 'info');
+            const destQuirk = getSectorQuirk(contracts[sec.id]);
+            if (destQuirk !== 'NONE' && !isSectorClosed(sec.id)) {
+              appendLog(`[⚠ SECTOR CONDITION: <strong style="color:#00f3ff;">${SECTOR_QUIRKS[destQuirk].label}</strong>] ${SECTOR_QUIRKS[destQuirk].desc}`, 'warn');
+            }
           }
           break;
         }
@@ -2268,6 +2501,53 @@ export default function App() {
     );
   }
 
+  const HORSEMEN = ['conquest', 'war', 'famine', 'death'] as const;
+  const banishedCount = HORSEMEN.filter(h => state.flags[`banished_${h}`]).length;
+  if (state.gameStage === 'ACTIVE' && banishedCount === HORSEMEN.length && !activeBanishmentTarget) {
+    const manifested = (state.releasedGoetia || []).length;
+    const rating =
+      lostSectorsCount === 0 && totalGlobalEntropy < 25 ? { title: 'ARCHON OF THE BRASS VESSEL', note: 'A flawless working. Solomon himself would have taken notes.' }
+      : lostSectorsCount <= 2 && totalGlobalEntropy < 50 ? { title: 'MAGISTER TEMPLI', note: 'The city will never know how close it came.' }
+      : totalGlobalEntropy < 75 ? { title: 'ADEPTUS MINOR', note: 'Reality held. Mostly. The seams will show for a generation.' }
+      : { title: 'PYRRHIC SURVIVOR', note: 'You won, and London will be paying for it for the rest of the century.' };
+    return (
+      <div style={{ position: 'fixed', inset: 0, backgroundColor: '#020403', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px', fontFamily: theme.fontMono, overflowY: 'auto' }}>
+        <div style={{ width: '100%', maxWidth: '560px', padding: '28px', border: `2px solid ${theme.textBright}`, backgroundColor: theme.bgPanel, textAlign: 'center', color: '#a8ccaf', boxShadow: '0 0 60px rgba(98, 240, 128, 0.2)' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '14px' }}>
+            {(['CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => (
+              <HorsemanSigilSvg key={h} horseman={h} color={theme.textBright} size={44} />
+            ))}
+          </div>
+          <h1 style={{ color: theme.textBright, letterSpacing: '5px', fontSize: '1.5rem', margin: '0 0 6px 0' }}>THE FOUR ARE BANISHED</h1>
+          <div style={{ color: theme.accentAmber, fontSize: '0.78rem', letterSpacing: '2px', marginBottom: '16px' }}>OPERATION CLOSED // {state.agencyName.toUpperCase() || 'DARKWIRE'}</div>
+          <p style={{ fontSize: '0.84rem', lineHeight: '1.65', margin: '0 0 14px 0', color: '#ffffff' }}>
+            Conquest, War, Famine and Death have been severed from the mundane world. The ley-lines under London go quiet for the first time in a decade.
+            {manifested > 0
+              ? ` But ${manifested} spirit${manifested === 1 ? '' : 's'} you failed to bind still walk${manifested === 1 ? 's' : ''} the city, unanswerable to any Horseman now — and unanswerable to you.`
+              : ' Every spirit you hunted is accounted for in the Brass Vessel.'}
+          </p>
+          <div style={{ fontSize: '0.78rem', lineHeight: '1.8', marginBottom: '16px', padding: '10px', border: `1px dashed ${theme.borderTerminal}`, backgroundColor: '#030504', textAlign: 'left' }}>
+            OPERATIVE: <strong style={{ color: theme.textBright }}>{state.playerName.toUpperCase() || 'UNKNOWN'}</strong><br/>
+            GOETIA SEALED: <strong style={{ color: theme.textBright }}>{state.sealedGoetia.length}/72</strong><br/>
+            SECTORS SECURED / LOST: <strong style={{ color: theme.textBright }}>{securedSectorsCount}</strong> / <strong style={{ color: lostSectorsCount ? theme.accentRed : theme.textBright }}>{lostSectorsCount}</strong><br/>
+            SPIRITS MANIFESTED: <strong style={{ color: manifested ? theme.accentRed : theme.textBright }}>{manifested}</strong><br/>
+            FINAL GLOBAL ENTROPY: <strong style={{ color: theme.accentAmber }}>{totalGlobalEntropy.toFixed(2)}%</strong><br/>
+            HUMANITY REMAINING: <strong style={{ color: theme.textBright }}>{state.humanity}%</strong>
+          </div>
+          <div style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>SERVICE RATING</div>
+          <div style={{ fontSize: '1.15rem', color: theme.textBright, fontWeight: 'bold', letterSpacing: '3px', margin: '4px 0' }}>{rating.title}</div>
+          <p style={{ fontSize: '0.78rem', margin: '0 0 18px 0' }}>{rating.note}</p>
+          <button
+            onClick={() => { ThaumaturgicAudio.keyClick(); handleFullReset(); }}
+            style={{ width: '100%', padding: '12px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontFamily: theme.fontMono, letterSpacing: '2px' }}
+          >
+            &gt; ARCHIVE OPERATIVE &amp; BEGIN A NEW RUN
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (state.gameStage === 'START_SCREEN') {
     return (
       <>
@@ -2292,9 +2572,8 @@ export default function App() {
     );
   }
 
-  const activeSectorClueCount = currentContract && !isSectorClosed(currentContract.sectorId)
-    ? currentContract.discoveredLogs.length
-    : 0;
+  const activeSectorClueCount = caseEvidence.length;
+  const activeReadingCount = caseEvidence.filter(l => l.kind === 'PHENOMENON').length;
 
   const selectedSuspect = allGoetia.find(g => g.id === selectedSuspectId) || allGoetia[0];
   const selectedRoomHeatCost = selectedSubNode ? getRoomEntryHeatCost(selectedSubNode) : 8;
@@ -2427,9 +2706,9 @@ export default function App() {
           <button
             className={`viewport-tab ${viewport === 'CODEX' ? 'active' : ''}`}
             onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('CODEX'); }}
-            style={activeSectorClueCount >= 3 && viewport !== 'CODEX' ? { borderColor: theme.accentAmber, color: theme.accentAmber, boxShadow: '0 0 8px rgba(255,184,0,0.4)' } : undefined}
+            style={activeReadingCount >= 3 && viewport !== 'CODEX' ? { borderColor: theme.accentAmber, color: theme.accentAmber, boxShadow: '0 0 8px rgba(255,184,0,0.4)' } : undefined}
           >
-            [F2] CODEX ({activeSectorClueCount}/3)
+            [F2] CODEX ({activeSectorClueCount})
           </button>
           <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}>[F3] KAGE ({state.tetheredYokai.length}/2)</button>
           <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}>[F4] SAFEHOUSE</button>
@@ -2533,12 +2812,15 @@ export default function App() {
                       </span>
                     )}
                   </span>
-                  {activeSectorClueCount >= 3 && isFirstRun ? (
+                  {activeReadingCount >= 3 && isFirstRun ? (
                     <button onClick={() => { ThaumaturgicAudio.scryPing(); setViewport('CODEX'); }} className="macro-chip macro-chip-amber" style={{ padding: '2px 8px', fontWeight: 'bold' }}>
-                      🎯 3/3 CLUES FOUND — OPEN [F2] CODEX &rarr;
+                      🎯 3/3 READINGS — OPEN [F2] CODEX &rarr;
                     </button>
                   ) : (
-                    <span style={{ color: theme.accentAmber }}>CLUES DECODED: <strong>{activeSectorClueCount}/3</strong></span>
+                    <span style={{ color: theme.accentAmber }}>
+                      READINGS: <strong>{activeReadingCount}/3</strong> · EVIDENCE: <strong>{activeSectorClueCount}</strong>
+                      {currentQuirk !== 'NONE' && <> · <span style={{ color: theme.accentCyan }}>{SECTOR_QUIRKS[currentQuirk].label}</span></>}
+                    </span>
                   )}
                 </div>
 
@@ -2549,6 +2831,10 @@ export default function App() {
                       ? `⚠️ TRAP ACTIVE: "${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"`
                       : currentSubNode.status === 'CLEARED'
                       ? `✓ Cleared.`
+                      : currentSubNode.nodeType === 'WITNESS'
+                      ? `🗣 A shaken witness is here — run interview.`
+                      : currentSubNode.nodeType === 'ANCHOR'
+                      ? `⚡ Conduit anchor — run attune to read its court and rank.`
                       : currentSubNode.rawSignalSymptom
                       ? `🔎 CLUE SIGNAL: "${currentSubNode.rawSignalSymptom}"`
                       : `⛩️ Shrine / Salvage ready.`}
@@ -2636,7 +2922,12 @@ export default function App() {
                   <button onClick={() => processCliCommand(`enter ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-amber">⚡ enter {selectedSubNode?.index || 1} (+{selectedRoomHeatCost}% Heat)</button>
                   <button onClick={() => processCliCommand('loot')} className="macro-chip">📦 loot</button>
                   {currentSubNode?.nodeType === 'ANCHOR' && (
-                    <button onClick={() => processCliCommand('attune')} className="macro-chip macro-chip-amber">⚡ attune (+4s Seal)</button>
+                    <button onClick={() => processCliCommand('attune')} className="macro-chip macro-chip-amber">
+                      ⚡ attune ({(currentContract?.discoveredLogs || []).some(l => l.kind === 'COURT') ? `deep: rank, -${DEEP_ATTUNE_COST.humanity}% HUM` : 'court, +4s Seal'})
+                    </button>
+                  )}
+                  {currentSubNode?.nodeType === 'WITNESS' && currentSubNode.status !== 'CLEARED' && (
+                    <button onClick={() => processCliCommand('interview')} className="macro-chip macro-chip-cyan">🗣 interview</button>
                   )}
                 </div>
 
@@ -2654,6 +2945,9 @@ export default function App() {
                   <button onClick={() => processCliCommand('vox')} className="macro-chip">🎙️ vox (Audio)</button>
                   <button onClick={() => processCliCommand('assay')} className="macro-chip">🧪 assay (Matter)</button>
                   <button onClick={() => processCliCommand('auspex')} className="macro-chip">👁️ auspex (Astral)</button>
+                  {(currentContract?.discoveredLogs || []).some(isAmbiguous) && (
+                    <button onClick={() => processCliCommand('refine')} className="macro-chip macro-chip-amber">≈ refine (-{REFINE_COST.humanity}% HUM)</button>
+                  )}
                   <button onClick={() => processCliCommand('spoof')} className="macro-chip macro-chip-danger">📡 spoof (-15 Ob)</button>
                   <button onClick={() => processCliCommand('bribe')} className="macro-chip macro-chip-danger">🪙 bribe (-25 Ob)</button>
                 </div>
@@ -2674,7 +2968,7 @@ export default function App() {
                 ref={cliInputRef}
                 value={cliInput}
                 onChange={e => setCliInput(e.target.value)}
-                placeholder="Type command (scan 1, degauss 2, enter 1, vox, assay, auspex, help)..."
+                placeholder="Type command (scan 1, enter 1, vox, refine, interview, attune, help)..."
                 style={{ flex: 1, backgroundColor: 'transparent', color: theme.textBright, border: 'none', outline: 'none', fontFamily: theme.fontMono, fontSize: '0.8rem' }}
               />
               <button type="submit" className="macro-chip">EXEC</button>
@@ -2688,7 +2982,7 @@ export default function App() {
           <section className="codex-col">
             <div style={{ height: '40%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>1. DECODED SECTOR CLUES ({activeSectorClueCount}/3)</span>
+                <span>1. CASE EVIDENCE ({activeSectorClueCount})</span>
                 <span style={{ color: theme.accentAmber }}>{currentContract?.sectorLabel}</span>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.76rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2698,15 +2992,51 @@ export default function App() {
                   <div style={{ color: theme.textBright }}>✓ Sector secured. Deploy to a new sector on the Regional Map!</div>
                 ) : currentContract.discoveredLogs.length === 0 ? (
                   <div style={{ color: theme.textMuted, fontStyle: 'italic' }}>
-                    No clues decoded in this sector yet.
+                    No evidence gathered in this sector yet. Decode clue rooms, interview the witness, and attune at the anchor.
                   </div>
                 ) : (
-                  currentContract.discoveredLogs.map((log, i) => (
-                    <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.textBright}` }}>
-                      <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '0.7rem' }}>CLUE #{i + 1} [{log.channel}] // {log.nodeLabel}</div>
-                      <div style={{ color: '#ffffff', marginTop: '3px' }}>"{log.text}"</div>
-                    </div>
-                  ))
+                  (() => {
+                    const readings = currentContract.discoveredLogs.filter(l => l.kind === 'PHENOMENON' || !l.kind);
+                    return currentContract.discoveredLogs.map(log => {
+                      if (log.kind === 'WITNESS') {
+                        return (
+                          <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.accentCyan}` }}>
+                            <div style={{ color: theme.accentCyan, fontWeight: 'bold', fontSize: '0.7rem' }}>WITNESS // {log.witness || 'UNNAMED'} // {log.nodeLabel}</div>
+                            <div style={{ color: '#ffffff', marginTop: '3px', fontStyle: 'italic' }}>"{log.text}"</div>
+                          </div>
+                        );
+                      }
+                      if (log.kind === 'COURT' || log.kind === 'RANK') {
+                        return (
+                          <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.accentAmber}` }}>
+                            <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '0.7rem' }}>ANCHOR RESONANCE // {log.kind}: {String(log.value).toUpperCase()}</div>
+                            <div style={{ color: '#ffffff', marginTop: '3px' }}>{log.text}</div>
+                          </div>
+                        );
+                      }
+                      const n = readings.indexOf(log) + 1;
+                      const degraded = isAmbiguous(log);
+                      const labels = (log.candidates || []).map(t => PHENOMENON_CATALOG.find(p => p.tag === t)?.label || formatLabel(t));
+                      return (
+                        <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${degraded ? theme.accentAmber : theme.textBright}` }}>
+                          <div style={{ color: degraded ? theme.accentAmber : theme.textBright, fontWeight: 'bold', fontSize: '0.7rem' }}>
+                            READING #{n} [{log.channel}] // {log.nodeLabel}{degraded ? ' // DEGRADED' : ''}
+                          </div>
+                          {labels.length > 0 && (
+                            <div style={{ color: degraded ? theme.accentAmber : theme.textBright, marginTop: '2px', fontSize: '0.72rem' }}>
+                              {degraded ? `≈ ${labels.join(' / ')}` : `✓ ${labels[0]}`}
+                            </div>
+                          )}
+                          <div style={{ color: '#ffffff', marginTop: '3px' }}>"{log.text}"</div>
+                          {degraded && (
+                            <button onClick={() => processCliCommand(`refine ${n}`)} className="macro-chip macro-chip-amber" style={{ marginTop: '5px', padding: '2px 8px' }}>
+                              ≈ refine {n} (-{REFINE_COST.humanity}% HUM)
+                            </button>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()
                 )}
               </div>
             </div>
@@ -2746,19 +3076,27 @@ export default function App() {
 
           <section className="codex-col" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px' }}>
-              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>3. SUSPECTS ({filteredCodexGoetia.length}/72)</span>
+              <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>
+                3. SUSPECTS {caseEvidence.length > 0 ? `(${consistentCount} FIT EVIDENCE)` : `(${filteredCodexGoetia.length}/72)`}
+              </span>
               <div style={{ display: 'flex', gap: '3px' }}>
                 {(['ALL', 'CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => (
                   <button key={h} onClick={() => setCodexHorsemanFilter(h)} className={`macro-chip ${codexHorsemanFilter === h ? 'macro-chip-amber' : ''}`} style={{ padding: '2px 5px', fontSize: '0.66rem' }}>
                     {h === 'ALL' ? 'ALL' : h.slice(0, 3)}
                   </button>
                 ))}
+                {caseEvidence.length > 0 && (
+                  <button onClick={() => setShowRuledOut(v => !v)} className={`macro-chip ${showRuledOut ? 'macro-chip-danger' : ''}`} style={{ padding: '2px 5px', fontSize: '0.66rem' }}>
+                    {showRuledOut ? 'HIDE ✗' : 'SHOW ✗'}
+                  </button>
+                )}
               </div>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
               {filteredCodexGoetia.map(g => {
                 const isSealed = state.sealedGoetia.includes(g.id);
                 const isSelected = g.id === selectedSuspectId;
+                const fit = suspectFit(g);
                 return (
                   <button
                     key={g.id}
@@ -2775,6 +3113,11 @@ export default function App() {
                     <div>
                       <strong>#{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()}</strong>
                       <div style={{ fontSize: '0.68rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance}</div>
+                      {fit.total > 0 && (
+                        <div style={{ fontSize: '0.64rem', color: fit.contradicted ? theme.accentRed : theme.textBright }}>
+                          {fit.contradicted ? `✗ RULED OUT (${fit.matched}/${fit.total})` : `✓ FITS ${fit.matched}/${fit.total}`}
+                        </div>
+                      )}
                     </div>
                     <span style={{ fontSize: '0.66rem', color: isSealed || isReleased(g.id) ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
                       {isSealed ? '✗ SEALED' : isReleased(g.id) ? '☠ MANIFESTED' : '[INSPECT]'}
@@ -2901,17 +3244,19 @@ export default function App() {
                 {getUniqueGoetiaSigns(selectedSuspect.id).map(tag => {
                   const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
                   const isToggled = deducedSigns.includes(tag);
+                  const supported = caseEvidence.some(l => l.kind === 'PHENOMENON' && l.candidates?.includes(tag));
                   return (
-                    <div key={tag} style={{ fontSize: '0.72rem', color: isToggled ? theme.textBright : '#a8ccaf' }}>
-                      {isToggled ? '✓ ' : '• '} <strong>{def?.label || formatLabel(tag)}</strong>
+                    <div key={tag} style={{ fontSize: '0.72rem', color: isToggled || supported ? theme.textBright : '#a8ccaf' }}>
+                      {isToggled || supported ? '✓ ' : '• '} <strong>{def?.label || formatLabel(tag)}</strong>{supported ? ' (in evidence)' : ''}
                     </div>
                   );
                 })}
               </div>
 
-              <p style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5', margin: 0, padding: '8px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}` }}>
+              <div style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5', margin: 0, padding: '8px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}` }}>
+                <div style={{ fontSize: '0.68rem', color: theme.accentCyan, fontWeight: 'bold', marginBottom: '3px' }}>LEMEGETON ENTRY (compare with witness statements):</div>
                 {selectedSuspect.description}
-              </p>
+              </div>
             </div>
           </section>
         </main>
@@ -2932,7 +3277,8 @@ export default function App() {
                 onClick={() => {
                   if ((state.inventory.obols || 0) >= 10) {
                     ThaumaturgicAudio.keyClick();
-                    dispatch({ type: 'LOAD_GAME', payload: { ...state, inventory: { ...state.inventory, obols: (state.inventory.obols || 0) - 10 }, ink: (state.ink || 0) + 1 } });
+                    dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -10 } });
+                    dispatch({ type: 'MODIFY_INK', payload: 1 });
                     addToast(`Distilled +1 Esoteric Ink`, 'ITEM');
                   } else {
                     addToast(`Requires 10 Obols to distill Esoteric Ink.`, 'ALERT');

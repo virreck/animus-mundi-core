@@ -1,6 +1,11 @@
 // src/engine/sectorGenerator.ts
 import { allGoetia } from '../content/goetia';
 import { allYokai } from '../content/yokai';
+import {
+  type EvidenceLog,
+  getAmbiguityGroup,
+  redactWitnessStatement
+} from './evidence';
 
 export type ForensicChannel = 'AUDIO' | 'MATTER' | 'ASTRAL';
 
@@ -260,7 +265,7 @@ const UNIQUE_SIGNS_CACHE: Record<string, string[]> = {};
 
 // Dev-only content sanity check: every clue a demon requires must be a real phenomenon,
 // otherwise it can't be decoded or ticked in the Codex.
-if (import.meta.env.DEV) {
+if (import.meta.env?.DEV) {
   const knownTags = new Set(PHENOMENON_CATALOG.map(p => p.tag));
   allGoetia.forEach(g => {
     (g.requiredIntel || []).forEach(tag => {
@@ -354,13 +359,18 @@ export interface SubGridNode {
   connections: string[];
   wardLevel: number;
   status: 'LOCKED' | 'SCANNED' | 'ENTERED' | 'CLEARED';
-  nodeType: 'ANOMALY' | 'SHRINE' | 'PATROL' | 'ANCHOR';
+  nodeType: 'ANOMALY' | 'SHRINE' | 'PATROL' | 'ANCHOR' | 'WITNESS';
   hazard: RoomHazardType;
   patrolActive?: boolean;
   signalChannel?: ForensicChannel;
   rawSignalSymptom?: string;
   signTag?: string;
   forensicText?: string;
+  /** Set when this room's clue reads as one of several phenomena until refined. */
+  ambiguityGroupId?: string;
+  /** WITNESS rooms: redacted statement and who gave it. */
+  witnessText?: string;
+  witnessName?: string;
   salvageDrop?: { itemId: string; amount: number; obols: number };
   shrineYokaiId?: string;
 }
@@ -372,8 +382,47 @@ export interface SectorContract {
   activeSubNodeId: string | null;
   selectedSubNodeId: string;
   subNodes: SubGridNode[];
-  discoveredLogs: { id: string; nodeLabel: string; text: string; channel: string }[];
+  discoveredLogs: EvidenceLog[];
+  /** Environmental modifier for this sector (missing on older saves = NONE). */
+  quirk?: SectorQuirk;
 }
+
+// ---------------------------------------------------------------------------
+// SECTOR QUIRKS — per-sector conditions that change how a contract plays
+// ---------------------------------------------------------------------------
+export type SectorQuirk = 'NONE' | 'SURVEILLED' | 'HALLOWED' | 'STATIC_STORM' | 'LUCID_WITNESS' | 'WARDED';
+
+export const SECTOR_QUIRKS: Record<SectorQuirk, { label: string; desc: string; heatMultiplier: number }> = {
+  NONE: { label: 'NOMINAL', desc: 'No unusual conditions.', heatMultiplier: 1 },
+  SURVEILLED: { label: 'MALLEUS SURVEILLANCE', desc: 'Tracking vans circle the block. All Inquisition Heat gains +50%.', heatMultiplier: 1.5 },
+  HALLOWED: { label: 'HALLOWED GROUND', desc: 'Old consecrations muffle your work. All Inquisition Heat gains -40%.', heatMultiplier: 0.6 },
+  STATIC_STORM: { label: 'AETHYRIC STORM', desc: 'Interference degrades every forensic reading. All clues need refining to be certain.', heatMultiplier: 1 },
+  LUCID_WITNESS: { label: 'LUCID WITNESS', desc: 'The witness here saw clearly. Their statement is far less redacted.', heatMultiplier: 1 },
+  WARDED: { label: 'HEAVILY WARDED', desc: 'Every room past the entrance is trapped.', heatMultiplier: 1 }
+};
+
+/** Sectors with a thematic tendency toward one quirk (70% chance); everything else rolls randomly. */
+const SECTOR_QUIRK_BIAS: Record<string, SectorQuirk> = {
+  malleus_precinct: 'SURVEILLED',
+  woolwich_arsenal: 'SURVEILLED',
+  lambeth_sanctum: 'HALLOWED',
+  st_pauls_whisper: 'HALLOWED',
+  croydon_relay: 'STATIC_STORM',
+  battersea_forge: 'STATIC_STORM',
+  brixton_morgue: 'LUCID_WITNESS',
+  highgate_catacombs: 'WARDED',
+  blackfriars_vault: 'WARDED'
+};
+
+const RANDOM_QUIRK_POOL: SectorQuirk[] = ['NONE', 'NONE', 'NONE', 'SURVEILLED', 'HALLOWED', 'STATIC_STORM', 'LUCID_WITNESS', 'WARDED'];
+
+function rollQuirk(sectorId: string): SectorQuirk {
+  const bias = SECTOR_QUIRK_BIAS[sectorId];
+  if (bias && Math.random() < 0.7) return bias;
+  return RANDOM_QUIRK_POOL[Math.floor(Math.random() * RANDOM_QUIRK_POOL.length)];
+}
+
+export const getSectorQuirk = (contract?: SectorContract | null): SectorQuirk => contract?.quirk || 'NONE';
 
 export interface AltarRecipe {
   outputId: string;
@@ -417,149 +466,186 @@ const ROOM_NAMES_BY_SECTOR: Record<string, string[]> = {
   st_pauls_whisper: ['DEAN STAIRWELL', 'WHISPERING GALLERY', 'GEOMETRIC DOME', 'CRYPT OF ST FAITH', 'BELL CRADLE', 'OMEGA THRONE']
 };
 
-export function generateSectorContract(sectorId: string, sectorLabel: string, sealedGoetia: string[], usedGoetiaIds: string[] = []): SectorContract {
+/** Two spare room names per sector so larger layouts never repeat. */
+const EXTRA_ROOM_NAMES: Record<string, string[]> = {
+  caterham_churchyard: ['YEW WALK', 'CHARNEL HOUSE'],
+  caterham_asylum: ['ELECTROSHOCK SUITE', 'CHAPEL OF REST'],
+  chaldon_quarry: ['DYNAMITE STORE', 'FOSSIL SEAM'],
+  croydon_relay: ['ROOFTOP DISH ARRAY', 'CABLE VAULT'],
+  malleus_precinct: ['BRIEFING ROOM', 'RECORDS ANNEX'],
+  brixton_morgue: ['VIEWING ROOM', 'PATHOLOGY STORE'],
+  waddon_marsh: ['REED BEDS', 'FLOODED CULVERT'],
+  thames_nexus: ['FORESHORE STEPS', 'PUMPING CHAMBER'],
+  blackfriars_vault: ['STRONGROOM 9', 'COUNTING HOUSE'],
+  highgate_catacombs: ['TERRACE CATACOMB', 'ANGEL STATUARY'],
+  woolwich_arsenal: ['CARTRIDGE WORKS', 'RIVER GATE'],
+  greenwich_observatory: ['CAMERA OBSCURA', 'PLANETARIUM WELL'],
+  whitechapel_abattoir: ['KILLING FLOOR', 'TALLOW STORE'],
+  lambeth_sanctum: ['GUARD ROOM', 'MORTON TOWER'],
+  battersea_forge: ['CHIMNEY BASE', 'COOLING CULVERT'],
+  st_pauls_whisper: ['STONE GALLERY', 'LIBRARY STAIR']
+};
+
+const GENERIC_ROOM_NAMES = ['PERIMETER', 'OUTER HALL', 'STORAGE BAY', 'SIDE ANNEX', 'SECURITY HUB', 'SERVICE CORRIDOR', 'UNDERCROFT', 'INNER SANCTUM'];
+
+const shuffle = <T,>(arr: T[]): T[] => {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
+/** Chance that a phenomenon clue reads as ambiguous (before quirks). */
+const AMBIGUITY_CHANCE = 0.75;
+
+type MiddleRole = 'CLUE' | 'WITNESS' | 'SHRINE' | 'PATROL';
+
+export function generateSectorContract(
+  sectorId: string,
+  sectorLabel: string,
+  sealedGoetia: string[],
+  usedGoetiaIds: string[] = [],
+  /** Rebuild a sector around an existing target (used to upgrade untouched contracts from older saves). */
+  forcedTargetId?: string
+): SectorContract {
   const available = allGoetia.filter(g => !sealedGoetia.includes(g.id) && !usedGoetiaIds.includes(g.id));
   const fallbackPool = allGoetia.filter(g => !sealedGoetia.includes(g.id));
   const pool = available.length > 0 ? available : fallbackPool.length > 0 ? fallbackPool : allGoetia;
-  const target = pool[Math.floor(Math.random() * pool.length)];
+  const target = allGoetia.find(g => g.id === forcedTargetId) || pool[Math.floor(Math.random() * pool.length)];
+  const quirk = rollQuirk(sectorId);
 
-  const labels = ROOM_NAMES_BY_SECTOR[sectorId] || ['PERIMETER', 'OUTER HALL', 'STORAGE BAY', 'SHRINE ALCOVE', 'SECURITY HUB', 'INNER SANCTUM'];
-  const coords = [
-    { x: 0.16, y: 0.50 },
-    { x: 0.38, y: 0.24 },
-    { x: 0.38, y: 0.76 },
-    { x: 0.62, y: 0.24 },
-    { x: 0.62, y: 0.76 },
-    { x: 0.85, y: 0.50 }
-  ];
+  // --- ROOM ROLES ---------------------------------------------------------
+  // Entry (a clue) + anchor are fixed. The middle always holds the other 2 clues and a
+  // witness, plus an optional shrine and 0–2 patrols: 5 to 8 rooms in total.
+  const middleRoles: MiddleRole[] = ['CLUE', 'CLUE', 'WITNESS'];
+  if (Math.random() < 0.75) middleRoles.push('SHRINE');
+  const patrols = Math.floor(Math.random() * 3);
+  for (let i = 0; i < patrols; i++) middleRoles.push('PATROL');
+  const roles = shuffle(middleRoles);
 
-  // Uses the 100% unique 3-phenomenon fingerprint for this demon
-  const requiredTags = getUniqueGoetiaSigns(target.id);
+  // --- LAYOUT ---------------------------------------------------------------
+  // Columns left -> right: [entry] [middle...] [anchor]. Middle rooms are spread over
+  // 1–3 columns, so every sector has a different shape.
+  const m = roles.length;
+  // 1–3 middle columns, never more than 3 rooms stacked in one column
+  const middleCols = Math.min(3, Math.max(Math.ceil(m / 3), Math.round(m / 2) - (Math.random() < 0.5 ? 0 : 1)));
+  const columnSizes: number[] = Array(middleCols).fill(0);
+  roles.forEach((_, i) => { columnSizes[i % middleCols]++; });
+  shuffle(columnSizes).forEach((v, i) => { columnSizes[i] = v; });
+  const columns: number[][] = [[0]];
+  let cursor = 1;
+  columnSizes.forEach(size => {
+    columns.push(Array.from({ length: size }, (_, k) => cursor + k));
+    cursor += size;
+  });
+  const anchorIdx = cursor;
+  columns.push([anchorIdx]);
+  const totalRooms = anchorIdx + 1;
 
-  const randomYokai = allYokai[Math.floor(Math.random() * allYokai.length)];
-  const rawMaterials: ('scrap_metal' | 'cursed_earth' | 'alchemical_distillate')[] = ['scrap_metal', 'cursed_earth', 'alchemical_distillate'];
+  const coords: { x: number; y: number }[] = [];
+  columns.forEach((col, ci) => {
+    const x = 0.14 + (0.72 * ci) / (columns.length - 1);
+    col.forEach((roomIdx, ri) => {
+      const y = col.length === 1 ? 0.5 : 0.2 + (0.6 * ri) / (col.length - 1);
+      coords[roomIdx] = { x, y: Math.min(0.82, Math.max(0.18, y + (col.length > 1 ? (Math.random() - 0.5) * 0.06 : 0))) };
+    });
+  });
 
-  const getPhenomMeta = (tag: string) => {
-    const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
-    if (!def) {
-      return {
-        channel: 'ASTRAL' as ForensicChannel,
-        symptom: 'Unidentified spatial distortion vibrating in the room.',
-        report: `AUSPEX LOG: Anomalous resonance signature [${tag}] isolated.`
-      };
+  // Connections: every room links to the nearest room in the neighbouring column(s),
+  // plus the odd extra corridor and same-column side passage.
+  const links = new Set<string>();
+  const link = (a: number, b: number) => { if (a !== b) links.add(a < b ? `${a}-${b}` : `${b}-${a}`); };
+  const nearest = (from: number, candidates: number[]) =>
+    candidates.reduce((best, c) => (Math.abs(coords[c].y - coords[from].y) < Math.abs(coords[best].y - coords[from].y) ? c : best), candidates[0]);
+  for (let ci = 0; ci < columns.length - 1; ci++) {
+    const here = columns[ci];
+    const next = columns[ci + 1];
+    next.forEach(n => link(n, nearest(n, here)));
+    here.forEach(h => link(h, nearest(h, next)));
+    if (here.length > 1 || next.length > 1) {
+      if (Math.random() < 0.45) link(here[Math.floor(Math.random() * here.length)], next[Math.floor(Math.random() * next.length)]);
     }
+  }
+  columns.forEach(col => {
+    for (let k = 0; k < col.length - 1; k++) if (Math.random() < 0.2) link(col[k], col[k + 1]);
+  });
+
+  // --- NAMES ----------------------------------------------------------------
+  const baseNames = ROOM_NAMES_BY_SECTOR[sectorId] || GENERIC_ROOM_NAMES.slice(0, 6);
+  const entryName = baseNames[0];
+  const anchorName = baseNames[baseNames.length - 1];
+  const middleNames = shuffle([...baseNames.slice(1, -1), ...(EXTRA_ROOM_NAMES[sectorId] || GENERIC_ROOM_NAMES.slice(3, 5))]);
+
+  // --- CLUES ----------------------------------------------------------------
+  const requiredTags = getUniqueGoetiaSigns(target.id);
+  const ambiguous = requiredTags.map(() => quirk === 'STATIC_STORM' || Math.random() < AMBIGUITY_CHANCE);
+  if (!ambiguous.some(Boolean)) ambiguous[Math.floor(Math.random() * ambiguous.length)] = true;
+
+  const clueFor = (clueIdx: number) => {
+    const tag = requiredTags[clueIdx];
+    const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
+    const group = ambiguous[clueIdx] ? getAmbiguityGroup(tag) : undefined;
+    const precise = def ? def.forensicReports[Math.floor(Math.random() * def.forensicReports.length)] : `AUSPEX LOG: Anomalous resonance signature [${tag}] isolated.`;
     return {
-      channel: def.channel,
-      symptom: def.rawSignalSymptom,
-      report: def.forensicReports[Math.floor(Math.random() * def.forensicReports.length)]
+      signalChannel: (def?.channel || 'ASTRAL') as ForensicChannel,
+      rawSignalSymptom: group ? group.symptom : def?.rawSignalSymptom || 'Unidentified spatial distortion vibrating in the room.',
+      signTag: tag,
+      forensicText: precise,
+      ambiguityGroupId: group?.id
     };
   };
 
-  const p0 = getPhenomMeta(requiredTags[0]);
-  const p1 = getPhenomMeta(requiredTags[1]);
-  const p2 = getPhenomMeta(requiredTags[2]);
+  const witness = redactWitnessStatement(
+    target.description || target.title || 'It came out of the dark and I never saw its face.',
+    quirk === 'LUCID_WITNESS' ? 0.3 : 0.55,
+    [target.name, ...target.name.split('-')]
+  );
 
+  const randomYokai = allYokai[Math.floor(Math.random() * allYokai.length)];
+  const rawMaterials: ('scrap_metal' | 'cursed_earth' | 'alchemical_distillate')[] = shuffle(['scrap_metal', 'cursed_earth', 'alchemical_distillate']);
   const traps: RoomHazardType[] = ['STATIC', 'WIRE', 'MIASMA', 'HEX'];
   const randomTrap = () => traps[Math.floor(Math.random() * traps.length)];
+  const maybeTrap = (chance: number): RoomHazardType => (quirk === 'WARDED' || Math.random() < chance ? randomTrap() : 'NONE');
 
-  const subNodes: SubGridNode[] = [
-    {
-      id: `${sectorId}_n0`,
-      index: 1,
-      label: `1: ${labels[0]}`,
-      x: coords[0].x,
-      y: coords[0].y,
-      connections: [`${sectorId}_n1`, `${sectorId}_n2`],
-      wardLevel: 1,
-      status: 'LOCKED',
-      nodeType: 'ANOMALY',
-      hazard: 'NONE',
-      signalChannel: p0.channel,
-      rawSignalSymptom: p0.symptom,
-      signTag: requiredTags[0],
-      forensicText: p0.report,
-      salvageDrop: { itemId: rawMaterials[0], amount: 2, obols: 12 }
-    },
-    {
-      id: `${sectorId}_n1`,
-      index: 2,
-      label: `2: ${labels[1]}`,
-      x: coords[1].x,
-      y: coords[1].y,
-      connections: [`${sectorId}_n0`, `${sectorId}_n3`, `${sectorId}_n4`],
-      wardLevel: 1,
-      status: 'LOCKED',
-      nodeType: 'ANOMALY',
-      hazard: randomTrap(),
-      signalChannel: p1.channel,
-      rawSignalSymptom: p1.symptom,
-      signTag: requiredTags[1],
-      forensicText: p1.report,
-      salvageDrop: { itemId: rawMaterials[1], amount: 2, obols: 15 }
-    },
-    {
-      id: `${sectorId}_n2`,
-      index: 3,
-      label: `3: ${labels[2]}`,
-      x: coords[2].x,
-      y: coords[2].y,
-      connections: [`${sectorId}_n0`, `${sectorId}_n3`, `${sectorId}_n4`],
-      wardLevel: 1,
-      status: 'LOCKED',
-      nodeType: 'SHRINE',
-      hazard: 'NONE',
-      shrineYokaiId: randomYokai.id,
-      salvageDrop: { itemId: 'alchemical_distillate', amount: 2, obols: 18 }
-    },
-    {
-      id: `${sectorId}_n3`,
-      index: 4,
-      label: `4: ${labels[3]}`,
-      x: coords[3].x,
-      y: coords[3].y,
-      connections: [`${sectorId}_n1`, `${sectorId}_n2`, `${sectorId}_n5`],
-      wardLevel: 2,
-      status: 'LOCKED',
-      nodeType: 'PATROL',
-      hazard: 'NONE', // Mutually exclusive with room traps so you can always decoy or disarm cleanly!
-      patrolActive: true,
-      salvageDrop: { itemId: rawMaterials[2], amount: 3, obols: 22 }
-    },
-    {
-      id: `${sectorId}_n4`,
-      index: 5,
-      label: `5: ${labels[4]}`,
-      x: coords[4].x,
-      y: coords[4].y,
-      connections: [`${sectorId}_n1`, `${sectorId}_n2`, `${sectorId}_n5`],
-      wardLevel: 2,
-      status: 'LOCKED',
-      nodeType: 'ANOMALY',
-      hazard: randomTrap(),
-      signalChannel: p2.channel,
-      rawSignalSymptom: p2.symptom,
-      signTag: requiredTags[2],
-      forensicText: p2.report,
-      salvageDrop: { itemId: rawMaterials[0], amount: 2, obols: 16 }
-    },
-    {
-      id: `${sectorId}_n5`,
-      index: 6,
-      label: `6: ${labels[5]} [ANCHOR]`,
-      x: coords[5].x,
-      y: coords[5].y,
-      connections: [`${sectorId}_n3`, `${sectorId}_n4`],
-      wardLevel: 3,
-      status: 'LOCKED',
-      nodeType: 'ANCHOR',
-      hazard: randomTrap(),
-      signalChannel: p2.channel,
-      rawSignalSymptom: p2.symptom,
-      signTag: requiredTags[2],
-      forensicText: `CONDUIT ANCHOR [${target.allegiance} COURT]: ${p2.report}`,
-      salvageDrop: { itemId: 'cursed_earth', amount: 3, obols: 28 }
+  let clueCursor = 1; // clue 0 is in the entry room
+  const subNodes: SubGridNode[] = [];
+  for (let idx = 0; idx < totalRooms; idx++) {
+    const id = `${sectorId}_n${idx}`;
+    const colIdx = columns.findIndex(c => c.includes(idx));
+    const base = {
+      id,
+      index: idx + 1,
+      x: coords[idx].x,
+      y: coords[idx].y,
+      connections: [...links]
+        .map(l => l.split('-').map(Number))
+        .filter(([a, b]) => a === idx || b === idx)
+        .map(([a, b]) => `${sectorId}_n${a === idx ? b : a}`),
+      wardLevel: Math.min(3, 1 + Math.floor((colIdx * 3) / columns.length)),
+      status: 'LOCKED' as const
+    };
+
+    if (idx === 0) {
+      subNodes.push({ ...base, label: `1: ${entryName}`, nodeType: 'ANOMALY', hazard: 'NONE', ...clueFor(0), salvageDrop: { itemId: rawMaterials[0], amount: 2, obols: 12 } });
+    } else if (idx === anchorIdx) {
+      subNodes.push({ ...base, label: `${idx + 1}: ${anchorName} [ANCHOR]`, wardLevel: 3, nodeType: 'ANCHOR', hazard: maybeTrap(0.8), salvageDrop: { itemId: 'cursed_earth', amount: 3, obols: 28 } });
+    } else {
+      const role = roles[idx - 1];
+      const label = `${idx + 1}: ${middleNames[(idx - 1) % middleNames.length]}`;
+      if (role === 'CLUE') {
+        subNodes.push({ ...base, label, nodeType: 'ANOMALY', hazard: maybeTrap(0.6), ...clueFor(clueCursor++), salvageDrop: { itemId: rawMaterials[clueCursor % 3], amount: 2, obols: 15 } });
+      } else if (role === 'WITNESS') {
+        subNodes.push({ ...base, label, nodeType: 'WITNESS', hazard: maybeTrap(0.3), witnessText: witness.text, witnessName: witness.witness, salvageDrop: { itemId: rawMaterials[1], amount: 1, obols: 10 } });
+      } else if (role === 'SHRINE') {
+        subNodes.push({ ...base, label, nodeType: 'SHRINE', hazard: quirk === 'WARDED' ? randomTrap() : 'NONE', shrineYokaiId: randomYokai.id, salvageDrop: { itemId: 'alchemical_distillate', amount: 2, obols: 18 } });
+      } else {
+        // Patrols never share a room with a trap, so you can always decoy cleanly
+        subNodes.push({ ...base, label, wardLevel: Math.max(2, base.wardLevel), nodeType: 'PATROL', hazard: 'NONE', patrolActive: true, salvageDrop: { itemId: rawMaterials[2], amount: 3, obols: 22 } });
+      }
     }
-  ];
+  }
 
   return {
     sectorId,
@@ -568,6 +654,7 @@ export function generateSectorContract(sectorId: string, sectorLabel: string, se
     activeSubNodeId: null,
     selectedSubNodeId: subNodes[0].id,
     subNodes,
-    discoveredLogs: []
+    discoveredLogs: [],
+    quirk
   };
 }
