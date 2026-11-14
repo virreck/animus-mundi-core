@@ -41,7 +41,105 @@ const theme = {
   fontMono: '"JetBrains Mono", "Courier New", Courier, monospace',
 };
 
-const SIGIL_GREEN_FILTER = 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 6px rgba(98, 240, 128, 0.45))';
+const SIGIL_REVEALED_FILTER = 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 6px rgba(98, 240, 128, 0.45))';
+
+// ============================================================================ //
+// SMART GOETIA SIGIL (GLITCHES/OBSCURES UNSEALED, REVEALS SEALED, SVG FALLBACK)
+// ============================================================================ //
+const SmartGoetiaSigil = ({
+  goetia,
+  isRevealed,
+  size = 130,
+  style
+}: {
+  goetia: typeof allGoetia[0];
+  isRevealed: boolean;
+  size?: number;
+  style?: React.CSSProperties;
+}) => {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setImgFailed(false);
+  }, [goetia.id]);
+
+  // Deterministic geometric seed from manifestId (1..72) for fallback vector sigils
+  const seed = goetia.manifestId || 1;
+  const spokes = 4 + (seed % 5); // 4 to 8 spokes
+  const innerRadius = 16 + (seed % 14);
+  const polygonSides = 3 + ((seed * 3) % 6); // 3 to 8 sides
+  const rotDeg = (seed * 37) % 360;
+
+  const polyPoints: string[] = [];
+  for (let i = 0; i < polygonSides; i++) {
+    const a = ((rotDeg + (i * 360) / polygonSides) * Math.PI) / 180;
+    polyPoints.push(`${50 + 34 * Math.cos(a)},${50 + 34 * Math.sin(a)}`);
+  }
+
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+        ...style
+      }}
+    >
+      {!imgFailed ? (
+        <img
+          src={`/seals/${goetia.id}.png`}
+          alt=""
+          onError={() => setImgFailed(true)}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            opacity: isRevealed ? 1 : 0.42,
+            filter: isRevealed ? SIGIL_REVEALED_FILTER : undefined,
+            animation: isRevealed ? 'none' : 'sigilGlitch 1.5s infinite steps(2)',
+            pointerEvents: 'none'
+          }}
+        />
+      ) : (
+        <svg
+          viewBox="0 0 100 100"
+          style={{
+            width: '100%',
+            height: '100%',
+            opacity: isRevealed ? 1 : 0.42,
+            filter: isRevealed ? 'drop-shadow(0 0 6px rgba(98, 240, 128, 0.55))' : undefined,
+            animation: isRevealed ? 'none' : 'sigilGlitchSvg 1.5s infinite steps(2)',
+            pointerEvents: 'none'
+          }}
+        >
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#62f080" strokeWidth="1.8" />
+          <circle cx="50" cy="50" r="39" fill="none" stroke="#62f080" strokeWidth="0.8" strokeDasharray="3 2" />
+          <polygon points={polyPoints.join(' ')} fill="none" stroke="#62f080" strokeWidth="1.6" />
+          <circle cx="50" cy="50" r={innerRadius} fill="none" stroke="#62f080" strokeWidth="1.4" />
+          {Array.from({ length: spokes }).map((_, i) => {
+            const angle = ((rotDeg + (i * 360) / spokes) * Math.PI) / 180;
+            const x2 = 50 + 36 * Math.cos(angle);
+            const y2 = 50 + 36 * Math.sin(angle);
+            const tx = 50 + 30 * Math.cos(angle + 0.18);
+            const ty = 50 + 30 * Math.sin(angle + 0.18);
+            return (
+              <g key={i} stroke="#62f080" strokeWidth="1.5" fill="none">
+                <line x1="50" y1="50" x2={x2} y2={y2} />
+                <circle cx={x2} cy={y2} r="2.6" fill="#050706" stroke="#62f080" strokeWidth="1.4" />
+                <line x1={x2} y1={y2} x2={tx} y2={ty} />
+              </g>
+            );
+          })}
+          <line x1="22" y1="50" x2="78" y2="50" stroke="#62f080" strokeWidth="1.3" />
+          <line x1="50" y1="22" x2="50" y2="78" stroke="#62f080" strokeWidth="1.3" />
+        </svg>
+      )}
+    </div>
+  );
+};
 
 export interface MacroSectorDef {
   id: string;
@@ -385,7 +483,7 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
     <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
       <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.textBright}`, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <div style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>SYNDICATE FIELD CODEX // THAUMATURGIC OS v4.13</div>
+          <div style={{ fontSize: '0.7rem', color: theme.accentAmber, letterSpacing: '2px' }}>SYNDICATE FIELD CODEX // THAUMATURGIC OS v4.14</div>
           <h2 style={{ margin: '2px 0 0 0', color: theme.textBright, letterSpacing: '2px', fontSize: '1.15rem' }}>OPERATIVE FIELD MANUAL &amp; PROTOCOL INDEX</h2>
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -585,7 +683,7 @@ const StartScreen = ({
 
         <div style={{ padding: '16px 24px 22px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-            <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.13</span>
+            <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.14</span>
             <button
               onClick={onOpenManual}
               style={{
@@ -880,15 +978,9 @@ const SealingTerminal = ({
               </div>
             )}
             <div style={{ position: 'relative', width: '280px', height: '280px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
-              <img
-                src={`/seals/${suspect.id}.png`}
-                alt="Target Seal"
-                style={{
-                  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                  width: '185px', height: '185px', opacity: 0.45, zIndex: 2, pointerEvents: 'none',
-                  filter: SIGIL_GREEN_FILTER
-                }}
-              />
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2, pointerEvents: 'none' }}>
+                <SmartGoetiaSigil goetia={suspect} isRevealed={false} size={175} />
+              </div>
               <svg ref={svgRef} viewBox="0 0 100 100" style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }} onPointerDown={startTracing} onPointerMove={moveTracing} onPointerUp={stopTracing} onPointerCancel={stopTracing} onPointerLeave={stopTracing}>
                 <polygon points={matrix.sequence.map(id => `${matrix.nodes.find(n => n.id === id)!.x},${matrix.nodes.find(n => n.id === id)!.y}`).join(' ')} fill="none" stroke={theme.borderTerminal} strokeWidth="0.7" />
                 <polyline points={path.map(nodeId => `${matrix.nodes.find(n => n.id === nodeId)!.x},${matrix.nodes.find(n => n.id === nodeId)!.y}`).join(' ')} fill="none" stroke={theme.textBright} strokeWidth="2.0" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
@@ -911,11 +1003,7 @@ const SealingTerminal = ({
         )}
         {phase === 'COMPLETE' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-            <img
-              src={`/seals/${suspect.id}.png`}
-              alt="Goetian Seal"
-              style={{ width: '175px', height: '175px', marginBottom: '14px', filter: SIGIL_GREEN_FILTER }}
-            />
+            <SmartGoetiaSigil goetia={suspect} isRevealed={true} size={175} style={{ marginBottom: '14px' }} />
             <h2 style={{ color: theme.textBright, letterSpacing: '6px', minHeight: '35px', margin: '0' }}>{typedName}</h2>
             {showSealed && (
               <>
@@ -1158,7 +1246,6 @@ export default function App() {
     return {};
   });
 
-  // Persistent First-Time Hint Tracker (Ensures each onboarding hint only triggers ONCE on the player's first run)
   const shownHintsRef = useRef<Record<string, boolean>>((() => {
     const saved = localStorage.getItem('thaumaturgic_os_hints_v1');
     if (saved) {
@@ -1200,10 +1287,8 @@ export default function App() {
   };
 
   const securedSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorSecured(s.id)).length;
-  // True only while the player is on their very first unsealed sector
   const isFirstRun = state.sealedGoetia.length === 0 && securedSectorsCount === 0;
 
-  // Returns true only the very first time a specific hint key is requested during the first run
   const consumeFirstTimeHint = (key: string): boolean => {
     if (!isFirstRun) return false;
     if (shownHintsRef.current[key]) return false;
@@ -1278,7 +1363,7 @@ export default function App() {
       if (consumeFirstTimeHint('boot_onboarding')) {
         appendLog(
           `<div style="border-left:2px solid #62f080;padding-left:10px;margin:4px 0;">` +
-          `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.13 — FIRST-RUN BRIEFING</div>` +
+          `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.14 — FIRST-RUN BRIEFING</div>` +
           `<div style="color:#a8ccaf;line-height:1.5;">` +
           `1. <strong>RECON:</strong> Run <code style="color:#ffb800;">scan 1</code> to inspect Room 1 before entering.<br/>` +
           `2. <strong>DISARM:</strong> Clear Patrols (<code style="color:#ff2a55;">decoy</code>) or Traps (<code style="color:#00f3ff;">degauss</code>, <code style="color:#00f3ff;">bypass</code>, <code style="color:#00f3ff;">purge</code>, <code style="color:#00f3ff;">dispel</code>) from outside before running <code style="color:#ffb800;">enter</code>.<br/>` +
@@ -1292,7 +1377,6 @@ export default function App() {
     }
   }, [state.gameStage, contracts, state.sealedGoetia, state.inventory, dispatch]);
 
-  // Always keep the console scrolled to the bottom on new logs AND when switching back to [F1] FIELD_OPS
   useEffect(() => {
     if (viewport === 'FIELD_OPS' && consoleScrollRef.current) {
       const el = consoleScrollRef.current;
@@ -2383,9 +2467,33 @@ export default function App() {
           52% { opacity: 0.95; }
         }
         @keyframes slideDownTop { from { transform: translateY(-120%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes sigilPulse {
-          0%, 100% { transform: scale(1); opacity: 0.75; }
-          50% { transform: scale(1.03); opacity: 0.92; }
+        @keyframes sigilGlitch {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(95%) blur(3.2px) drop-shadow(-3px 0 rgba(255,42,85,0.65));
+          }
+          33% {
+            transform: translate(-3px, 2px) scale(1.04) skewX(4deg);
+            filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(75%) blur(4.2px) drop-shadow(3px 0 rgba(0,243,255,0.65));
+          }
+          66% {
+            transform: translate(3px, -2px) scale(0.97) skewX(-4deg);
+            filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(85%) blur(3.6px);
+          }
+        }
+        @keyframes sigilGlitchSvg {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            filter: blur(3.2px) drop-shadow(-3px 0 rgba(255,42,85,0.65));
+          }
+          33% {
+            transform: translate(-3px, 2px) scale(1.04) skewX(4deg);
+            filter: blur(4.2px) drop-shadow(3px 0 rgba(0,243,255,0.65));
+          }
+          66% {
+            transform: translate(3px, -2px) scale(0.97) skewX(-4deg);
+            filter: blur(3.6px);
+          }
         }
         .crt-scanlines {
           pointer-events: none; position: fixed; inset: 0; z-index: 50;
@@ -2797,7 +2905,6 @@ export default function App() {
             </div>
           </section>
 
-          {/* DOSSIER PANEL: PROMINENT HIGH-CONTRAST SEAL ARTWORK + TOP ACTION BUTTON */}
           <section className="codex-col" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', overflowY: 'auto' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
@@ -2806,7 +2913,6 @@ export default function App() {
                 <div style={{ fontSize: '0.78rem', color: '#ffffff', fontWeight: 'bold' }}>{selectedSuspect.rank} — "{selectedSuspect.title}"</div>
               </div>
 
-              {/* TOP-MOUNTED SEALING BUTTON */}
               {state.sealedGoetia.includes(selectedSuspect.id) ? (
                 <div style={{ padding: '10px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold' }}>
                   [ ENTITY SEALED IN VESSEL ]
@@ -2835,7 +2941,7 @@ export default function App() {
                 })()
               )}
 
-              {/* RESTORED HIGH-VISIBILITY GOETIAN SEAL ARTWORK */}
+              {/* GLITCHED/OBSCURED WHEN UNSEALED; CRISP REVEAL + STAMP WHEN SEALED */}
               {(() => {
                 const isTargetSealed = state.sealedGoetia.includes(selectedSuspect.id);
                 return (
@@ -2847,28 +2953,36 @@ export default function App() {
                       margin: '0 auto',
                       flexShrink: 0,
                       backgroundColor: '#030504',
-                      border: `1px solid ${isTargetSealed ? theme.accentRed : theme.textBright}`,
+                      border: `1px solid ${isTargetSealed ? theme.accentRed : theme.borderTerminal}`,
                       borderRadius: '4px',
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
                       overflow: 'hidden',
-                      boxShadow: isTargetSealed ? 'inset 0 0 20px rgba(255, 42, 85, 0.25)' : 'inset 0 0 18px rgba(98, 240, 128, 0.15)'
+                      boxShadow: isTargetSealed ? 'inset 0 0 20px rgba(255, 42, 85, 0.25)' : 'inset 0 0 18px rgba(0, 0, 0, 0.8)'
                     }}
                   >
-                    <img
-                      src={`/seals/${selectedSuspect.id}.png`}
-                      alt={`${selectedSuspect.name} Seal`}
-                      style={{
-                        width: '130px',
-                        height: '130px',
-                        objectFit: 'contain',
-                        opacity: isTargetSealed ? 1 : 0.82,
-                        filter: SIGIL_GREEN_FILTER,
-                        animation: isTargetSealed ? 'none' : 'sigilPulse 3s ease-in-out infinite',
-                        pointerEvents: 'none'
-                      }}
-                    />
+                    <SmartGoetiaSigil goetia={selectedSuspect} isRevealed={isTargetSealed} size={126} />
+                    {!isTargetSealed && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: '6px',
+                          left: '6px',
+                          right: '6px',
+                          textAlign: 'center',
+                          backgroundColor: 'rgba(5, 7, 6, 0.85)',
+                          border: `1px dashed ${theme.borderTerminal}`,
+                          color: theme.textMuted,
+                          fontSize: '0.6rem',
+                          padding: '2px 0',
+                          letterSpacing: '1px',
+                          pointerEvents: 'none'
+                        }}
+                      >
+                        // SIGIL ENCRYPTED //
+                      </div>
+                    )}
                     {isTargetSealed && (
                       <div style={{ position: 'absolute', transform: 'rotate(-12deg)', border: `2px solid ${theme.accentRed}`, backgroundColor: 'rgba(15, 2, 2, 0.92)', color: theme.accentRed, padding: '2px 8px', fontSize: '0.8rem', fontWeight: 'bold', boxShadow: '0 0 10px rgba(255,42,85,0.5)' }}>
                         [SEALED]
