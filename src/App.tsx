@@ -4,7 +4,7 @@ import { useEngine, peekSavedOperative } from './ui/hooks/useEngine';
 import { allGoetia } from './content/goetia';
 import { allYokai } from './content/yokai';
 import type { GameAction } from './engine/reducer';
-import { type GameState, getTotalGlobalEntropy, getMaxHumanity } from './engine/state';
+import { type GameState, getTotalGlobalEntropy, getMaxHumanity, isSectorFailed } from './engine/state';
 import {
   PHENOMENON_CATALOG,
   ALTAR_RECIPES,
@@ -447,6 +447,9 @@ const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
             <p>
               Each of the <strong>Four Horsemen</strong> (Conquest, War, Famine, Death) uses 18 Goetian Lieutenants to anchor itself into London and Surrey. Sealing a high-ranking <strong>King, Prince, or Duke</strong> triggers a <em>Solomonic Resonance Cascade</em> that automatically severs and binds <strong>1 to 2 lesser demons</strong> of that Horseman's court into your Brass Vessel.
             </p>
+            <p>
+              <strong style={{ color: theme.accentRed }}>Failure is permanent.</strong> If the Sealing Rite timer runs out before the binding geometry is complete, the spirit <strong>manifests</strong>: it can never be sealed, its sector is <strong>lost</strong> for the rest of the run, and its Horseman's court will always be one lieutenant short at the Grand Rite.
+            </p>
           </div>
         )}
 
@@ -655,6 +658,8 @@ interface SealingTerminalProps {
   showFirstTimeHint: boolean;
   onClose: () => void;
   onSuccessSeal: (goetiaId: string) => string[];
+  /** Sector being worked; a failed rite loses it permanently. */
+  sectorId: string;
   dispatch: React.Dispatch<GameAction>;
   sealGoetia: (id: string) => void;
   addToast: (msg: string, type: 'INTEL'|'ITEM'|'ALERT'|'SEAL') => void;
@@ -669,6 +674,7 @@ const SealingTerminal = ({
   showFirstTimeHint,
   onClose,
   onSuccessSeal,
+  sectorId,
   dispatch,
   sealGoetia,
   addToast,
@@ -758,11 +764,13 @@ const SealingTerminal = ({
     addToast(`SEALING SUCCESSFUL. Target ${suspect.name} bound to the brass vessel.`, 'SEAL');
   };
 
-  // Running out of time no longer binds the demon: the catalysts are spent and the anchor stays active.
+  // Running out of time is permanent: the demon manifests, can never be sealed,
+  // and this sector is lost for the rest of the run.
   const failSeal = () => {
     setPhase('FAILED');
     ThaumaturgicAudio.errorBuzz();
-    addToast(`RITUAL FRACTURE. ${suspect.name} broke free! Global Entropy +10%.`, 'ALERT');
+    addToast(`RITUAL FRACTURE. ${suspect.name} has MANIFESTED! Sector lost. Global Entropy +10%.`, 'ALERT');
+    dispatch({ type: 'RELEASE_GOETIA', payload: { goetiaId: suspect.id, sectorId } });
     dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 10 });
   };
 
@@ -805,11 +813,11 @@ const SealingTerminal = ({
         )}
         {phase === 'FAILED' && (
           <div style={{ textAlign: 'center', padding: '15px 0' }}>
-            <h2 style={{ color: theme.accentRed, letterSpacing: '3px', margin: '0 0 10px 0' }}>! CONTAINMENT COLLAPSED !</h2>
+            <h2 style={{ color: theme.accentRed, letterSpacing: '3px', margin: '0 0 10px 0' }}>! {suspect.name.toUpperCase()} HAS MANIFESTED !</h2>
             <p style={{ fontSize: '0.82rem', color: '#ffb3b3', lineHeight: '1.6' }}>
-              The binding geometry was not completed in time and <strong>{suspect.name}</strong> tore free of the vessel.<br/><br/>
-              <strong>PENALTY:</strong> Catalysts burned | +10.00% Global Entropy.<br/>
-              The anchor is still active — craft fresh catalysts and try again.
+              The binding geometry was not completed in time and <strong>{suspect.name}</strong> tore free of the vessel, anchoring itself permanently in the mundane world.<br/><br/>
+              <strong>PENALTY:</strong> Catalysts burned | +10.00% Global Entropy<br/>
+              <strong>{suspect.name}</strong> can never be sealed, and this sector is <strong>LOST</strong> for the rest of the run.
             </p>
             <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontFamily: theme.fontMono }}>
               &gt; EMERGENCY DISCONNECT
@@ -966,9 +974,10 @@ const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToast, teth
             <div style={{ maxHeight: '160px', overflowY: 'auto', fontSize: '0.76rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: 'black', padding: '10px', border: `1px solid ${overrideTheme.border}` }}>
               {lieutenants.map(g => {
                 const isSealed = state.sealedGoetia.includes(g.id);
+                const released = (state.releasedGoetia || []).includes(g.id);
                 return (
-                  <div key={g.id} style={{ color: isSealed ? '#62f080' : overrideTheme.text }}>
-                    #{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()} {isSealed ? '[SEALED]' : '[ACTIVE]'}
+                  <div key={g.id} style={{ color: isSealed ? '#62f080' : released ? '#ff2a55' : overrideTheme.text, textDecoration: released ? 'line-through' : 'none' }}>
+                    #{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()} {isSealed ? '[SEALED]' : released ? '[MANIFESTED]' : '[ACTIVE]'}
                   </div>
                 );
               })}
@@ -1096,10 +1105,17 @@ export default function App() {
   const formatLabel = (str: string) => str.replace(/_/g, ' ').toUpperCase();
 
   const isSectorSecured = (sectorId: string) => !!state.flags[`sector_secured_${sectorId}`];
+  /** Lost for good: the anchor broke free of a failed Sealing Rite. */
+  const isSectorLost = (sectorId: string) => isSectorFailed(state, sectorId);
+  /** Resolved either way (secured or lost) — no further operations possible. */
+  const isSectorClosed = (sectorId: string) => isSectorSecured(sectorId) || isSectorLost(sectorId);
+  const isReleased = (goetiaId: string) => (state.releasedGoetia || []).includes(goetiaId);
   const isSectorUnlocked = (sec: MacroSectorDef) => {
-    if (sec.unlockedByDefault || state.flags[`sector_unlocked_${sec.id}`] || isSectorSecured(sec.id)) return true;
-    return sec.connections.some(connId => isSectorSecured(connId));
+    if (sec.unlockedByDefault || state.flags[`sector_unlocked_${sec.id}`] || isSectorClosed(sec.id)) return true;
+    // A lost sector still opens its neighbours, so one failure can't wall off the rest of the map
+    return sec.connections.some(connId => isSectorClosed(connId));
   };
+  const lostSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorLost(s.id)).length;
 
   const securedSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorSecured(s.id)).length;
   const isFirstRun = state.sealedGoetia.length === 0 && securedSectorsCount === 0;
@@ -1155,7 +1171,7 @@ export default function App() {
       const initialContracts: Record<string, SectorContract> = {};
       const usedGoetia: string[] = [];
       MACRO_SECTORS.filter(s => s.id !== 'safehouse').forEach(sec => {
-        const c = generateSectorContract(sec.id, sec.label, state.sealedGoetia, usedGoetia);
+        const c = generateSectorContract(sec.id, sec.label, [...state.sealedGoetia, ...(state.releasedGoetia || [])], usedGoetia);
         usedGoetia.push(c.targetGoetiaId);
         initialContracts[sec.id] = c;
       });
@@ -1189,7 +1205,8 @@ export default function App() {
   // demon is already sealed gets a fresh, still-unsealed target.
   useEffect(() => {
     if (state.gameStage !== 'ACTIVE') return;
-    if (allGoetia.every(g => state.sealedGoetia.includes(g.id))) return; // nothing left to assign
+    const unavailable = [...state.sealedGoetia, ...(state.releasedGoetia || [])];
+    if (allGoetia.every(g => unavailable.includes(g.id))) return; // nothing left to assign
     const broken = Object.values(contracts).filter(
       c => state.sealedGoetia.includes(c.targetGoetiaId) && !state.flags[`sector_secured_${c.sectorId}`]
     );
@@ -1198,13 +1215,13 @@ export default function App() {
       const next = { ...prev };
       const used = Object.values(prev).map(c => c.targetGoetiaId);
       broken.forEach(c => {
-        const fresh = generateSectorContract(c.sectorId, c.sectorLabel, state.sealedGoetia, used);
+        const fresh = generateSectorContract(c.sectorId, c.sectorLabel, unavailable, used);
         used.push(fresh.targetGoetiaId);
         next[c.sectorId] = fresh;
       });
       return next;
     });
-  }, [state.gameStage, contracts, state.sealedGoetia, state.flags]);
+  }, [state.gameStage, contracts, state.sealedGoetia, state.releasedGoetia, state.flags]);
 
   useEffect(() => {
     if (viewport === 'FIELD_OPS' && consoleScrollRef.current) {
@@ -1280,8 +1297,18 @@ export default function App() {
     addToast(`Unbound: ${yName}`, 'ALERT');
   };
 
+  /** Logs and returns true when the current sector has been lost to a released demon. */
+  const blockIfSectorLost = (): boolean => {
+    if (!currentContract || !isSectorLost(currentContract.sectorId)) return false;
+    ThaumaturgicAudio.errorBuzz();
+    const demon = allGoetia.find(g => g.id === currentContract.targetGoetiaId);
+    appendLog(`[✗] SECTOR LOST: <strong>${escapeHtml(demon?.name.toUpperCase() || 'THE ANCHOR')}</strong> has manifested here and can no longer be contained. Switch to the REGIONAL MAP and deploy elsewhere.`, 'error');
+    return true;
+  };
+
   const handleScanRoom = (targetNode?: SubGridNode | null) => {
     if (!currentContract) return;
+    if (blockIfSectorLost()) return;
     if (isSectorSecured(currentContract.sectorId)) {
       appendLog(`[✓] Sector is permanently SECURED. Switch to REGIONAL MAP to deploy elsewhere.`, 'success');
       return;
@@ -1360,6 +1387,7 @@ export default function App() {
 
   const handleDecoyPatrol = (arg?: string) => {
     if (!currentContract) return;
+    if (blockIfSectorLost()) return;
     const target = resolveCounterTarget(arg);
     if (!target) return;
 
@@ -1379,6 +1407,7 @@ export default function App() {
 
   const handleAttemptTrapCounter = (cmdUsed: string, arg?: string) => {
     if (!currentContract) return;
+    if (blockIfSectorLost()) return;
     const target = resolveCounterTarget(arg);
     if (!target) return;
 
@@ -1423,6 +1452,7 @@ export default function App() {
 
   const handleEnterRoom = (targetNode?: SubGridNode | null) => {
     if (!currentContract) return;
+    if (blockIfSectorLost()) return;
     if (isSectorSecured(currentContract.sectorId)) {
       appendLog(`[✓] Sector already SECURED.`, 'success');
       return;
@@ -1526,6 +1556,7 @@ export default function App() {
       appendLog(`[-] Enter a room first.`, 'error');
       return;
     }
+    if (blockIfSectorLost()) return;
     if (currentSubNode.nodeType !== 'ANCHOR') {
       appendLog(`[-] You can only run <code>attune</code> inside Room 6 (the <strong>[ANCHOR]</strong> chamber).`, 'warn');
       return;
@@ -1542,6 +1573,7 @@ export default function App() {
   };
 
   const handleRunForensicTool = (toolCmd: string, expectedChannel: ForensicChannel, toolLabel: string) => {
+    if (blockIfSectorLost()) return;
     if (!currentContract || !currentSubNode) {
       ThaumaturgicAudio.errorBuzz();
       appendLog(`[-] Enter Room 1 first (<code>enter 1</code>).`, 'error');
@@ -1631,6 +1663,7 @@ export default function App() {
   };
 
   const handleLootRoom = (bypassSignalCheck = false) => {
+    if (blockIfSectorLost()) return;
     if (!currentContract || !currentSubNode) {
       ThaumaturgicAudio.errorBuzz();
       appendLog(`[-] Enter Room 1 first (<code>enter 1</code>).`, 'error');
@@ -1906,7 +1939,8 @@ export default function App() {
           }
 
           if (mapViewMode === 'SUB_GRID' && currentContract) {
-            const sectorSecured = isSectorSecured(currentContract.sectorId);
+            const sectorFailed = isSectorLost(currentContract.sectorId);
+            const sectorSecured = isSectorSecured(currentContract.sectorId) || sectorFailed;
 
             if (!currentContract.activeSubNodeId) {
               const r1 = currentContract.subNodes[0];
@@ -1941,7 +1975,9 @@ export default function App() {
                   ctx.strokeStyle = 'rgba(98, 240, 128, 0.85)';
                   ctx.lineWidth = 2.6;
                 } else {
-                  ctx.strokeStyle = sectorSecured
+                  ctx.strokeStyle = sectorFailed
+                    ? 'rgba(255, 42, 85, 0.45)'
+                    : sectorSecured
                     ? 'rgba(98, 240, 128, 0.55)'
                     : node.status !== 'LOCKED' && target.status !== 'LOCKED'
                     ? 'rgba(98, 240, 128, 0.35)'
@@ -1964,7 +2000,8 @@ export default function App() {
               const entryHeat = getRoomEntryHeatCost(node);
 
               let color = '#ff2a55';
-              if (sectorSecured || node.status === 'CLEARED') color = '#62f080';
+              if (sectorFailed) color = '#ff2a55';
+              else if (sectorSecured || node.status === 'CLEARED') color = '#62f080';
               else if (node.status === 'SCANNED') {
                 color = node.patrolActive ? '#ff2a55' : node.nodeType === 'SHRINE' ? '#00f3ff' : '#ffb800';
               } else if (node.status === 'ENTERED') color = '#ffb800';
@@ -2006,7 +2043,7 @@ export default function App() {
               ctx.fillStyle = isSelected ? '#ffffff' : '#a8ccaf';
               ctx.fillText(node.label, nx, ny + 30);
 
-              let subBadge = sectorSecured ? '[SECURED]' : isCurrent ? '[YOU ARE HERE]' : `[${node.status} // +${entryHeat}% HEAT]`;
+              let subBadge = sectorFailed ? '[LOST]' : sectorSecured ? '[SECURED]' : isCurrent ? '[YOU ARE HERE]' : `[${node.status} // +${entryHeat}% HEAT]`;
               if (!sectorSecured && !isCurrent && node.status === 'SCANNED') {
                 const typeTag = node.patrolActive ? '! PATROL !' : node.nodeType === 'SHRINE' ? 'SHRINE' : node.nodeType === 'ANCHOR' ? 'ANCHOR' : 'CLUE';
                 subBadge = `[${typeTag} // +${entryHeat}% HEAT]`;
@@ -2054,17 +2091,19 @@ export default function App() {
               const ny = node.y * h;
               const isCurrent = node.id === state.currentNode;
               const secured = isSectorSecured(node.id);
+              const lost = isSectorLost(node.id);
               const unlocked = isSectorUnlocked(node);
               const nodeHeat = state.sectorEntropy[node.id] || 0;
 
               let color = '#2a5233';
               if (node.id === 'safehouse') color = '#00f3ff';
               else if (secured) color = '#62f080';
+              else if (lost) color = '#ff2a55';
               else if (unlocked) color = nodeHeat >= 75 ? '#ff2a55' : '#ffb800';
 
               ctx.beginPath();
               ctx.arc(nx, ny, isCurrent ? 13 : unlocked ? 9 : 5, 0, Math.PI * 2);
-              ctx.fillStyle = secured ? 'rgba(98, 240, 128, 0.25)' : '#050706';
+              ctx.fillStyle = secured ? 'rgba(98, 240, 128, 0.25)' : lost ? 'rgba(255, 42, 85, 0.3)' : '#050706';
               ctx.fill();
               ctx.strokeStyle = isCurrent ? '#ffffff' : color;
               ctx.lineWidth = isCurrent ? 2.5 : 1.8;
@@ -2215,6 +2254,7 @@ export default function App() {
           <div style={{ fontSize: '0.78rem', color: '#a8ccaf', lineHeight: '1.7', marginBottom: '18px' }}>
             GOETIA SEALED: <strong>{state.sealedGoetia.length}/72</strong><br/>
             SECTORS SECURED: <strong>{securedSectorsCount}</strong><br/>
+            SECTORS LOST: <strong>{lostSectorsCount}</strong> ({(state.releasedGoetia || []).length} demons manifested)<br/>
             HORSEMEN BANISHED: <strong>{(['conquest', 'war', 'famine', 'death'] as const).filter(h => state.flags[`banished_${h}`]).length}/4</strong>
           </div>
           <button
@@ -2252,7 +2292,7 @@ export default function App() {
     );
   }
 
-  const activeSectorClueCount = currentContract && !isSectorSecured(currentContract.sectorId)
+  const activeSectorClueCount = currentContract && !isSectorClosed(currentContract.sectorId)
     ? currentContract.discoveredLogs.length
     : 0;
 
@@ -2652,7 +2692,9 @@ export default function App() {
                 <span style={{ color: theme.accentAmber }}>{currentContract?.sectorLabel}</span>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.76rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {(!currentContract || isSectorSecured(currentContract.sectorId)) ? (
+                {currentContract && isSectorLost(currentContract.sectorId) ? (
+                  <div style={{ color: theme.accentRed }}>✗ Sector lost — its anchor has manifested and can never be sealed. Deploy to a new sector on the Regional Map.</div>
+                ) : (!currentContract || isSectorSecured(currentContract.sectorId)) ? (
                   <div style={{ color: theme.textBright }}>✓ Sector secured. Deploy to a new sector on the Regional Map!</div>
                 ) : currentContract.discoveredLogs.length === 0 ? (
                   <div style={{ color: theme.textMuted, fontStyle: 'italic' }}>
@@ -2734,8 +2776,8 @@ export default function App() {
                       <strong>#{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()}</strong>
                       <div style={{ fontSize: '0.68rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance}</div>
                     </div>
-                    <span style={{ fontSize: '0.66rem', color: isSealed ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
-                      {isSealed ? '✗ SEALED' : '[INSPECT]'}
+                    <span style={{ fontSize: '0.66rem', color: isSealed || isReleased(g.id) ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
+                      {isSealed ? '✗ SEALED' : isReleased(g.id) ? '☠ MANIFESTED' : '[INSPECT]'}
                     </span>
                   </button>
                 );
@@ -2755,12 +2797,16 @@ export default function App() {
                 <div style={{ padding: '10px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold' }}>
                   [ ENTITY SEALED IN VESSEL ]
                 </div>
+              ) : isReleased(selectedSuspect.id) ? (
+                <div style={{ padding: '10px', textAlign: 'center', border: `1px solid ${theme.accentRed}`, color: theme.accentRed, fontWeight: 'bold' }}>
+                  [ ENTITY MANIFESTED — BEYOND SEALING ]
+                </div>
               ) : (
                 (() => {
                   const sealCost = selectedSuspect.sealCost || {};
                   const hasCatalysts = Object.entries(sealCost).every(([item, amt]) => (state.inventory[item] || 0) >= amt);
                   // Sealing must happen inside a live sector (previously the Safehouse let you seal anything)
-                  const inLiveSector = !!currentContract && !isSectorSecured(currentContract.sectorId);
+                  const inLiveSector = !!currentContract && !isSectorClosed(currentContract.sectorId);
                   const canAfford = hasCatalysts && inLiveSector;
                   return (
                     <button
@@ -3053,7 +3099,7 @@ export default function App() {
             <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.88rem' }}>&gt; INQUISITION COUNTER-INTELLIGENCE</h3>
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorUnlocked(s) && !isSectorSecured(s.id)).map(sec => {
+                {MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorUnlocked(s) && !isSectorClosed(s.id)).map(sec => {
                   const heat = state.sectorEntropy[sec.id] || 0;
                   return (
                     <div key={sec.id} style={{ padding: '8px', backgroundColor: '#030504', border: `1px solid ${heat >= 100 ? theme.accentRed : theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3119,10 +3165,11 @@ export default function App() {
                     <div style={{ flex: 1, overflowY: 'auto', maxHeight: '180px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '6px' }}>
                       {lieutenants.map(g => {
                         const isSealed = state.sealedGoetia.includes(g.id);
+                        const released = isReleased(g.id);
                         return (
-                          <div key={g.id} onClick={() => { setSelectedSuspectId(g.id); setViewport('CODEX'); }} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 4px', fontSize: '0.68rem', cursor: 'pointer', color: isSealed ? theme.textBright : '#a8ccaf', textDecoration: isSealed ? 'line-through' : 'none' }}>
+                          <div key={g.id} onClick={() => { setSelectedSuspectId(g.id); setViewport('CODEX'); }} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 4px', fontSize: '0.68rem', cursor: 'pointer', color: isSealed ? theme.textBright : released ? theme.accentRed : '#a8ccaf', textDecoration: isSealed ? 'line-through' : 'none' }}>
                             <span>#{g.manifestId.toString().padStart(2, '0')} {g.name} ({g.rank})</span>
-                            <span style={{ color: isSealed ? theme.textBright : theme.accentRed }}>{isSealed ? 'SEALED' : 'ACTIVE'}</span>
+                            <span style={{ color: isSealed ? theme.textBright : theme.accentRed }}>{isSealed ? 'SEALED' : released ? 'MANIFESTED' : 'ACTIVE'}</span>
                           </div>
                         );
                       })}
@@ -3224,6 +3271,7 @@ export default function App() {
             attunedBonusSeconds={attunedBonus}
             showFirstTimeHint={isFirstRun}
             onClose={() => setActiveSealSuspectId(null)}
+            sectorId={currentContract.sectorId}
             onSuccessSeal={(sealedId) => {
               dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 45 } });
               dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -100 } });
@@ -3250,6 +3298,7 @@ export default function App() {
                   g => g.allegiance === suspect.allegiance &&
                   g.id !== sealedId &&
                   !state.sealedGoetia.includes(g.id) &&
+                  !isReleased(g.id) &&
                   !reservedTargets.has(g.id) &&
                   !['King', 'Prince'].includes(g.rank)
                 );

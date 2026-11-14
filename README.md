@@ -43,7 +43,7 @@ Switch instantaneously across seven specialized OS screens via function keys or 
 * **`[F2] CODEX` — Goetian Deduction Engine:** Filter all 72 spirits of the *Lemegeton* by Horseman allegiance and observed manifestation signs, inspect glitched/obscured demon sigils, and initiate the **Vessel Sealing Protocol**.
 * **`[F3] KAGE` — Kage-no-Sho (Shikigami Kernel Interceptors):** Forge pacts with up to **2 Yokai daemons** simultaneously (`KITSUNE.SYS`, `TENGU.DMN`, `BAKU.EXE`, `ZASHIKI.BOT`, `KAMEOSA.ALC`, `KAMAITACHI.VEX`, `AMABIE.iso`, `NOPPERA.MSK`). Each spirit installs a continuous passive OS hook alongside finite active field invocations.
 * **`[F4] SAFEHOUSE` — Alchemical Altar & Tether Recovery:** Craft planetary catalysts, rest at the brass-warded hearth to restore Humanity, and spend Obols to jam Ordo Malleus direction-finders across hot sectors.
-* **`[F5] HORSEMEN` — Apocalypse War Room:** Track all four Riders via custom vector Apocalypse Sigils, inspect the Goetian anchors tethered to each court, and launch the triple-matrix **Grand Rite of Banishment**.
+* **`[F5] HORSEMEN` — Apocalypse War Room:** Track all four Riders via custom vector Apocalypse Sigils, inspect the 18 Goetian anchors tethered to each court, and launch the triple-matrix **Grand Rite of Banishment**.
 * **`[F6] DOSSIER` — Operative Service Record:** View your full-body ink operative portrait, Brass Vessel ledger, `0.01%` precision Global Entropy meter, and session save controls.
 * **`[F7] MANUAL` — In-Universe Field Guide:** Quick-reference field manual detailing forensic instruments, hazard symptom tables, Solomonic planetary metals, and Inquisition survival rules.
 
@@ -60,7 +60,7 @@ Switch instantaneously across seven specialized OS screens via function keys or 
 
 ## // RITUAL TRACING & PROCEDURAL WEB AUDIO
 
-* **Pointer & Touch Sigil Tracing:** Sealing a Goetian spirit requires tracing a procedurally rotated star-polygon matrix under a tight countdown. Run out of time and the spirit breaks free: your catalysts are spent and the sector stays live. Banishing one of the Four Horsemen escalates into a **60-second triple-matrix endurance gauntlet** where your odds scale with every lieutenant you've bound:
+* **Pointer & Touch Sigil Tracing:** Sealing a Goetian spirit requires tracing a procedurally rotated star-polygon matrix under a tight countdown. Run out of time and the spirit **manifests** permanently: your catalysts are spent, the demon can never be sealed, and its sector is lost for the rest of the run (its neighbouring sectors still open up, so the map can't be walled off). Banishing one of the Four Horsemen escalates into a **60-second triple-matrix endurance gauntlet** where your odds scale with every lieutenant you've bound:
 
 $$\text{Banishment Odds} = \min\Big(95\%, \; 5\% + (\text{Sealed Court Lieutenants} \times 5\%)\Big)$$
 
