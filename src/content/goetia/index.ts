@@ -18,7 +18,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     sealCost: { copper_wire: 2, obols: 10 }
   },
   {
-    id: "03_vassago", manifestId: 3, name: "Vassago", rank: "Prince", allegiance: "CONQUEST",
+    id: "03_vassago", manifestId: 3, name: "Vassago", rank: "Prince", allegiance: "DEATH",
     title: "The Blind Seer",
     description: "A spirit of good nature who declares things past and to come, and discovers all things hidden or lost.",
     requiredIntel: ["cryptic_whispers", "star_alignment", "mind_fog"],
@@ -88,7 +88,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     sealCost: { silver_shavings: 2, black_salt: 1 }
   },
   {
-    id: "13_beleth", manifestId: 13, name: "Beleth", rank: "King", allegiance: "CONQUEST",
+    id: "13_beleth", manifestId: 13, name: "Beleth", rank: "King", allegiance: "DEATH",
     title: "The Terrible King",
     description: "Rides a pale horse with musical instruments playing before him. He is furious when first summoned and requires a hazel wand to command.",
     requiredIntel: ["earthquake_tremors", "sudden_invisibility", "mind_fog"],
@@ -116,14 +116,14 @@ export const allGoetia: GoetiaLieutenant[] = [
     sealCost: { copper_wire: 1, grave_dust: 2 }
   },
   {
-    id: "17_botis", manifestId: 17, name: "Botis", rank: "President", allegiance: "FAMINE",
+    id: "17_botis", manifestId: 17, name: "Botis", rank: "President", allegiance: "DEATH",
     title: "The Ugly Viper",
     description: "Appears initially as an ugly viper, then puts on a human shape with great teeth and two horns, carrying a sharp sword.",
-    requiredIntel: ["serpent_scales", "weapon_decay", "cryptic_whispers"],
+    requiredIntel: ["serpent_scales", "weapon_decay", "plague_vectors"],
     sealCost: { mercury_drops: 1, cold_iron_filings: 2 }
   },
   {
-    id: "18_bathin", manifestId: 18, name: "Bathin", rank: "Duke", allegiance: "FAMINE",
+    id: "18_bathin", manifestId: 18, name: "Bathin", rank: "Duke", allegiance: "DEATH",
     title: "The Pale Horseman",
     description: "A strong man with a serpent's tail riding a pale horse. He transports men instantly from one country to another.",
     requiredIntel: ["serpent_scales", "temporal_distortion", "astral_projection"],
@@ -139,7 +139,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     sealCost: { copper_wire: 2, silver_shavings: 1 }
   },
   {
-    id: "20_purson", manifestId: 20, name: "Purson", rank: "King", allegiance: "CONQUEST",
+    id: "20_purson", manifestId: 20, name: "Purson", rank: "King", allegiance: "DEATH",
     title: "The Bear-Riding King",
     description: "A lion-faced man carrying a viper, riding a bear. He knows all hidden things and can discover treasure.",
     requiredIntel: ["serpent_scales", "wolf_howls", "cryptic_whispers"],
@@ -174,7 +174,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     sealCost: { silver_shavings: 1, bone_meal: 2 }
   },
   {
-    id: "25_glasya_labolas", manifestId: 25, name: "Glasya-Labolas", rank: "President", allegiance: "DEATH",
+    id: "25_glasya_labolas", manifestId: 25, name: "Glasya-Labolas", rank: "President", allegiance: "WAR",
     title: "The Author of Bloodshed",
     description: "A dog with the wings of a griffin. He incites murders and bloodshed, and can make a man invisible.",
     requiredIntel: ["blood_frenzy", "wolf_howls", "sudden_invisibility"],
@@ -184,11 +184,11 @@ export const allGoetia: GoetiaLieutenant[] = [
     id: "26_bune", manifestId: 26, name: "Bune", rank: "Duke", allegiance: "DEATH",
     title: "The Three-Headed Dragon",
     description: "A dragon with three heads (dog, griffin, man). He moves the dead, gathers demons around graves, and gives riches.",
-    requiredIntel: ["corpse_theft", "necrotic_stasis", "hoarse_voice"],
+    requiredIntel: ["corpse_theft", "necrotic_stasis", "cryptic_whispers"],
     sealCost: { copper_wire: 1, grave_dust: 3 }
   },
   {
-    id: "27_ronove", manifestId: 27, name: "Ronove", rank: "Marquis", allegiance: "FAMINE",
+    id: "27_ronove", manifestId: 27, name: "Ronove", rank: "Marquis", allegiance: "DEATH",
     title: "The Monster of Rhetoric",
     description: "Appears as a monster. He teaches rhetoric, gives good servants, and grants favor with friends and foes.",
     requiredIntel: ["lost_languages", "illusory_terrain", "cryptic_whispers"],
@@ -223,7 +223,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     sealCost: { mercury_drops: 1, sacred_sand: 2 }
   },
   {
-    id: "32_asmoday", manifestId: 32, name: "Asmoday", rank: "King", allegiance: "CONQUEST",
+    id: "32_asmoday", manifestId: 32, name: "Asmoday", rank: "King", allegiance: "WAR",
     title: "The Three-Headed Beast",
     description: "A king with three heads (bull, man, ram), a serpent's tail, and webbed feet, breathing fire. He gives the Ring of Virtues.",
     requiredIntel: ["thermal_scorching", "amphibian_tracks", "serpent_scales"],
@@ -358,14 +358,14 @@ export const allGoetia: GoetiaLieutenant[] = [
     sealCost: { lead_weights: 2, bone_meal: 1 }
   },
   {
-    id: "51_balam", manifestId: 51, name: "Balam", rank: "King", allegiance: "CONQUEST",
+    id: "51_balam", manifestId: 51, name: "Balam", rank: "King", allegiance: "FAMINE",
     title: "The Three-Headed Terrible",
     description: "A king with three heads (bull, man, ram) with a serpent's tail and flaming eyes, riding a bear. He gives invisibility and wit.",
     requiredIntel: ["sudden_invisibility", "thermal_scorching", "mind_fog"],
     sealCost: { gold_leaf: 1, black_salt: 2 }
   },
   {
-    id: "52_alloces", manifestId: 52, name: "Alloces", rank: "Duke", allegiance: "WAR",
+    id: "52_alloces", manifestId: 52, name: "Alloces", rank: "Duke", allegiance: "CONQUEST",
     title: "The Red Lion Soldier",
     description: "A soldier riding a great horse, with a lion's face, very red, and flaming eyes. He teaches astronomy and brings good familiars.",
     requiredIntel: ["blood_frenzy", "thermal_scorching", "star_alignment"],
@@ -430,14 +430,14 @@ export const allGoetia: GoetiaLieutenant[] = [
     sealCost: { copper_wire: 2, cold_iron_filings: 1 }
   },
   {
-    id: "61_zagan", manifestId: 61, name: "Zagan", rank: "King", allegiance: "CONQUEST",
+    id: "61_zagan", manifestId: 61, name: "Zagan", rank: "King", allegiance: "FAMINE",
     title: "The Bull of Alchemy",
     description: "A bull with griffin's wings. He makes men witty, turns wine into water and blood into wine, and transforms any metal into coins.",
     requiredIntel: ["metal_transmutation", "blood_frenzy", "water_corruption"],
     sealCost: { gold_leaf: 1, obols: 20 }
   },
   {
-    id: "62_volac", manifestId: 62, name: "Volac", rank: "President", allegiance: "FAMINE",
+    id: "62_volac", manifestId: 62, name: "Volac", rank: "President", allegiance: "DEATH",
     title: "The Child on the Dragon",
     description: "Appears as a child with angel's wings, riding a two-headed dragon. He reveals hidden treasures and the hiding places of serpents.",
     requiredIntel: ["serpent_scales", "cryptic_whispers", "astral_projection"],
@@ -465,14 +465,14 @@ export const allGoetia: GoetiaLieutenant[] = [
     sealCost: { silver_shavings: 2, sacred_sand: 1 }
   },
   {
-    id: "66_cimejes", manifestId: 66, name: "Cimejes", rank: "Marquis", allegiance: "WAR",
+    id: "66_cimejes", manifestId: 66, name: "Cimejes", rank: "Marquis", allegiance: "CONQUEST",
     title: "The Black Horseman",
     description: "A valiant warrior riding a goodly black horse. He rules over all spirits in Africa and finds lost or hidden things.",
     requiredIntel: ["weapon_decay", "earthquake_tremors", "lost_languages"],
     sealCost: { silver_shavings: 1, black_salt: 2 }
   },
   {
-    id: "67_amdusias", manifestId: 67, name: "Amdusias", rank: "Duke", allegiance: "FAMINE",
+    id: "67_amdusias", manifestId: 67, name: "Amdusias", rank: "Duke", allegiance: "DEATH",
     title: "The Musical Unicorn",
     description: "Appears as a unicorn. He causes all manner of musical instruments to be heard but not seen, and makes trees bend to his will.",
     requiredIntel: ["earthquake_tremors", "illusory_terrain", "cryptic_whispers"],
@@ -482,14 +482,14 @@ export const allGoetia: GoetiaLieutenant[] = [
     id: "68_belial", manifestId: 68, name: "Belial", rank: "King", allegiance: "CONQUEST",
     title: "The Lawless One",
     description: "Two beautiful angels sitting in a chariot of fire. He distributes presentations and senatorships, but requires constant sacrifices to tell the truth.",
-    requiredIntel: ["thermal_scorching", "mind_fog", "sudden_invisibility"],
+    requiredIntel: ["thermal_scorching", "mind_fog", "star_alignment"],
     sealCost: { gold_leaf: 1, obols: 25 }
   },
   {
     id: "69_decarabia", manifestId: 69, name: "Decarabia", rank: "Marquis", allegiance: "FAMINE",
     title: "The Star in the Pentacle",
     description: "Appears as a star in a pentacle. He knows the virtues of all birds and precious stones, and can cause illusionary birds to sing and fly.",
-    requiredIntel: ["star_alignment", "avian_screeches", "illusory_terrain"],
+    requiredIntel: ["star_alignment", "avian_screeches", "plague_vectors"],
     sealCost: { silver_shavings: 2, mercury_drops: 1 }
   },
   {
@@ -503,7 +503,7 @@ export const allGoetia: GoetiaLieutenant[] = [
     id: "71_dantalion", manifestId: 71, name: "Dantalion", rank: "Duke", allegiance: "DEATH",
     title: "The Many-Faced Book",
     description: "A man with many countenances (men and women) carrying a book. He knows all human thoughts, can change them at will, and causes love.",
-    requiredIntel: ["mind_fog", "cryptic_whispers", "necrotic_stasis"],
+    requiredIntel: ["mind_fog", "cryptic_whispers", "corpse_theft"],
     sealCost: { copper_wire: 1, bone_meal: 2 }
   },
   {

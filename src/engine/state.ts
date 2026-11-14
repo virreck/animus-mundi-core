@@ -33,6 +33,8 @@ export interface GameState {
   
   identifiedGoetia: GoetiaId[];
   sealedGoetia: GoetiaId[];
+  /** Demons that broke free of a failed Sealing Rite. They can never be sealed. */
+  releasedGoetia: GoetiaId[];
   
   /** @deprecated Legacy mirror of `tetheredYokai`, kept so old saves still load. */
   activeContracts: YokaiId[];
@@ -60,6 +62,10 @@ export function getTotalGlobalEntropy(state: Pick<GameState, 'globalEntropy' | '
   return Math.min(ENTROPY_CEILING, +((state.globalEntropy || 0) + (state.microEntropy || 0)).toFixed(2));
 }
 
+/** A sector is lost for good once its anchor demon has broken free of a failed seal. */
+export const isSectorFailed = (state: Pick<GameState, 'flags'>, sectorId: string) =>
+  !!state.flags[`sector_failed_${sectorId}`];
+
 export function getMaxHumanity(state: Pick<GameState, 'tetheredYokai'>): number {
   // Zashiki-warashi permanently lowers your max humanity while bound
   return (state.tetheredYokai || []).includes('yokai_zashiki') ? 85 : 100;
@@ -85,6 +91,7 @@ export const initialGameState: GameState = {
   factions: { malleus: 50, independent: 50 },
   identifiedGoetia: [],
   sealedGoetia: [],
+  releasedGoetia: [],
   activeContracts: [],
   tetheredYokai: [],
   ink: 0,
@@ -113,6 +120,7 @@ export function normalizeLoadedState(raw: Partial<GameState>, legacyMicroEntropy
     factions: { ...initialGameState.factions, ...(raw.factions || {}) },
     identifiedGoetia: raw.identifiedGoetia || [],
     sealedGoetia: raw.sealedGoetia || [],
+    releasedGoetia: raw.releasedGoetia || [],
     microEntropy: typeof raw.microEntropy === 'number' ? raw.microEntropy : legacyMicroEntropy,
     yokaiCharges: raw.yokaiCharges || {},
     attunedSectors: raw.attunedSectors || {},

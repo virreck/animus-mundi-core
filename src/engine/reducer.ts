@@ -17,6 +17,7 @@ export type GameAction =
   | { type: 'MODIFY_INVENTORY'; payload: { itemId: string; amount: number } }
   | { type: 'IDENTIFY_GOETIA'; payload: string }
   | { type: 'SEAL_GOETIA'; payload: string }
+  | { type: 'RELEASE_GOETIA'; payload: { goetiaId: string; sectorId: string } }
   | { type: 'DRAFT_CONTRACT'; payload: { yokaiId: string; costs: ContractCost; maxCharges?: number } }
   | { type: 'UNBIND_YOKAI'; payload: string }
   | { type: 'CONSUME_YOKAI_CHARGE'; payload: { yokaiId: string; maxCharges: number } }
@@ -106,8 +107,19 @@ function baseReducer(state: GameState, action: GameAction): GameState {
       return { ...state, identifiedGoetia: [...state.identifiedGoetia, action.payload] };
 
     case 'SEAL_GOETIA':
-      if (state.sealedGoetia.includes(action.payload)) return state;
+      if (state.sealedGoetia.includes(action.payload) || state.releasedGoetia.includes(action.payload)) return state;
       return { ...state, sealedGoetia: [...state.sealedGoetia, action.payload] };
+
+    case 'RELEASE_GOETIA': {
+      // A failed Sealing Rite: the demon manifests permanently and its sector is lost.
+      const { goetiaId, sectorId } = action.payload;
+      if (state.sealedGoetia.includes(goetiaId)) return state;
+      return {
+        ...state,
+        releasedGoetia: state.releasedGoetia.includes(goetiaId) ? state.releasedGoetia : [...state.releasedGoetia, goetiaId],
+        flags: { ...state.flags, [`sector_failed_${sectorId}`]: true }
+      };
+    }
 
     case 'DRAFT_CONTRACT': {
       const { yokaiId, costs, maxCharges } = action.payload;
