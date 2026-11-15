@@ -1,0 +1,74 @@
+# Publishes the game. Runs when a version tag is pushed (e.g. v1.2.0), or by hand from the Actions tab.
+#  1. Tests and builds the game.
+#  2. Publishes the build to GitHub Pages: https://virreck.github.io/animus-mundi-core/
+#  3. On a tag, creates a GitHub Release with an itch.io-ready ZIP (index.html at the top level).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create the GitHub Release
+  pages: write      # publish to GitHub Pages
+  id-token: write   # required by the Pages deploy action
+
+# Never run two publishes at once; a newer one waits for the older one to finish
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      zip: ${{ steps.zip.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - name: Package for itch.io
+        id: zip
+        run: |
+          name="kage-no-sho-web-${GITHUB_REF_NAME//\//-}.zip"
+          (cd dist && zip -qr "../$name" .)
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: itch-zip
+          path: ${{ steps.zip.outputs.name }}
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  github-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: itch-zip
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "${{ needs.build.outputs.zip }}" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

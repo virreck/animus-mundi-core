@@ -113,10 +113,31 @@ npm run dev
 
 Open `http://localhost:5173` in your browser.
 
-### Production Build (Netlify / Static Hosting)
+### Publishing (GitHub Pages and itch.io)
 
-* **Build Command:** `npm run build` (or `npx vite build`)
-* **Publish Directory:** `dist`
+The game is published from GitHub Actions; nothing goes live when you merge.
+
+* **Every pull request and every push to `main`** runs the tests and a production build (`.github/workflows/ci.yml`). This only checks; nothing is published.
+* **Publishing a version:** push a version tag, or run **Release** by hand from the Actions tab (`.github/workflows/release.yml`):
+
+  ```bash
+  git checkout main && git pull
+  git tag v1.0.0
+  git push origin v1.0.0
+  ```
+
+  The release workflow tests and builds the game, then publishes it to **https://virreck.github.io/animus-mundi-core/**. It also creates a GitHub Release with `kage-no-sho-web-<version>.zip`, ready for itch.io: upload it as an HTML game and tick *"This file will be played in the browser"*.
+
+**One-time setup** (repository **Settings**):
+
+1. **Pages** → *Build and deployment* → *Source*: **GitHub Actions**.
+2. **Environments** → **github-pages** → *Deployment branches and tags*: add a **tag** rule `v*`. GitHub creates this environment the first time Pages is used. Without the rule, tag releases are refused with *"not allowed to deploy to github-pages due to environment protection rules"*.
+
+**Asset paths:** the build uses relative URLs (`base: './'` in `vite.config.ts`), so the same build runs from a sub-folder (GitHub Pages, itch.io) or a site root. Address files in `public/` with `assetUrl('seals/01_bael.png')` from `src/ui/assets.ts`, never with a leading `/`.
+
+**Saves on a new address:** browser saves belong to the site they were made on. To move a run from an old address (e.g. Netlify) to the new one, use **EXPORT** on the old site's title screen and **IMPORT** on the new one.
+
+To build locally: `npm run build` (output in `dist`), then `npm run preview` to try it.
 
 ### Playtest Debug Log
 

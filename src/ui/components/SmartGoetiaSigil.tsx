@@ -1,5 +1,6 @@
 // src/ui/components/SmartGoetiaSigil.tsx
 // Goetia sigil image with fallbacks and reveal styling.
+import { assetUrl } from '../assets';
 import { useState, useEffect, type CSSProperties as ReactCSSProperties } from 'react';
 import { allGoetia } from '../../content/goetia';
 import { SIGIL_REVEALED_FILTER } from '../theme';
@@ -48,7 +49,7 @@ export const SmartGoetiaSigil = ({
     >
       {!imgFailed ? (
         <img
-          src={`/seals/${goetia.id}.png`}
+          src={assetUrl(`seals/${goetia.id}.png`)}
           alt=""
           onError={() => setImgFailed(true)}
           style={{
