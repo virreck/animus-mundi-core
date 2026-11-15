@@ -5,6 +5,7 @@ import { allGoetia } from '../../content/goetia';
 import { HORSEMAN_LORE } from '../../content/horsemen';
 import type { GameAction } from '../../engine/reducer';
 import { generateSealMatrix } from '../../engine/sealMatrix';
+import { countManifestedOfCourt, getBanishmentOdds, getBanishmentSeconds } from '../../engine/world';
 import type { GameState } from '../../engine/state';
 import { ThaumaturgicAudio } from '../audio';
 import { HorsemanSigilSvg } from '../components/HorsemanSigilSvg';
@@ -25,13 +26,14 @@ export const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToas
   const [matrices] = useState(() => [generateSealMatrix(), generateSealMatrix(), generateSealMatrix()]);
   const [currentMatrixIdx, setCurrentMatrixIdx] = useState(0);
   const hasTimeBuff = tetheredYokai.includes('yokai_kamaitachi');
-  const [timeLeft, setTimeLeft] = useState(60 + (hasTimeBuff ? 15 : 0));
+  const [timeLeft, setTimeLeft] = useState(() => getBanishmentSeconds(state, horseman, hasTimeBuff));
   const [path, setPath] = useState<number[]>([]);
   const [isVictory, setIsVictory] = useState(false);
 
   const lieutenants = allGoetia.filter(g => g.allegiance === horseman);
   const sealedCount = lieutenants.filter(g => state.sealedGoetia.includes(g.id)).length;
-  const winProbability = Math.min(95, 5 + (sealedCount * 5));
+  const manifestedCount = countManifestedOfCourt(state, horseman);
+  const winProbability = getBanishmentOdds(state, horseman);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval>;
@@ -93,7 +95,7 @@ export const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToas
                 <div style={{ fontSize: '0.74rem', color: overrideTheme.text }}>{HORSEMAN_LORE[horseman].riderTitle}</div>
               </div>
             </div>
-            <p style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>Each sealed Goetia Lieutenant of {horseman} adds +5% to your Grand Rite stabilization roll (5% Base + {sealedCount} × 5%).</p>
+            <p style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>Each sealed Goetia Lieutenant of {horseman} adds +5% to your Grand Rite stabilization roll (5% Base + {sealedCount} × 5%).{manifestedCount > 0 && <> Each of the <strong style={{ color: '#ff2a55' }}>{manifestedCount} manifested</strong> lieutenant{manifestedCount === 1 ? '' : 's'} costs 5% and 3 seconds.</>}</p>
             <div style={{ maxHeight: '160px', overflowY: 'auto', fontSize: '0.76rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: 'black', padding: '10px', border: `1px solid ${overrideTheme.border}` }}>
               {lieutenants.map(g => {
                 const isSealed = state.sealedGoetia.includes(g.id);

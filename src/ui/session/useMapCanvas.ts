@@ -2,6 +2,7 @@
 // Map canvas rendering and pointer interaction.
 import { useEffect, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import { MACRO_SECTORS } from '../../content/map';
+import { getRipeness } from '../../engine/world';
 import { SECTOR_QUIRKS, getSectorQuirk } from '../../engine/sectorGenerator';
 import { ThaumaturgicAudio } from '../audio';
 import type { FieldOps } from './useFieldOps';
@@ -257,6 +258,16 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
               ctx.lineWidth = isCurrent ? 2.5 : 1.8;
               ctx.stroke();
 
+              // Ripeness ring: how close this anchor is to manifesting on its own
+              const ripeness = getRipeness(state, node.id);
+              if (unlocked && !secured && !lost && node.id !== 'safehouse' && ripeness > 0) {
+                ctx.beginPath();
+                ctx.arc(nx, ny, (isCurrent ? 13 : 9) + 4, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * ripeness) / 100);
+                ctx.strokeStyle = ripeness >= 75 ? '#ff2a55' : ripeness >= 50 ? '#ffb800' : '#a8ccaf';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+              }
+
               ctx.font = unlocked ? 'bold 10px "Courier New", monospace' : '9px "Courier New", monospace';
               ctx.textAlign = 'center';
               ctx.fillStyle = isCurrent ? '#ffffff' : unlocked ? '#a8ccaf' : '#2a5233';
@@ -265,7 +276,7 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
               if (unlocked) {
                 ctx.font = '9px "Courier New", monospace';
                 ctx.fillStyle = color;
-                const statusTxt = node.id === 'safehouse' ? '[SAFEHOUSE]' : secured ? '✓ SECURED' : `HEAT:${nodeHeat}%`;
+                const statusTxt = node.id === 'safehouse' ? '[SAFEHOUSE]' : secured ? '✓ SECURED' : lost ? '☠ LOST' : `HEAT:${nodeHeat}% · RIPE:${ripeness}%`;
                 ctx.fillText(statusTxt, nx, ny + 34);
               }
             });

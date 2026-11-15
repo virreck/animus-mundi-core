@@ -59,6 +59,8 @@ Switch instantaneously across seven specialized OS screens via function keys or 
 * **Humanity (`0%–100%`):** Your remote mental tether. Drained by Auspex probes, Inquisition ambushes, and botched hazard protocols. Restored at the Safehouse.
 * **Inquisition Heat (`0%–100%`):** The Vatican-Crown **Ordo Malleus** monitors ley-line spikes with mobile tracking vans and witch-hound packs. At **75%+ Heat**, your CRT display flickers crimson with triangulation warnings. At **100% Heat**, the sector enters **Total Lockdown**—all room actions are blocked until you run `spoof` (`-15` Obols), `bribe` (`-25` Obols), invoke a stealth Shikigami, or retreat to the Safehouse.
 * **Global Entropy (`0.00%` Precision):** Tracks the irreversible fraying of mundane reality. Ticks up by $+0.01\%$ to $+0.05\%$ during travel, breaches, and safehouse rest, and spikes violently if you misidentify a demon or fracture a ritual.
+* **Ripening Anchors:** Every trip and every rest is time the other open sectors spend ripening (faster at high entropy, faster still next to a manifested demon). At 100% an anchor manifests on its own and its sector is lost — the Regional Map's rings show how close each one is.
+* **Manifested Demons Spread:** Loose demons bleed Heat into neighbouring sectors, trickle Global Entropy, and cost their Horseman's Grand Rite 5% odds and 3 seconds each.
 * **Game Over:** The run ends if Humanity hits `0%` (*Tether Severed*) or Global Entropy reaches `100%` (*Reality Unravelled*).
 * **Victory:** Banish all four Horsemen to close the operation. The debrief scores your run — sectors lost, spirits left manifested, and final entropy decide whether you retire as an *Archon of the Brass Vessel* or a *Pyrrhic Survivor*.
 

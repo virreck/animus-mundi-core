@@ -7,6 +7,11 @@ import { type EvidenceLog, scoreSuspect } from '../../engine/evidence';
 import { type SectorContract, generateSectorContract, getUniqueGoetiaSigns } from '../../engine/sectorGenerator';
 import { getMaxHumanity, getTotalGlobalEntropy, isSectorFailed } from '../../engine/state';
 import { useEngine } from '../hooks/useEngine';
+import {
+  isSectorSecured as engineIsSectorSecured,
+  isSectorClosed as engineIsSectorClosed,
+  isSectorUnlocked as engineIsSectorUnlocked
+} from '../../engine/world';
 import { type ControlMode, type FontScale, type TerminalEntry, type ViewportMode, escapeHtml } from '../theme';
 
 export function useSessionCore() {
@@ -26,13 +31,11 @@ export function useSessionCore() {
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const didDragRef = useRef(false);
 
-  const [contracts, setContracts] = useState<Record<string, SectorContract>>(() => {
-    const saved = localStorage.getItem('thaumaturgic_os_contracts_v2');
-    if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
-    }
-    return {};
-  });
+  // Contracts live in the game state (and the save file); these helpers keep the old call style.
+  const contracts: Record<string, SectorContract> = state.contracts || {};
+  const setContracts = (
+    next: Record<string, SectorContract> | ((prev: Record<string, SectorContract>) => Record<string, SectorContract>)
+  ) => dispatch(typeof next === 'function' ? { type: 'UPDATE_CONTRACTS', payload: next } : { type: 'SET_CONTRACTS', payload: next });
 
   /** Functional update of one sector's contract, always based on the latest stored value. */
   const updateContract = (sectorId: string, fn: (c: SectorContract) => SectorContract) =>
@@ -75,17 +78,13 @@ export function useSessionCore() {
   }>({ sonarRings: [], angle: 0, wavePhase: 0 });
 
 
-  const isSectorSecured = (sectorId: string) => !!state.flags[`sector_secured_${sectorId}`];
+  const isSectorSecured = (sectorId: string) => engineIsSectorSecured(state, sectorId);
   /** Lost for good: the anchor broke free of a failed Sealing Rite. */
   const isSectorLost = (sectorId: string) => isSectorFailed(state, sectorId);
   /** Resolved either way (secured or lost) — no further operations possible. */
-  const isSectorClosed = (sectorId: string) => isSectorSecured(sectorId) || isSectorLost(sectorId);
+  const isSectorClosed = (sectorId: string) => engineIsSectorClosed(state, sectorId);
   const isReleased = (goetiaId: string) => (state.releasedGoetia || []).includes(goetiaId);
-  const isSectorUnlocked = (sec: MacroSectorDef) => {
-    if (sec.unlockedByDefault || state.flags[`sector_unlocked_${sec.id}`] || isSectorClosed(sec.id)) return true;
-    // A lost sector still opens its neighbours, so one failure can't wall off the rest of the map
-    return sec.connections.some(connId => isSectorClosed(connId));
-  };
+  const isSectorUnlocked = (sec: MacroSectorDef) => engineIsSectorUnlocked(state, sec);
   const lostSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorLost(s.id)).length;
 
   const securedSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorSecured(s.id)).length;
@@ -131,11 +130,19 @@ export function useSessionCore() {
     setTerminalLines(prev => [...prev, { id: Date.now() + Math.random(), html, type }]);
   };
 
+  // Engine notices (anchor instability, auto-manifestations) are printed once, then acknowledged
   useEffect(() => {
-    if (Object.keys(contracts).length > 0) {
-      localStorage.setItem('thaumaturgic_os_contracts_v2', JSON.stringify(contracts));
-    }
-  }, [contracts]);
+    if (!state.notices || state.notices.length === 0) return;
+    state.notices.forEach(n => {
+      if (n.kind === 'MANIFEST') {
+        appendLog(`<div style="border-left:3px solid #ff2a55;padding-left:10px;margin:4px 0;color:#ff2a55;"><strong>[☠ ${escapeHtml(n.text)}]</strong></div>`, 'error');
+        addToast(n.text, 'ALERT');
+      } else {
+        appendLog(`[⚠ ${escapeHtml(n.text)}]`, 'warn');
+      }
+    });
+    dispatch({ type: 'ACK_NOTICES', payload: state.notices.map(n => n.id) });
+  }, [state.notices]);
 
   useEffect(() => {
     if (state.gameStage === 'ACTIVE' && Object.keys(contracts).length === 0) {

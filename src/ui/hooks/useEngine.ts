@@ -6,8 +6,9 @@ import { gameReducer } from '../../engine/reducer';
 import type { ContractCost } from '../../content/yokai/types';
 
 export const SAVE_KEY = 'thaumaturgic_os_save_v1';
-/** Pre-v2 saves kept micro entropy in its own key; read once on load for migration. */
+/** Older saves kept micro entropy and contracts in their own keys; read once on load for migration. */
 const LEGACY_MICRO_ENTROPY_KEY = 'thaumaturgic_os_micro_entropy_v2';
+const LEGACY_CONTRACTS_KEY = 'thaumaturgic_os_contracts_v2';
 
 /** Reads the operative name from the save slot without loading it. */
 export function peekSavedOperative(): string | null {
@@ -39,7 +40,9 @@ export function useEngine() {
     try {
       const parsed: Partial<GameState> = JSON.parse(savedData);
       const legacyMicro = parseFloat(localStorage.getItem(LEGACY_MICRO_ENTROPY_KEY) || '0') || 0;
-      dispatch({ type: 'LOAD_GAME', payload: normalizeLoadedState(parsed, legacyMicro) });
+      let legacyContracts = {};
+      try { legacyContracts = JSON.parse(localStorage.getItem(LEGACY_CONTRACTS_KEY) || '{}'); } catch { /* ignore */ }
+      dispatch({ type: 'LOAD_GAME', payload: normalizeLoadedState(parsed, legacyMicro, legacyContracts) });
     } catch (error) {
       console.error('Failed to parse local save data.', error);
     }
