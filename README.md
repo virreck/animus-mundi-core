@@ -101,6 +101,31 @@ Open `http://localhost:5173` in your browser.
 * **Build Command:** `npm run build` (or `npx vite build`)
 * **Publish Directory:** `dist`
 
+### Tests
+
+```bash
+npm test
+```
+
+Runs the engine tests in `tests/` with Node's built-in test runner (needs Node 22.18+, no extra packages). They cover the reducer, procedural sector generation, the deduction/evidence layer and the content files (clue tags, court sizes, fingerprints, seal costs). `npm run build` also type-checks the tests.
+
+### Project Structure
+
+```
+src/
+  engine/        Pure game logic, no React: state, reducer, sector generation, evidence, seal geometry
+  content/       Game data: Goetia, Yokai, map sectors, Horsemen lore, Yokai power specs
+  ui/
+    session/     The live session: useSessionCore (state + derived data), field operations split by
+                 area (sectorRules, roomOps, evidenceOps, yokaiOps, commandLine) and useMapCanvas
+    viewports/   One component per [F1]-[F7] screen, reading the session through useSession()
+    rituals/     Sealing Rite and Grand Rite of Banishment overlays
+    screens/     Start, game-over and victory screens
+    components/  Shared pieces (header, toasts, sigils, tracing board)
+  App.tsx        Wires the session together and shows the active viewport
+tests/           Engine and content tests (npm test)
+```
+
 ### Content Scaffolding Scripts
 
 The raw lists in `data_ingest/` can be turned into JSON scaffolds with:
