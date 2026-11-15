@@ -3,6 +3,7 @@
 import { allGoetia } from '../../content/goetia';
 import { getFullBodyPath } from '../assets';
 import { ThaumaturgicAudio } from '../audio';
+import { buildSaveFile, downloadText, saveFileName } from '../saves';
 import { useSession } from '../session/SessionContext';
 import { FONT_ZOOM_MAP, theme } from '../theme';
 
@@ -13,7 +14,9 @@ export function DossierViewport() {
     securedSectorsCount,
     handleFullReset,
     totalGlobalEntropy,
-    handleLogout
+    handleLogout,
+    activeSlot,
+    isTrainingRun
   } = useSession();
 
   return (
@@ -64,17 +67,29 @@ export function DossierViewport() {
         </div>
 
         <div style={{ borderTop: `1px dashed ${theme.accentRed}`, paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-          <button onClick={handleLogout} className="macro-chip macro-chip-amber" style={{ padding: '10px 14px', fontWeight: 'bold' }}>&gt; LOG OUT TO TITLE</button>
+          <span style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button onClick={handleLogout} className="macro-chip macro-chip-amber" style={{ padding: '10px 14px', fontWeight: 'bold' }}>&gt; LOG OUT TO TITLE</button>
+            {!isTrainingRun && (
+              <button
+                onClick={() => { ThaumaturgicAudio.keyClick(); downloadText(saveFileName(state), JSON.stringify(buildSaveFile(state), null, 1)); }}
+                className="macro-chip macro-chip-cyan"
+                style={{ padding: '10px 14px' }}
+                title="Download this run as a file you can import on another device"
+              >
+                &gt; EXPORT SAVE (SLOT {activeSlot})
+              </button>
+            )}
+          </span>
           <button
             onClick={() => {
-              if (window.confirm('TERMINATE SESSION & WIPE LOCAL SAVE DATA?')) {
+              if (window.confirm(`DELETE THIS RUN? Save slot ${activeSlot} will be wiped. Other slots are kept.`)) {
                 ThaumaturgicAudio.errorBuzz();
                 handleFullReset();
               }
             }}
             style={{ padding: '10px 16px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold' }}
           >
-            &gt; WIPE SAVE &amp; RESET
+            &gt; DELETE THIS RUN
           </button>
         </div>
       </section>

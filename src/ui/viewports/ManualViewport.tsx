@@ -6,8 +6,48 @@ import { KAGE_TUNING } from '../../engine/kage';
 import { ThaumaturgicAudio } from '../audio';
 import { FONT_ZOOM_MAP, type FontScale, theme } from '../theme';
 
+/** Plain-English meanings of the game's terms (MANUAL tab 7). */
+const GLOSSARY: Array<[string, string]> = [
+  ['Entropy', 'How close the world is to falling apart. It rises when spirits escape or rituals fail. If it reaches 100%, you lose.'],
+  ['Humanity (HUM)', 'Your health. Scans, traps and some powers cost it. Rest at the Safehouse to get it back. At 0% the run ends.'],
+  ['Obols', 'Money. You find it while searching rooms and spend it on materials, bribes and spirit tributes.'],
+  ['Heat', 'How close the witch-hunters are to finding you in one place. Entering rooms raises it. At 100% that place is locked down.'],
+  ['Ordo Malleus', 'Witch-hunters. They want to burn the problem away, you included.'],
+  ['Sector', 'A place on the Regional Map, like a crypt or an asylum. Each one hides one spirit.'],
+  ['Room', 'One of the boxes on the local map. Tap a room to select it; the buttons then act on that room.'],
+  ['Scan', 'Look through a door before going in: what is inside, any trap, and the Heat it will cost.'],
+  ['Enter', 'Walk into the selected room. You can only reach rooms next to the one you are in.'],
+  ['Loot', 'Search the room you are in for materials and Obols.'],
+  ['Clue / reading', 'Evidence about the spirit, found by using the right instrument in a room.'],
+  ['VOX / ASSAY / AUSPEX', 'Your three instruments. VOX for sounds, ASSAY for things you could touch, AUSPEX for light, heat, time or the mind.'],
+  ['Degraded', 'An unclear clue (shown in amber). It could be one of a few things.'],
+  ['Refine', 'Turn an unclear clue into a clear one. Costs Humanity and Heat.'],
+  ['Trap (ward)', 'A dangerous door. The scan describes it; DEGAUSS, BYPASS, PURGE or DISPEL removes it (see tab 2).'],
+  ['Patrol', 'Witch-hunter guards in a room. Use DECOY to lure them away before going in.'],
+  ['Witness', 'A frightened person in a room. Interview them for a description of the spirit, with gaps in it.'],
+  ['Shrine', 'An altar to a helper spirit. Searching it adds that spirit to your Kage No Sho.'],
+  ['Kage No Sho', 'Your Book of Shadows: the helper spirits you have found, and where you bind them.'],
+  ['Shikigami / daemon', 'A helper spirit you have bound. It has a side effect, and a power you can use a few times.'],
+  ['Bond', 'How well you know a helper spirit. Use it more and its side effect gets easier.'],
+  ['Pact', 'Your deal with a bound helper. Renew it with ink to refill its charges. Breaking it offends the spirit for a while.'],
+  ['Anchor', 'The room that ties the spirit to the place. Attune there to learn about the spirit.'],
+  ['Attune', 'At the anchor: once tells you which Horseman the spirit serves, twice tells you its rank.'],
+  ['Court', 'Which of the four Horsemen a spirit serves.'],
+  ['Rank', 'How important a spirit is (King, Duke, Prince and so on).'],
+  ['Codex', 'The list of all 72 spirits. Tick clues to narrow it down, strike out the ones that do not fit, and start the seal here.'],
+  ['Catalysts', 'The materials needed to seal a particular spirit. Make them at the Safehouse.'],
+  ['Sealing Rite', 'Locking a spirit away: type its name, then trace its star. If it fails, the spirit escapes for good.'],
+  ['Ripeness', 'The ring around each place on the Regional Map. It fills while you are elsewhere; when it is full, the spirit breaks loose on its own.'],
+  ['Manifested / lost', 'The spirit escaped. That place is lost for good and the escaped spirit makes its neighbours worse.'],
+  ['Re-infestation', 'A place you cleared that has a new spirit in it. It opens up again on the map.'],
+  ['Horsemen', 'The four big enemies. Each spirit you seal weakens one of them.'],
+  ['Grand Rite of Banishment', 'The final ritual that defeats a Horseman for good (see tab 6).'],
+  ['Safehouse', 'Your base: rest, make materials and lower Heat.'],
+  ['Save slots', 'Three separate games. Each saves by itself. On the title screen you can export a game to a file and import it on another device.']
+];
+
 export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: FontScale; onReplayTutorial?: () => void }) => {
-  const [tab, setTab] = useState<'FORENSICS' | 'COUNTERS' | 'LORE' | 'INQUISITION' | 'SHIKIGAMI' | 'GRAND_RITE'>('FORENSICS');
+  const [tab, setTab] = useState<'FORENSICS' | 'COUNTERS' | 'LORE' | 'INQUISITION' | 'SHIKIGAMI' | 'GRAND_RITE' | 'WORDS'>('FORENSICS');
   const subTabStyle = (active: boolean): ReactCSSProperties => ({
     padding: '8px 12px', fontFamily: theme.fontMono, fontSize: '0.74rem', fontWeight: 'bold', cursor: 'pointer',
     border: `1px solid ${active ? theme.textBright : theme.borderTerminal}`,
@@ -29,6 +69,7 @@ export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: Fon
           <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('INQUISITION'); }} style={subTabStyle(tab === 'INQUISITION')}>4. ORDO MALLEUS &amp; HEAT</button>
           <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('SHIKIGAMI'); }} style={subTabStyle(tab === 'SHIKIGAMI')}>5. SHIKIGAMI &amp; SAFEHOUSE</button>
           <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('GRAND_RITE'); }} style={subTabStyle(tab === 'GRAND_RITE')}>6. THE GRAND RITE</button>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('WORDS'); }} style={subTabStyle(tab === 'WORDS')}>7. WHAT THE WORDS MEAN</button>
           {onReplayTutorial && (
             <button onClick={() => { ThaumaturgicAudio.keyClick(); onReplayTutorial(); }} style={{ ...subTabStyle(false), borderColor: theme.accentAmber, color: theme.accentAmber }}>
               ▶ REPLAY GUIDED CASE
@@ -195,6 +236,21 @@ export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: Fon
             <p style={{ marginTop: '14px', color: theme.accentAmber }}>
               The Rite is not available during the guided training case.
             </p>
+          </div>
+        )}
+
+        {tab === 'WORDS' && (
+          <div>
+            <h3 style={{ color: theme.textBright, marginTop: 0 }}>WHAT THE WORDS MEAN</h3>
+            <p>Every term in the game, in plain English.</p>
+            <dl style={{ margin: 0 }}>
+              {GLOSSARY.map(([term, meaning]) => (
+                <div key={term} style={{ padding: '5px 0', borderBottom: `1px dashed ${theme.borderTerminal}` }}>
+                  <dt style={{ color: theme.textBright, fontWeight: 'bold', display: 'inline' }}>{term}: </dt>
+                  <dd style={{ margin: 0, display: 'inline' }}>{meaning}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         )}
       </div>

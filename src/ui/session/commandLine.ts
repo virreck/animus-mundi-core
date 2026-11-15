@@ -16,6 +16,7 @@ export function createCommandLine(s: SessionCore & SectorRules & RoomOps & Evide
     setViewport,
     setMapViewMode,
     setTerminalLines,
+    setDebugOpen,
     addToast,
     appendLog,
     currentContract,
@@ -102,7 +103,9 @@ export function createCommandLine(s: SessionCore & SectorRules & RoomOps & Evide
     [['horsemen'], () => setViewport('HORSEMEN')],
     [['dossier'], () => setViewport('DOSSIER')],
     [['manual'], () => setViewport('MANUAL')],
-    [['clear', 'cls'], () => setTerminalLines([])]
+    [['clear', 'cls'], () => setTerminalLines([])],
+    // Not listed in help: opens the passphrase-locked playtest log
+    [['debug'], () => setDebugOpen(true)]
   ];
   const COMMAND_INDEX = new Map(COMMANDS.flatMap(([names, run]) => names.map(n => [n, run] as const)));
 

@@ -70,6 +70,7 @@ export function SafehouseViewport() {
                       addToast(`Synthesized +1 ${recipe.label}`, 'ITEM');
                     }}
                     disabled={!canCraft}
+                    data-tour={`craft-${recipe.outputId}`}
                     className="macro-chip macro-chip-amber"
                   >
                     SYNTHESIZE

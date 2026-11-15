@@ -36,7 +36,8 @@ function describeScan(node: SubGridNode, heatCost: number): { colour: string; te
   return { colour: theme.textBright, text: `✓ Threshold clear (+${heatCost}% Heat).` };
 }
 
-function DaemonCard({ name, spec, charges, maxCharges, confirming, onInvoke, onSeverTap, onSeverBlur }: Readonly<{
+function DaemonCard({ yokaiId, name, spec, charges, maxCharges, confirming, onInvoke, onSeverTap, onSeverBlur }: Readonly<{
+  yokaiId: string;
   name?: string;
   spec?: { activeLabel: string; activeDesc: string };
   charges: number;
@@ -53,7 +54,7 @@ function DaemonCard({ name, spec, charges, maxCharges, confirming, onInvoke, onS
         <span style={{ color: theme.accentAmber, fontSize: '0.65rem' }}>{charges}/{maxCharges}</span>
       </div>
       <div style={{ display: 'flex', gap: '4px' }}>
-        <button onClick={onInvoke} title={spec?.activeDesc} className="macro-chip macro-chip-amber" style={{ flex: 1, padding: '3px 5px', fontSize: '0.65rem' }}>
+        <button data-tour={`invoke-${yokaiId}`} onClick={onInvoke} title={spec?.activeDesc} className="macro-chip macro-chip-amber" style={{ flex: 1, padding: '3px 5px', fontSize: '0.65rem' }}>
           ⚡ {spec?.activeLabel}
         </button>
         {/* Severing offends the spirit, so it takes a second tap */}
@@ -124,23 +125,23 @@ function CommandPalette() {
       <div style={{ backgroundColor: '#060a07', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.66rem', color: theme.accentAmber, fontWeight: 'bold', width: '74px' }}>RECON</span>
-          <button onClick={() => processCliCommand(`scan ${targetIdx}`)} className="macro-chip">📡 scan {targetIdx}</button>
-          <button onClick={() => processCliCommand(`enter ${targetIdx}`)} className="macro-chip macro-chip-amber">⚡ enter {targetIdx}</button>
-          <button onClick={() => processCliCommand('loot')} className="macro-chip">📦 loot</button>
+          <button data-tour="palette-scan" onClick={() => processCliCommand(`scan ${targetIdx}`)} className="macro-chip">📡 scan {targetIdx}</button>
+          <button data-tour="palette-enter" onClick={() => processCliCommand(`enter ${targetIdx}`)} className="macro-chip macro-chip-amber">⚡ enter {targetIdx}</button>
+          <button data-tour="palette-loot" onClick={() => processCliCommand('loot')} className="macro-chip">📦 loot</button>
           {currentSubNode?.nodeType === 'ANCHOR' && (
-            <button onClick={() => processCliCommand('attune')} className="macro-chip macro-chip-amber">
+            <button data-tour="palette-attune" onClick={() => processCliCommand('attune')} className="macro-chip macro-chip-amber">
               ⚡ attune
             </button>
           )}
           {currentSubNode?.nodeType === 'WITNESS' && currentSubNode.status !== 'CLEARED' && (
-            <button onClick={() => processCliCommand('interview')} className="macro-chip macro-chip-cyan">🗣 interview</button>
+            <button data-tour="palette-interview" onClick={() => processCliCommand('interview')} className="macro-chip macro-chip-cyan">🗣 interview</button>
           )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.66rem', color: theme.accentCyan, fontWeight: 'bold', width: '74px' }}>COUNTER</span>
-          <button onClick={() => processCliCommand(`decoy ${targetIdx}`)} className="macro-chip macro-chip-danger">🐕 decoy {targetIdx}</button>
-          <button onClick={() => processCliCommand(`degauss ${targetIdx}`)} className="macro-chip macro-chip-cyan">degauss {targetIdx}</button>
+          <button data-tour="palette-decoy" onClick={() => processCliCommand(`decoy ${targetIdx}`)} className="macro-chip macro-chip-danger">🐕 decoy {targetIdx}</button>
+          <button data-tour="palette-degauss" onClick={() => processCliCommand(`degauss ${targetIdx}`)} className="macro-chip macro-chip-cyan">degauss {targetIdx}</button>
           <button onClick={() => processCliCommand(`bypass ${targetIdx}`)} className="macro-chip macro-chip-cyan">bypass {targetIdx}</button>
           <button onClick={() => processCliCommand(`purge ${targetIdx}`)} className="macro-chip macro-chip-cyan">purge {targetIdx}</button>
           <button onClick={() => processCliCommand(`dispel ${targetIdx}`)} className="macro-chip macro-chip-cyan">dispel {targetIdx}</button>
@@ -148,11 +149,13 @@ function CommandPalette() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.66rem', color: theme.textBright, fontWeight: 'bold', width: '74px' }}>FORENSIC</span>
-          <button onClick={() => processCliCommand('vox')} className="macro-chip">🎙️ vox</button>
-          <button onClick={() => processCliCommand('assay')} className="macro-chip">🧪 assay</button>
-          <button onClick={() => processCliCommand('auspex')} className="macro-chip">👁️ auspex</button>
+          <span data-tour="palette-forensic" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+            <button onClick={() => processCliCommand('vox')} className="macro-chip">🎙️ vox</button>
+            <button onClick={() => processCliCommand('assay')} className="macro-chip">🧪 assay</button>
+            <button onClick={() => processCliCommand('auspex')} className="macro-chip">👁️ auspex</button>
+          </span>
           {(currentContract?.discoveredLogs || []).some(isAmbiguous) && (
-            <button onClick={() => processCliCommand('refine')} className="macro-chip macro-chip-amber">≈ refine</button>
+            <button data-tour="palette-refine" onClick={() => processCliCommand('refine')} className="macro-chip macro-chip-amber">≈ refine</button>
           )}
           <button onClick={() => processCliCommand('spoof')} className="macro-chip macro-chip-danger">📡 spoof</button>
           <button onClick={() => processCliCommand('bribe')} className="macro-chip macro-chip-danger">🪙 bribe</button>
@@ -210,7 +213,7 @@ export function FieldOpsViewport() {
       {/* Compact screens only: choose map + wire together, or either one full height */}
       <div className="mobile-only field-ops-switch">
         {(['SPLIT', 'MAP', 'WIRE'] as const).map(p => (
-          <button key={p} onClick={() => setMobilePane(p)} className={`macro-chip ${mobilePane === p ? 'macro-chip-amber' : ''}`} style={{ flex: 1, padding: '6px' }}>
+          <button key={p} data-tour={`pane-${p}`} onClick={() => setMobilePane(p)} className={`macro-chip ${mobilePane === p ? 'macro-chip-amber' : ''}`} style={{ flex: 1, padding: '6px' }}>
             {p === 'SPLIT' ? 'MAP + WIRE' : p}
           </button>
         ))}
@@ -237,8 +240,8 @@ export function FieldOpsViewport() {
         <div className="map-panel" style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ position: 'absolute', top: 6, left: 8, right: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, fontSize: '0.7rem', flexWrap: 'wrap', gap: '4px' }}>
             <div style={{ display: 'flex', gap: '4px' }}>
-              <button onClick={() => { setMapViewMode('SUB_GRID'); setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className={`macro-chip ${mapViewMode === 'SUB_GRID' ? 'macro-chip-amber' : ''}`}>LOCAL SUB-GRID</button>
-              <button onClick={() => { setMapViewMode('GEO_TRACKER'); setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className={`macro-chip ${mapViewMode === 'GEO_TRACKER' ? 'macro-chip-amber' : ''}`}>REGIONAL MAP ({securedSectorsCount}/{allSectors.length - 1})</button>
+              <button data-tour="map-local" onClick={() => { setMapViewMode('SUB_GRID'); setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className={`macro-chip ${mapViewMode === 'SUB_GRID' ? 'macro-chip-amber' : ''}`}>LOCAL SUB-GRID</button>
+              <button data-tour="map-regional" onClick={() => { setMapViewMode('GEO_TRACKER'); setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className={`macro-chip ${mapViewMode === 'GEO_TRACKER' ? 'macro-chip-amber' : ''}`}>REGIONAL MAP ({securedSectorsCount}/{allSectors.length - 1})</button>
             </div>
             <div style={{ display: 'flex', gap: '3px', alignItems: 'center', backgroundColor: 'rgba(5,7,6,0.9)', padding: '2px 5px', border: `1px solid ${theme.borderTerminal}` }}>
               <span style={{ color: theme.textMuted }}>{Math.round(mapZoom * 100)}%</span>
@@ -274,6 +277,7 @@ export function FieldOpsViewport() {
                 {state.tetheredYokai.map(yid => (
                   <DaemonCard
                     key={yid}
+                    yokaiId={yid}
                     name={allYokai.find(item => item.id === yid)?.nameEn}
                     spec={YOKAI_DAEMON_SPECS[yid]}
                     charges={yokaiCharges[yid] ?? getMaxCharges(state, yid)}

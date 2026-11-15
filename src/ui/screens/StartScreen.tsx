@@ -1,37 +1,133 @@
 // src/ui/screens/StartScreen.tsx
 // Boot / operative creation screen.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { normalizeLoadedState } from '../../engine/state';
 import { getFullBodyPath } from '../assets';
 import { ThaumaturgicAudio } from '../audio';
-import { peekSavedOperative } from '../hooks/useEngine';
+import { exportSlot, listSlots, parseSaveFile, writeSlot, type SlotSummary } from '../saves';
 import { theme } from '../theme';
 
+const formatSavedAt = (ms?: number) => {
+  if (!ms) return '';
+  try {
+    return new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+};
+
+function SlotLabel({ summary }: Readonly<{ summary: SlotSummary }>) {
+  if (summary.empty) return <span style={{ color: theme.textMuted, fontSize: '0.74rem', flex: 1 }}>— empty —</span>;
+  const details = [
+    `${summary.sealed}/72 sealed`,
+    summary.released ? `${summary.released} loose` : '',
+    formatSavedAt(summary.savedAt)
+  ].filter(Boolean).join(' · ');
+  return (
+    <span style={{ flex: 1, minWidth: 0 }}>
+      <strong style={{ color: summary.over ? theme.accentRed : theme.textBright, fontSize: '0.8rem' }}>
+        {(summary.name || '').toUpperCase()}{summary.over ? ' · RUN OVER' : ''}
+      </strong>
+      <span style={{ display: 'block', color: '#a8ccaf', fontSize: '0.68rem' }}>{details}</span>
+    </span>
+  );
+}
+
+/** One save slot: what is in it, and what you can do with it. */
+function SlotCard({ summary, selected, onSelect, onContinue, onDelete, onImport }: Readonly<{
+  summary: SlotSummary;
+  selected: boolean;
+  onSelect: () => void;
+  onContinue: () => void;
+  onDelete: () => void;
+  onImport: () => void;
+}>) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const border = selected ? theme.textBright : theme.borderTerminal;
+  return (
+    <div style={{ border: `1px solid ${border}`, backgroundColor: selected ? '#0c170f' : theme.bgDark, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <button type="button" className="row-btn" onClick={onSelect} aria-pressed={selected} style={{ color: 'inherit', display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'baseline' }}>
+        <span style={{ color: theme.textMuted, fontSize: '0.68rem', flexShrink: 0 }}>SLOT {summary.slot}</span>
+        <SlotLabel summary={summary} />
+      </button>
+      {selected && (
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {!summary.empty && !summary.over && (
+            <button onClick={onContinue} className="macro-chip" style={{ flex: 2, padding: '7px', fontWeight: 'bold', backgroundColor: theme.textBright, color: '#000' }}>
+              &gt; CONTINUE
+            </button>
+          )}
+          {!summary.empty && (
+            <button onClick={() => { ThaumaturgicAudio.keyClick(); exportSlot(summary.slot); }} className="macro-chip macro-chip-cyan" style={{ flex: 1, padding: '7px' }}>
+              EXPORT
+            </button>
+          )}
+          <button onClick={onImport} className="macro-chip macro-chip-cyan" style={{ flex: 1, padding: '7px' }}>
+            IMPORT
+          </button>
+          {!summary.empty && (confirmDelete ? (
+            <>
+              <button onClick={() => { setConfirmDelete(false); onDelete(); }} className="macro-chip macro-chip-danger" style={{ flex: 1, padding: '7px', fontWeight: 'bold' }}>DELETE?</button>
+              <button onClick={() => setConfirmDelete(false)} className="macro-chip" style={{ padding: '7px' }}>KEEP</button>
+            </>
+          ) : (
+            <button onClick={() => setConfirmDelete(true)} className="macro-chip macro-chip-danger" style={{ flex: 1, padding: '7px' }}>DELETE</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const StartScreen = ({
+  activeSlot,
+  trainingSeen,
   onStart,
   onLoad,
   onOpenManual,
-  onFullReset
+  onDeleteSlot,
+  onSecretTap
 }: {
-  onStart: (name: string, portrait: string, agency: string) => void;
-  onLoad: () => void;
+  activeSlot: number;
+  /** The guided case has been played (or skipped) on this device before. */
+  trainingSeen: boolean;
+  onStart: (name: string, portrait: string, agency: string, slot: number, withTraining: boolean) => void;
+  onLoad: (slot: number) => void;
   onOpenManual: () => void;
-  onFullReset: () => void;
+  onDeleteSlot: (slot: number) => void;
+  /** Taps on the version stamp (the hidden way into the debug log). */
+  onSecretTap: () => void;
 }) => {
   const [name, setName] = useState('');
   const [agency, setAgency] = useState('');
   const [portrait, setPortrait] = useState('/portraits/thaumaturge_m1.png');
   const [showConfirm, setShowConfirm] = useState(false);
-  const [saveTick, setSaveTick] = useState(0);
+  const [withTraining, setWithTraining] = useState(!trainingSeen);
+  const [slotsTick, setSlotsTick] = useState(0);
+  const [selectedSlot, setSelectedSlot] = useState(activeSlot);
+  const [notice, setNotice] = useState<{ text: string; bad?: boolean } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // saveTick forces a re-read after the save is wiped
-  const savedOperative: string | null = saveTick >= 0 ? peekSavedOperative() : null;
+  // slotsTick forces a re-read after a slot is deleted or imported
+  const slots = slotsTick >= 0 ? listSlots() : [];
+  const chosen = slots.find(sl => sl.slot === selectedSlot) ?? slots[0];
 
-  const handleWipeSave = () => {
-    if (window.confirm('PURGE LOCAL TETHER DATA? This will erase your current operative save and reset all 72 Goetia seals.')) {
+  const handleImportFile = async (file: File | undefined) => {
+    if (!file) return;
+    const parsed = parseSaveFile(await file.text());
+    if (!parsed.ok) {
       ThaumaturgicAudio.errorBuzz();
-      onFullReset();
-      setSaveTick(prev => prev + 1);
+      setNotice({ text: parsed.error, bad: true });
+      return;
     }
+    if (!chosen.empty && !window.confirm(`Replace ${chosen.name} in slot ${selectedSlot} with the imported save?`)) return;
+    if (!writeSlot(selectedSlot, normalizeLoadedState(parsed.state))) {
+      setNotice({ text: 'Could not save: browser storage is full or blocked.', bad: true });
+      return;
+    }
+    ThaumaturgicAudio.sealSuccess();
+    setNotice({ text: `Imported ${(parsed.state.playerName || 'operative').toUpperCase()} into slot ${selectedSlot}.` });
+    setSlotsTick(t => t + 1);
   };
 
   const handleInitiateClick = () => {
@@ -59,11 +155,22 @@ export const StartScreen = ({
                 <div><span style={{ color: theme.textMuted }}>DIRECTIVE:</span> <span style={{ color: theme.accentAmber }}>SEVER THE 72 GOETIAN ANCHORS &amp; BANISH THE FOUR HORSEMEN</span></div>
               </div>
               <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <label style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', color: theme.textBright, fontSize: '0.8rem', cursor: 'pointer', lineHeight: 1.4 }}>
+                  <input type="checkbox" checked={withTraining} onChange={e => setWithTraining(e.target.checked)} style={{ marginTop: '3px' }} />
+                  <span>
+                    Play the training case first
+                    <span style={{ display: 'block', color: theme.textMuted, fontSize: '0.7rem' }}>A guided practice run that shows you how everything works. Recommended for your first game.</span>
+                  </span>
+                </label>
+                {!chosen.empty && (
+                  <div style={{ color: theme.accentRed, fontSize: '0.74rem' }}>
+                    This replaces {(chosen.name || '').toUpperCase()} in slot {selectedSlot}.
+                  </div>
+                )}
                 <button
                   onClick={() => {
                     ThaumaturgicAudio.scryPing();
-                    onFullReset();
-                    onStart(name || 'VERGIL', portrait, agency || 'DARKWIRE');
+                    onStart(name || 'VERGIL', portrait, agency || 'DARKWIRE', selectedSlot, withTraining);
                   }}
                   style={{ padding: '13px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.95rem', letterSpacing: '2px' }}
                 >
@@ -98,7 +205,10 @@ export const StartScreen = ({
 
         <div style={{ padding: '16px 24px 22px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-            <span style={{ fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '2px' }}>THAUMATURGIC OS // NET-OPS v4.14</span>
+            {/* The version stamp doubles as the hidden way into the debug log */}
+            <button type="button" className="row-btn" onClick={onSecretTap} style={{ width: 'auto', fontSize: '0.68rem', color: theme.accentAmber, letterSpacing: '2px', cursor: 'default' }}>
+              THAUMATURGIC OS {'//'} NET-OPS v4.14
+            </button>
             <button
               onClick={onOpenManual}
               style={{
@@ -118,20 +228,35 @@ export const StartScreen = ({
             INITIATING DATA-TETHER
           </h2>
 
-          {savedOperative && (
-            <div style={{ padding: '10px', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgDark, textAlign: 'center' }}>
-              <div style={{ color: theme.textMuted, fontSize: '0.68rem', marginBottom: '6px' }}>EXISTING OPERATIVE TETHER FOUND:</div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => { ThaumaturgicAudio.scryPing(); onLoad(); }} style={{ flex: 2, padding: '9px', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '1px' }}>
-                  &gt; RESUME: OP_{savedOperative.toUpperCase()}
-                </button>
-                <button onClick={handleWipeSave} style={{ flex: 1, padding: '9px', backgroundColor: '#2a0808', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.72rem' }}>
-                  WIPE SAVE
-                </button>
-              </div>
-            </div>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '0.74rem', color: theme.textBright }}>&gt; SAVE SLOTS</div>
+            {slots.map(sl => (
+              <SlotCard
+                key={sl.slot}
+                summary={sl}
+                selected={sl.slot === selectedSlot}
+                onSelect={() => { ThaumaturgicAudio.keyClick(); setSelectedSlot(sl.slot); setNotice(null); }}
+                onContinue={() => { ThaumaturgicAudio.scryPing(); onLoad(sl.slot); }}
+                onDelete={() => { ThaumaturgicAudio.errorBuzz(); onDeleteSlot(sl.slot); setSlotsTick(t => t + 1); }}
+                onImport={() => fileRef.current?.click()}
+              />
+            ))}
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".json,application/json"
+              aria-label="Import a save file"
+              style={{ display: 'none' }}
+              onChange={e => { handleImportFile(e.target.files?.[0]); e.target.value = ''; }}
+            />
+            {notice && (
+              <div role="status" style={{ fontSize: '0.74rem', color: notice.bad ? theme.accentRed : theme.textBright }}>{notice.text}</div>
+            )}
+          </div>
 
+          <div style={{ fontSize: '0.74rem', color: theme.textBright, borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '8px' }}>
+            &gt; NEW OPERATIVE IN SLOT {selectedSlot}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div>
               <label htmlFor="operative-callsign" style={{ display: 'block', marginBottom: '4px', fontSize: '0.74rem', color: theme.textBright }}>&gt; INPUT OPERATIVE CALLSIGN:</label>
