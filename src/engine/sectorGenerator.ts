@@ -263,16 +263,8 @@ export const PHENOMENON_CATALOG: PhenomenonDef[] = [
 // Guarantees every single one of the 72 Goetia has a 100% unique 3-phenomenon fingerprint
 const UNIQUE_SIGNS_CACHE: Record<string, string[]> = {};
 
-// Dev-only content sanity check: every clue a demon requires must be a real phenomenon,
-// otherwise it can't be decoded or ticked in the Codex.
-if (import.meta.env?.DEV) {
-  const knownTags = new Set(PHENOMENON_CATALOG.map(p => p.tag));
-  allGoetia.forEach(g => {
-    (g.requiredIntel || []).forEach(tag => {
-      if (!knownTags.has(tag)) console.warn(`[content] ${g.id} requires unknown phenomenon "${tag}"`);
-    });
-  });
-}
+// Content sanity (every clue tag is a real phenomenon, fingerprints are unique, etc.)
+// is covered by tests/content.test.ts.
 
 export function getUniqueGoetiaSigns(goetiaId: string): string[] {
   if (Object.keys(UNIQUE_SIGNS_CACHE).length === 0) {
@@ -576,7 +568,7 @@ export function generateSectorContract(
   const baseNames = ROOM_NAMES_BY_SECTOR[sectorId] || GENERIC_ROOM_NAMES.slice(0, 6);
   const entryName = baseNames[0];
   const anchorName = baseNames[baseNames.length - 1];
-  const middleNames = shuffle([...baseNames.slice(1, -1), ...(EXTRA_ROOM_NAMES[sectorId] || GENERIC_ROOM_NAMES.slice(3, 5))]);
+  const middleNames = shuffle([...baseNames.slice(1, -1), ...(EXTRA_ROOM_NAMES[sectorId] || GENERIC_ROOM_NAMES.slice(6, 8))]);
 
   // --- CLUES ----------------------------------------------------------------
   const requiredTags = getUniqueGoetiaSigns(target.id);

@@ -1,0 +1,355 @@
+// src/ui/session/useSessionCore.ts
+// Session state: engine, UI state, contracts, logs, toasts and derived case data.
+import { useState, useEffect, useRef } from 'react';
+import { allGoetia } from '../../content/goetia';
+import { MACRO_SECTORS, type MacroSectorDef } from '../../content/map';
+import { type EvidenceLog, scoreSuspect } from '../../engine/evidence';
+import { type SectorContract, generateSectorContract, getUniqueGoetiaSigns } from '../../engine/sectorGenerator';
+import { getMaxHumanity, getTotalGlobalEntropy, isSectorFailed } from '../../engine/state';
+import { useEngine } from '../hooks/useEngine';
+import { type ControlMode, type FontScale, type TerminalEntry, type ViewportMode, escapeHtml } from '../theme';
+
+export function useSessionCore() {
+  const { state, dispatch, draftContract, resetGame, sealGoetia, startInvestigation, loadGame, travelTo } = useEngine();
+
+  const [viewport, setViewport] = useState<ViewportMode>('FIELD_OPS');
+  const [mapViewMode, setMapViewMode] = useState<'SUB_GRID' | 'GEO_TRACKER'>('SUB_GRID');
+  const [fontScale, setFontScale] = useState<FontScale>('MD');
+  const [controlMode, setControlMode] = useState<ControlMode>('PALETTE');
+  const [showManual, setShowManual] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [hudFlash, setHudFlash] = useState<'NONE' | 'DAMAGE' | 'DECODE'>('NONE');
+
+  const [mapZoom, setMapZoom] = useState<number>(1);
+  const [mapPan, setMapPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const didDragRef = useRef(false);
+
+  const [contracts, setContracts] = useState<Record<string, SectorContract>>(() => {
+    const saved = localStorage.getItem('thaumaturgic_os_contracts_v2');
+    if (saved) {
+      try { return JSON.parse(saved); } catch { /* ignore */ }
+    }
+    return {};
+  });
+
+  /** Functional update of one sector's contract, always based on the latest stored value. */
+  const updateContract = (sectorId: string, fn: (c: SectorContract) => SectorContract) =>
+    setContracts(prev => (prev[sectorId] ? { ...prev, [sectorId]: fn(prev[sectorId]) } : prev));
+
+  const shownHintsRef = useRef<Record<string, boolean>>((() => {
+    const saved = localStorage.getItem('thaumaturgic_os_hints_v1');
+    if (saved) {
+      try { return JSON.parse(saved); } catch { /* ignore */ }
+    }
+    return {};
+  })());
+
+  // Persisted in the save file via the reducer
+  const yokaiCharges = state.yokaiCharges || {};
+  const attunedSectors = state.attunedSectors || {};
+  const deducedSigns = state.deducedSigns || [];
+  const setDeducedSigns = (next: string[] | ((prev: string[]) => string[])) =>
+    dispatch({ type: 'SET_DEDUCED_SIGNS', payload: typeof next === 'function' ? next(deducedSigns) : next });
+  const [codexHorsemanFilter, setCodexHorsemanFilter] = useState<'ALL' | 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH'>('ALL');
+  const [selectedSuspectId, setSelectedSuspectId] = useState<string>('01_bael');
+  const [showRuledOut, setShowRuledOut] = useState(false);
+
+  const [activeSealSuspectId, setActiveSealSuspectId] = useState<string | null>(null);
+  const [activeBanishmentTarget, setActiveBanishmentTarget] = useState<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH' | null>(null);
+
+  const [terminalLines, setTerminalLines] = useState<TerminalEntry[]>([]);
+  const [cliInput, setCliInput] = useState('');
+  const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
+
+  const mapCanvasRef = useRef<HTMLCanvasElement>(null);
+  const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
+  const consoleScrollRef = useRef<HTMLDivElement>(null);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const cliInputRef = useRef<HTMLInputElement>(null);
+  const visualFxRef = useRef<{
+    sonarRings: { x: number; y: number; r: number; alpha: number }[];
+    angle: number;
+    wavePhase: number;
+  }>({ sonarRings: [], angle: 0, wavePhase: 0 });
+
+
+  const isSectorSecured = (sectorId: string) => !!state.flags[`sector_secured_${sectorId}`];
+  /** Lost for good: the anchor broke free of a failed Sealing Rite. */
+  const isSectorLost = (sectorId: string) => isSectorFailed(state, sectorId);
+  /** Resolved either way (secured or lost) — no further operations possible. */
+  const isSectorClosed = (sectorId: string) => isSectorSecured(sectorId) || isSectorLost(sectorId);
+  const isReleased = (goetiaId: string) => (state.releasedGoetia || []).includes(goetiaId);
+  const isSectorUnlocked = (sec: MacroSectorDef) => {
+    if (sec.unlockedByDefault || state.flags[`sector_unlocked_${sec.id}`] || isSectorClosed(sec.id)) return true;
+    // A lost sector still opens its neighbours, so one failure can't wall off the rest of the map
+    return sec.connections.some(connId => isSectorClosed(connId));
+  };
+  const lostSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorLost(s.id)).length;
+
+  const securedSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorSecured(s.id)).length;
+  const isFirstRun = state.sealedGoetia.length === 0 && securedSectorsCount === 0;
+
+  const consumeFirstTimeHint = (key: string): boolean => {
+    if (!isFirstRun) return false;
+    if (shownHintsRef.current[key]) return false;
+    shownHintsRef.current[key] = true;
+    localStorage.setItem('thaumaturgic_os_hints_v1', JSON.stringify(shownHintsRef.current));
+    return true;
+  };
+
+  const triggerHudFlash = (kind: 'DAMAGE' | 'DECODE') => {
+    setHudFlash(kind);
+    setTimeout(() => setHudFlash('NONE'), 420);
+  };
+
+  const handleFullReset = () => {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('thaumaturgic_os')) localStorage.removeItem(k);
+    });
+    shownHintsRef.current = {};
+    setContracts({});
+    setTerminalLines([]);
+    setActiveSealSuspectId(null);
+    setActiveBanishmentTarget(null);
+    resetGame();
+  };
+
+  const addMicroEntropy = (delta: number) => dispatch({ type: 'ADD_MICRO_ENTROPY', payload: delta });
+
+  const totalGlobalEntropy = getTotalGlobalEntropy(state);
+  const maxHumanity = getMaxHumanity(state);
+
+  const addToast = (message: string, type: 'INTEL' | 'ITEM' | 'ALERT' | 'SEAL' = 'ALERT') => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4200);
+  };
+
+  const appendLog = (html: string, type: TerminalEntry['type'] = 'normal') => {
+    setTerminalLines(prev => [...prev, { id: Date.now() + Math.random(), html, type }]);
+  };
+
+  useEffect(() => {
+    if (Object.keys(contracts).length > 0) {
+      localStorage.setItem('thaumaturgic_os_contracts_v2', JSON.stringify(contracts));
+    }
+  }, [contracts]);
+
+  useEffect(() => {
+    if (state.gameStage === 'ACTIVE' && Object.keys(contracts).length === 0) {
+      const initialContracts: Record<string, SectorContract> = {};
+      const usedGoetia: string[] = [];
+      MACRO_SECTORS.filter(s => s.id !== 'safehouse').forEach(sec => {
+        const c = generateSectorContract(sec.id, sec.label, [...state.sealedGoetia, ...(state.releasedGoetia || [])], usedGoetia);
+        usedGoetia.push(c.targetGoetiaId);
+        initialContracts[sec.id] = c;
+      });
+      setContracts(initialContracts);
+
+      if (Object.keys(state.inventory).length === 0) {
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 55 } });
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 2 } });
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'cursed_earth', amount: 2 } });
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'alchemical_distillate', amount: 2 } });
+      }
+
+      if (consumeFirstTimeHint('boot_onboarding')) {
+        appendLog(
+          `<div style="border-left:2px solid #62f080;padding-left:10px;margin:4px 0;">` +
+          `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.14 — FIRST-RUN BRIEFING</div>` +
+          `<div style="color:#a8ccaf;line-height:1.5;">` +
+          `1. <strong>RECON:</strong> Run <code style="color:#ffb800;">scan 1</code> to inspect Room 1 before entering.<br/>` +
+          `2. <strong>DISARM:</strong> Clear Patrols (<code style="color:#ff2a55;">decoy</code>) or Traps (<code style="color:#00f3ff;">degauss</code>, <code style="color:#00f3ff;">bypass</code>, <code style="color:#00f3ff;">purge</code>, <code style="color:#00f3ff;">dispel</code>) from outside before running <code style="color:#ffb800;">enter</code>.<br/>` +
+          `3. <strong>DECODE:</strong> Inside a room, match <code style="color:#62f080;">vox</code> (Audio), <code style="color:#62f080;">assay</code> (Matter), or <code style="color:#62f080;">auspex</code> (Astral/Thermal) to the clue signal. Degraded readings can be <code style="color:#62f080;">refine</code>d.<br/>` +
+          `4. <strong>BUILD THE CASE:</strong> <code style="color:#00f3ff;">interview</code> the witness and <code style="color:#ffb800;">attune</code> at the [ANCHOR], then check which suspects still fit in <strong>[F2] CODEX</strong>.` +
+          `</div></div>`,
+          'info'
+        );
+      } else {
+        appendLog(`[+] TETHER ESTABLISHED // ${escapeHtml(state.playerName.toUpperCase())} ONLINE.`, 'info');
+      }
+    }
+  }, [state.gameStage, contracts, state.sealedGoetia, state.inventory, dispatch]);
+
+  // Repair saves hit by the old cascade bug: any unsecured sector whose target
+  // demon is already sealed gets a fresh, still-unsealed target.
+  useEffect(() => {
+    if (state.gameStage !== 'ACTIVE') return;
+    const unavailable = [...state.sealedGoetia, ...(state.releasedGoetia || [])];
+    if (allGoetia.every(g => unavailable.includes(g.id))) return; // nothing left to assign
+    const isClosed = (id: string) => !!state.flags[`sector_secured_${id}`] || !!state.flags[`sector_failed_${id}`];
+    const broken = Object.values(contracts).filter(
+      c => state.sealedGoetia.includes(c.targetGoetiaId) && !state.flags[`sector_secured_${c.sectorId}`]
+    );
+    // Untouched sectors generated by an older version (fixed 6-room layout, no witness, no quirk)
+    // are rebuilt around the same demon so they get the new layout and evidence.
+    const legacy = Object.values(contracts).filter(
+      c => c.quirk === undefined && !c.activeSubNodeId && c.discoveredLogs.length === 0 && !isClosed(c.sectorId) && !broken.includes(c)
+    );
+    if (broken.length === 0 && legacy.length === 0) return;
+    setContracts(prev => {
+      const next = { ...prev };
+      const used = Object.values(prev).map(c => c.targetGoetiaId);
+      broken.forEach(c => {
+        const fresh = generateSectorContract(c.sectorId, c.sectorLabel, unavailable, used);
+        used.push(fresh.targetGoetiaId);
+        next[c.sectorId] = fresh;
+      });
+      legacy.forEach(c => {
+        next[c.sectorId] = generateSectorContract(c.sectorId, c.sectorLabel, unavailable, used, c.targetGoetiaId);
+      });
+      return next;
+    });
+  }, [state.gameStage, contracts, state.sealedGoetia, state.releasedGoetia, state.flags]);
+
+  useEffect(() => {
+    if (viewport === 'FIELD_OPS' && consoleScrollRef.current) {
+      const el = consoleScrollRef.current;
+      el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        if (consoleScrollRef.current) {
+          consoleScrollRef.current.scrollTop = consoleScrollRef.current.scrollHeight;
+        }
+      });
+    }
+  }, [terminalLines, viewport]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F1') { e.preventDefault(); setViewport('FIELD_OPS'); }
+      if (e.key === 'F2') { e.preventDefault(); setViewport('CODEX'); }
+      if (e.key === 'F3') { e.preventDefault(); setViewport('KAGE_NO_SHO'); }
+      if (e.key === 'F4') { e.preventDefault(); setViewport('SAFEHOUSE_ALTAR'); }
+      if (e.key === 'F5') { e.preventDefault(); setViewport('HORSEMEN'); }
+      if (e.key === 'F6') { e.preventDefault(); setViewport('DOSSIER'); }
+      if (e.key === 'F7') { e.preventDefault(); setViewport('MANUAL'); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const currentContract = contracts[state.currentNode];
+  const currentSubNode = currentContract?.subNodes.find(n => n.id === currentContract.activeSubNodeId) || null;
+  const selectedSubNode = currentContract?.subNodes.find(n => n.id === currentContract.selectedSubNodeId) || null;
+  const currentHeat = state.sectorEntropy[state.currentNode] || 0;
+
+  // --- CODEX: suspects ranked by how well they fit this sector's evidence ---
+  const caseEvidence: EvidenceLog[] = currentContract && !isSectorClosed(currentContract.sectorId) ? currentContract.discoveredLogs : [];
+  const suspectFit = (g: typeof allGoetia[0]) => scoreSuspect(g, getUniqueGoetiaSigns(g.id), caseEvidence);
+  const rankedCodexGoetia = allGoetia
+    .filter(g => {
+      if (codexHorsemanFilter !== 'ALL' && g.allegiance !== codexHorsemanFilter) return false;
+      if (deducedSigns.length === 0) return true;
+      const uniqueSigns = getUniqueGoetiaSigns(g.id);
+      return deducedSigns.every(tag => uniqueSigns.includes(tag));
+    })
+    .map(g => ({ g, fit: suspectFit(g) }))
+    .sort((a, b) =>
+      Number(a.fit.contradicted) - Number(b.fit.contradicted) ||
+      b.fit.matched - a.fit.matched ||
+      a.g.manifestId - b.g.manifestId
+    );
+  const consistentCount = rankedCodexGoetia.filter(r => !r.fit.contradicted).length;
+  const filteredCodexGoetia = rankedCodexGoetia
+    .filter(r => showRuledOut || !r.fit.contradicted)
+    .map(r => r.g);
+
+  useEffect(() => {
+    // Keep a valid selection, but never auto-pick "the answer" for the player
+    if (filteredCodexGoetia.length > 0 && !filteredCodexGoetia.some(g => g.id === selectedSuspectId)) {
+      setSelectedSuspectId(filteredCodexGoetia[0].id);
+    }
+  }, [filteredCodexGoetia, selectedSuspectId]);
+
+
+  return {
+    state,
+    dispatch,
+    draftContract,
+    resetGame,
+    sealGoetia,
+    startInvestigation,
+    loadGame,
+    travelTo,
+    viewport,
+    setViewport,
+    mapViewMode,
+    setMapViewMode,
+    fontScale,
+    setFontScale,
+    controlMode,
+    setControlMode,
+    showManual,
+    setShowManual,
+    audioEnabled,
+    setAudioEnabled,
+    hudFlash,
+    setHudFlash,
+    mapZoom,
+    setMapZoom,
+    mapPan,
+    setMapPan,
+    isPanningRef,
+    panStartRef,
+    didDragRef,
+    contracts,
+    setContracts,
+    updateContract,
+    shownHintsRef,
+    yokaiCharges,
+    attunedSectors,
+    deducedSigns,
+    setDeducedSigns,
+    codexHorsemanFilter,
+    setCodexHorsemanFilter,
+    selectedSuspectId,
+    setSelectedSuspectId,
+    showRuledOut,
+    setShowRuledOut,
+    activeSealSuspectId,
+    setActiveSealSuspectId,
+    activeBanishmentTarget,
+    setActiveBanishmentTarget,
+    terminalLines,
+    setTerminalLines,
+    cliInput,
+    setCliInput,
+    toasts,
+    setToasts,
+    mapCanvasRef,
+    waveformCanvasRef,
+    consoleScrollRef,
+    terminalEndRef,
+    cliInputRef,
+    visualFxRef,
+    isSectorSecured,
+    isSectorLost,
+    isSectorClosed,
+    isReleased,
+    isSectorUnlocked,
+    lostSectorsCount,
+    securedSectorsCount,
+    isFirstRun,
+    consumeFirstTimeHint,
+    triggerHudFlash,
+    handleFullReset,
+    addMicroEntropy,
+    totalGlobalEntropy,
+    maxHumanity,
+    addToast,
+    appendLog,
+    currentContract,
+    currentSubNode,
+    selectedSubNode,
+    currentHeat,
+    caseEvidence,
+    suspectFit,
+    rankedCodexGoetia,
+    consistentCount,
+    filteredCodexGoetia
+  };
+}
+
+export type SessionCore = ReturnType<typeof useSessionCore>;
