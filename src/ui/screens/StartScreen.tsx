@@ -158,7 +158,7 @@ export const StartScreen = ({
                 <label style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', color: theme.textBright, fontSize: '0.8rem', cursor: 'pointer', lineHeight: 1.4 }}>
                   <input type="checkbox" checked={withTraining} onChange={e => setWithTraining(e.target.checked)} style={{ marginTop: '3px' }} />
                   <span>
-                    Play the training case first
+                    <span style={{ display: 'block' }}>Play the training case first</span>
                     <span style={{ display: 'block', color: theme.textMuted, fontSize: '0.7rem' }}>A guided practice run that shows you how everything works. Recommended for your first game.</span>
                   </span>
                 </label>
@@ -247,10 +247,13 @@ export const StartScreen = ({
               accept=".json,application/json"
               aria-label="Import a save file"
               style={{ display: 'none' }}
-              onChange={e => { handleImportFile(e.target.files?.[0]); e.target.value = ''; }}
+              onChange={e => {
+                handleImportFile(e.target.files?.[0]).catch(() => setNotice({ text: 'Could not read that file.', bad: true }));
+                e.target.value = '';
+              }}
             />
             {notice && (
-              <div role="status" style={{ fontSize: '0.74rem', color: notice.bad ? theme.accentRed : theme.textBright }}>{notice.text}</div>
+              <output style={{ display: 'block', fontSize: '0.74rem', color: notice.bad ? theme.accentRed : theme.textBright }}>{notice.text}</output>
             )}
           </div>
 
@@ -268,9 +271,9 @@ export const StartScreen = ({
               <input id="operative-syndicate" type="text" value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="e.g. DARKWIRE" style={{ width: '100%', padding: '8px', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none' }} />
             </div>
 
-            <div>
-              <div id="operative-portrait" style={{ display: 'block', marginBottom: '6px', fontSize: '0.74rem', color: theme.textBright }}>&gt; SELECT OPERATIVE DOSSIER PORTRAIT:</div>
-              <div role="group" aria-labelledby="operative-portrait" style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <fieldset style={{ border: 'none', margin: 0, padding: 0, minWidth: 0 }}>
+              <legend style={{ padding: 0, marginBottom: '6px', fontSize: '0.74rem', color: theme.textBright }}>&gt; SELECT OPERATIVE DOSSIER PORTRAIT:</legend>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 {[
                   { id: 'thaumaturge_m1', src: '/portraits/thaumaturge_m1.png' },
                   { id: 'thaumaturge_m2', src: '/portraits/thaumaturge_m2.png' },
@@ -299,7 +302,7 @@ export const StartScreen = ({
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
             <button onClick={handleInitiateClick} style={{ width: '100%', padding: '11px', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', letterSpacing: '2px', marginTop: '4px' }}>
               INITIALIZE TETHER PROTOCOL //

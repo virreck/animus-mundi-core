@@ -351,5 +351,20 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
 export const getTutorialGuide = (step: TutorialStep | undefined, ctx: TutorialContext): TutorialGuide | null =>
   step?.guide ? step.guide(ctx) : null;
 
-export const fillTutorialText = (text: string, state: Pick<GameState, 'playerName' | 'agencyName'>) =>
-  text.replaceAll('{name}', (state.playerName || 'OPERATIVE').toUpperCase()).replaceAll('{agency}', (state.agencyName || 'DARKWIRE').toUpperCase());
+/** How the player points at things: guidance says "tap" on touch screens and "click" with a mouse. */
+export type PointerKind = 'touch' | 'mouse';
+
+const CLICK_FORMS: Record<string, string> = { tap: 'click', taps: 'clicks', tapped: 'clicked', tapping: 'clicking' };
+
+/** Script text is written for touch ("tap"); with a mouse every form of "tap" becomes "click", keeping its case. */
+export function adaptVerbs(text: string, pointer: PointerKind): string {
+  if (pointer === 'touch') return text;
+  return text.replaceAll(/\b(tap|taps|tapped|tapping)\b/gi, word => {
+    const click = CLICK_FORMS[word.toLowerCase()];
+    if (word === word.toUpperCase()) return click.toUpperCase();
+    return word[0] === word[0].toUpperCase() ? click[0].toUpperCase() + click.slice(1) : click;
+  });
+}
+
+export const fillTutorialText = (text: string, state: Pick<GameState, 'playerName' | 'agencyName'>, pointer: PointerKind = 'touch') =>
+  adaptVerbs(text.replaceAll('{name}', (state.playerName || 'OPERATIVE').toUpperCase()).replaceAll('{agency}', (state.agencyName || 'DARKWIRE').toUpperCase()), pointer);

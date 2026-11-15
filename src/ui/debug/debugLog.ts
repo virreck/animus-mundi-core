@@ -102,7 +102,7 @@ export function describeAction(action: GameAction): string | null {
   const p: unknown = action.payload;
   if (typeof p === 'function') return `${action.type} (update)`;
   if (action.type === 'LOAD_GAME' || action.type === 'SET_CONTRACTS') return `${action.type} (state)`;
-  const text = typeof p === 'object' ? JSON.stringify(p) : String(p);
+  const text = typeof p === 'string' ? p : JSON.stringify(p) ?? '';
   return `${action.type} ${text.length > 140 ? text.slice(0, 140) + '…' : text}`;
 }
 
@@ -144,7 +144,10 @@ export function snapshotWorthy(prev: GameState | null, next: GameState): boolean
 // EXPORT
 // ---------------------------------------------------------------------------
 const csvCell = (v: unknown) => {
-  const s = v === undefined || v === null ? '' : String(v);
+  let s = '';
+  if (typeof v === 'string') s = v;
+  else if (typeof v === 'number' || typeof v === 'boolean') s = String(v);
+  else if (v !== undefined && v !== null) s = JSON.stringify(v) ?? '';
   return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
 };
 

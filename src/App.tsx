@@ -38,7 +38,9 @@ export default function App() {
   const core = useSessionCore();
   const ops = useFieldOps(core);
   const canvas = useMapCanvas({ ...core, ...ops });
-  const session: Session = { ...core, ...ops, ...canvas };
+  // Rebuilt every render on purpose: it carries the live game state, and every consumer sits under
+  // App and re-renders with it anyway, so a useMemo here would have no stable dependencies to key on.
+  const session: Session = { ...core, ...ops, ...canvas }; // NOSONAR(typescript:S6481)
   const {
     state,
     startInvestigation,

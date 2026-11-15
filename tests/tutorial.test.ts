@@ -14,7 +14,7 @@ import {
 } from '../src/engine/tutorial';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { TUTORIAL_STEPS, fillTutorialText, getTutorialGuide, type TutorialContext } from '../src/content/tutorial';
+import { TUTORIAL_STEPS, adaptVerbs, fillTutorialText, getTutorialGuide, type TutorialContext } from '../src/content/tutorial';
 
 const identity = { name: 'Vergil', portrait: '/portraits/thaumaturge_m1.png', agency: 'Darkwire' };
 const target = allGoetia.find(g => g.id === TUTORIAL_TARGET_ID)!;
@@ -198,4 +198,12 @@ test('tasks inside a room walk you in first', () => {
 
 test('every docked step has a plain-English summary', () => {
   for (const step of TUTORIAL_STEPS.filter(s => !s.fullscreen)) assert.ok(step.plain && step.plain.length > 20, `${step.id} has no plain summary`);
+});
+
+test('guidance says "tap" on touch screens and "click" with a mouse', () => {
+  const line = 'Tap Room 2, then tap SCAN. TAP HERE. Keep tapping; it taps back. Tapped!';
+  assert.equal(adaptVerbs(line, 'touch'), line);
+  assert.equal(adaptVerbs(line, 'mouse'), 'Click Room 2, then click SCAN. CLICK HERE. Keep clicking; it clicks back. Clicked!');
+  assert.equal(adaptVerbs('a tapestry of taps', 'mouse'), 'a tapestry of clicks', 'only whole words change');
+  assert.equal(fillTutorialText('Tap {name}', { playerName: 'vergil', agencyName: 'x' }, 'mouse'), 'Click VERGIL');
 });

@@ -4,6 +4,8 @@ import { useState, type CSSProperties as ReactCSSProperties } from 'react';
 import { DEEP_ATTUNE_COST, REFINE_COST } from '../../engine/evidence';
 import { KAGE_TUNING } from '../../engine/kage';
 import { ThaumaturgicAudio } from '../audio';
+import { adaptVerbs } from '../../content/tutorial';
+import { usePointerKind } from '../hooks/usePointerKind';
 import { FONT_ZOOM_MAP, type FontScale, theme } from '../theme';
 
 /** Plain-English meanings of the game's terms (MANUAL tab 7). */
@@ -47,6 +49,7 @@ const GLOSSARY: Array<[string, string]> = [
 ];
 
 export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: FontScale; onReplayTutorial?: () => void }) => {
+  const pointer = usePointerKind();
   const [tab, setTab] = useState<'FORENSICS' | 'COUNTERS' | 'LORE' | 'INQUISITION' | 'SHIKIGAMI' | 'GRAND_RITE' | 'WORDS'>('FORENSICS');
   const subTabStyle = (active: boolean): ReactCSSProperties => ({
     padding: '8px 12px', fontFamily: theme.fontMono, fontSize: '0.74rem', fontWeight: 'bold', cursor: 'pointer',
@@ -247,7 +250,7 @@ export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: Fon
               {GLOSSARY.map(([term, meaning]) => (
                 <div key={term} style={{ padding: '5px 0', borderBottom: `1px dashed ${theme.borderTerminal}` }}>
                   <dt style={{ color: theme.textBright, fontWeight: 'bold', display: 'inline' }}>{term}: </dt>
-                  <dd style={{ margin: 0, display: 'inline' }}>{meaning}</dd>
+                  <dd style={{ margin: 0, display: 'inline' }}>{adaptVerbs(meaning, pointer)}</dd>
                 </div>
               ))}
             </dl>

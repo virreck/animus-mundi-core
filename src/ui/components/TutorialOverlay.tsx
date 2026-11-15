@@ -9,6 +9,7 @@ import {
 import type { SubGridNode } from '../../engine/sectorGenerator';
 import { TUTORIAL_SECTOR_ID } from '../../engine/tutorial';
 import { ThaumaturgicAudio } from '../audio';
+import { usePointerKind } from '../hooks/usePointerKind';
 import { useSession } from '../session/SessionContext';
 import { theme } from '../theme';
 
@@ -130,6 +131,7 @@ export function TutorialOverlay() {
   const [minimised, setMinimised] = useState(false);
   const [showStory, setShowStory] = useState(false);
   const [confirmSkip, setConfirmSkip] = useState(false);
+  const pointer = usePointerKind();
 
   const step = TUTORIAL_STEPS[Math.min(tutorialStep, TUTORIAL_STEPS.length - 1)];
   const ctx: TutorialContext = { state, viewport, mapViewMode, selectedSuspectId };
@@ -162,7 +164,7 @@ export function TutorialOverlay() {
   const { targetBox, roomBox } = useTourBoxes(targetId, roomNo, state.contracts[TUTORIAL_SECTOR_ID]?.subNodes, mapCanvasRef.current, mapZoom, mapPan);
 
   if (!isTrainingRun || !step) return null;
-  const fill = (text: string) => fillTutorialText(text, state);
+  const fill = (text: string) => fillTutorialText(text, state, pointer);
   const progress = `${Math.min(tutorialStep + 1, TUTORIAL_STEPS.length)}/${TUTORIAL_STEPS.length}`;
 
   const skipControls = <SkipControls confirming={confirmSkip} setConfirming={setConfirmSkip} onSkip={finishTutorial} />;
@@ -173,11 +175,11 @@ export function TutorialOverlay() {
 
   const spot = targetBox ?? roomBox;
   const position = panelPosition(spot);
-  const hint = complete ? 'Done.' : guide?.hint;
+  const hint = complete ? 'Done.' : guide?.hint && fill(guide.hint);
 
   const marker = (
     <>
-      {targetBox && <Highlight box={targetBox} label="TAP HERE" />}
+      {targetBox && <Highlight box={targetBox} label={fill('TAP HERE')} />}
       {roomBox && !targetBox && <Highlight box={roomBox} label={`ROOM ${roomNo}`} round />}
     </>
   );
@@ -190,7 +192,7 @@ export function TutorialOverlay() {
           onClick={() => setMinimised(false)}
           style={{ position: 'fixed', ...position, zIndex: 90, maxWidth: 'min(420px, calc(100vw - 16px))', padding: '7px 10px', backgroundColor: 'rgba(5,7,6,0.97)', border: `1px solid ${theme.accentAmber}`, color: theme.accentAmber, fontFamily: theme.fontMono, fontSize: '0.72rem', cursor: 'pointer', textAlign: 'left' }}
         >
-          ◆ {hint || (step.objective ? fill(step.objective) : fill(step.title))} <span style={{ color: theme.textMuted }}>(tap to open)</span>
+          ◆ {hint || (step.objective ? fill(step.objective) : fill(step.title))} <span style={{ color: theme.textMuted }}>{fill('(tap to open)')}</span>
         </button>
       </>
     );
@@ -280,9 +282,8 @@ function CoachPanel({ step, progress, fill, complete, hint, position, showStory,
   const stretched = position.right !== undefined && position.left !== undefined;
   const accent = complete ? theme.textBright : theme.accentAmber;
   return (
-    <div
+    <aside
       key={step.id}
-      role="dialog"
       aria-label="Training guide"
       style={{
         position: 'fixed', ...position, zIndex: 90,
@@ -328,7 +329,7 @@ function CoachPanel({ step, progress, fill, complete, hint, position, showStory,
           </button>
         )}
       </div>
-    </div>
+    </aside>
   );
 }
 
