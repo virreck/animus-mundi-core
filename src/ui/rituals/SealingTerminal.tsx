@@ -208,8 +208,14 @@ export const SealingTerminal = ({
               <span style={{ color: timeLeft <= 5 ? theme.accentRed : theme.textBright, fontWeight: 'bold' }}>00:{timeLeft.toString().padStart(2, '0')}</span>
             </div>
             <div style={{ position: 'relative', width: '280px', height: '280px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2, pointerEvents: 'none' }}>
-                <SmartGoetiaSigil goetia={suspect} isRevealed={false} size={175} />
+              {/* The True Name is known: the sigil burns in full and pulses faster as the binding closes */}
+              <div
+                style={{
+                  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2, pointerEvents: 'none',
+                  animation: `sigilBindPulse ${Math.max(0.55, 1.8 - (1.25 * path.length) / matrix.sequence.length).toFixed(2)}s ease-in-out infinite`
+                }}
+              >
+                <SmartGoetiaSigil goetia={suspect} isRevealed={true} size={175} />
               </div>
               <SigilTracingBoard
                 matrix={matrix}

@@ -1,5 +1,6 @@
 // src/ui/components/AppHeader.tsx
 // Top bar: viewport tabs, vital stats and settings.
+import { useEffect, useRef, useState } from 'react';
 import { ThaumaturgicAudio } from '../audio';
 import { useSession } from '../session/SessionContext';
 import { theme } from '../theme';
@@ -20,26 +21,38 @@ export function AppHeader() {
     activeSectorClueCount,
     activeReadingCount
   } = useSession();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Publish the header's real height so fixed overlays (toasts, training panel) sit just under it
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const publish = () => document.documentElement.style.setProperty('--header-h', `${el.offsetHeight}px`);
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   return (
-    <header style={{ minHeight: '46px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', overflowX: 'auto', zIndex: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-        <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}>[F1] FIELD_OPS</button>
+    <header ref={headerRef} className="app-header" style={{ minHeight: '46px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', zIndex: 20 }}>
+      <nav className="header-tabs" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+        <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}><span className="fkey">[F1] </span>FIELD_OPS</button>
         <button
           className={`viewport-tab ${viewport === 'CODEX' ? 'active' : ''}`}
           onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('CODEX'); }}
           style={activeReadingCount >= 3 && viewport !== 'CODEX' ? { borderColor: theme.accentAmber, color: theme.accentAmber, boxShadow: '0 0 8px rgba(255,184,0,0.4)' } : undefined}
         >
-          [F2] CODEX ({activeSectorClueCount})
+          <span className="fkey">[F2] </span>CODEX ({activeSectorClueCount})
         </button>
-        <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}>[F3] KAGE ({state.tetheredYokai.length}/2)</button>
-        <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}>[F4] SAFEHOUSE</button>
-        <button className={`viewport-tab ${viewport === 'HORSEMEN' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('HORSEMEN'); }} style={viewport !== 'HORSEMEN' ? { borderColor: theme.accentRed, color: theme.accentRed } : undefined}>[F5] HORSEMEN</button>
-        <button className={`viewport-tab ${viewport === 'DOSSIER' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('DOSSIER'); }}>[F6] DOSSIER</button>
-        <button className={`viewport-tab ${viewport === 'MANUAL' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('MANUAL'); }}>[F7] MANUAL</button>
-      </div>
+        <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}><span className="fkey">[F3] </span>KAGE_NO_SHO ({state.tetheredYokai.length}/2)</button>
+        <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}><span className="fkey">[F4] </span>SAFEHOUSE</button>
+        <button className={`viewport-tab ${viewport === 'HORSEMEN' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('HORSEMEN'); }} style={viewport !== 'HORSEMEN' ? { borderColor: theme.accentRed, color: theme.accentRed } : undefined}><span className="fkey">[F5] </span>HORSEMEN</button>
+        <button className={`viewport-tab ${viewport === 'DOSSIER' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('DOSSIER'); }}><span className="fkey">[F6] </span>DOSSIER</button>
+        <button className={`viewport-tab ${viewport === 'MANUAL' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('MANUAL'); }}><span className="fkey">[F7] </span>MANUAL</button>
+      </nav>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, fontSize: '0.72rem' }}>
+      <div className="header-vitals" style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, fontSize: '0.72rem' }}>
         <span style={{ padding: '4px 6px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentRed }}>
           ENTROPY: <strong>{totalGlobalEntropy.toFixed(2)}%</strong>
         </span>
@@ -49,6 +62,10 @@ export function AppHeader() {
         <span style={{ padding: '4px 6px', backgroundColor: '#090d0a', border: `1px solid ${theme.borderTerminal}`, color: theme.accentAmber, fontWeight: 'bold' }}>
           OBOLS: {state.inventory.obols || 0}
         </span>
+        <button className="mobile-only macro-chip" style={{ padding: '4px 8px' }} onClick={() => setSettingsOpen(v => !v)} aria-label="Settings">
+          ⚙
+        </button>
+        <span className={`header-settings ${settingsOpen ? 'open' : ''}`}>
         <button
           onClick={() => { ThaumaturgicAudio.keyClick(); setControlMode(prev => prev === 'PALETTE' ? 'CLI' : 'PALETTE'); }}
           className={`macro-chip ${controlMode === 'PALETTE' ? 'macro-chip-amber' : ''}`}
@@ -69,6 +86,7 @@ export function AppHeader() {
         <button onClick={handleLogout} className="macro-chip macro-chip-danger" style={{ padding: '4px 7px' }}>
           LOG OUT
         </button>
+        </span>
       </div>
     </header>
   );

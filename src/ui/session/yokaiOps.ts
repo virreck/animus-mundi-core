@@ -2,6 +2,7 @@
 // Yokai daemons: unbinding and active invocations.
 import { allYokai } from '../../content/yokai';
 import { YOKAI_DAEMON_SPECS } from '../../content/yokaiSpecs';
+import { getMaxCharges, KAGE_TUNING } from '../../engine/kage';
 import type { SubGridNode } from '../../engine/sectorGenerator';
 import { ThaumaturgicAudio } from '../audio';
 import { escapeHtml } from '../theme';
@@ -25,20 +26,25 @@ export function createYokaiOps(s: SessionCore & SectorRules & RoomOps & Evidence
     isAdjacentOrEntry
   } = s;
 
-  const handleUnbindYokai = (yokaiId: string, reason = 'Manually severed') => {
+  /** Severs a pact by hand. A spirit cut loose with charges left is offended for a while. */
+  const handleUnbindYokai = (yokaiId: string, reason = 'Pact severed') => {
     ThaumaturgicAudio.errorBuzz();
-    // Dedicated action: a LOAD_GAME with a copy of `state` here would overwrite
-    // any actions dispatched earlier in the same event handler.
-    dispatch({ type: 'UNBIND_YOKAI', payload: yokaiId });
+    const hadCharges = (yokaiCharges[yokaiId] ?? getMaxCharges(state, yokaiId)) > 0;
+    dispatch({ type: 'BREAK_PACT', payload: yokaiId });
     const yName = allYokai.find(y => y.id === yokaiId)?.nameEn || yokaiId;
-    appendLog(`[*] DAEMON UNBOUND: <strong style="color:#ff2a55;">${escapeHtml(yName)}</strong> (${escapeHtml(reason)}).`, 'warn');
-    addToast(`Unbound: ${yName}`, 'ALERT');
+    appendLog(
+      `[*] PACT SEVERED: <strong style="color:#ff2a55;">${escapeHtml(yName)}</strong> (${escapeHtml(reason)}).` +
+      (hadCharges ? ` It will not deal with you for ${KAGE_TUNING.brokenPactOffense} sectors.` : ''),
+      'warn'
+    );
+    addToast(`Pact severed: ${yName}`, 'ALERT');
   };
 
   const handleInvokeYokaiPower = (yokaiId: string) => {
     const spec = YOKAI_DAEMON_SPECS[yokaiId];
     if (!spec) return;
-    const currentCharges = yokaiCharges[yokaiId] ?? spec.maxCharges;
+    const maxCharges = getMaxCharges(state, yokaiId);
+    const currentCharges = yokaiCharges[yokaiId] ?? maxCharges;
     if (currentCharges <= 0) {
       handleUnbindYokai(yokaiId, 'Contract charges exhausted');
       return;
@@ -108,13 +114,13 @@ export function createYokaiOps(s: SessionCore & SectorRules & RoomOps & Evidence
     const remaining = currentCharges - 1;
     // The reducer decrements the charge and unbinds the daemon at zero, so the
     // power's own effects above are never rolled back.
-    dispatch({ type: 'CONSUME_YOKAI_CHARGE', payload: { yokaiId, maxCharges: spec.maxCharges } });
+    dispatch({ type: 'CONSUME_YOKAI_CHARGE', payload: { yokaiId } });
 
     if (remaining <= 0) {
-      appendLog(`[*] DAEMON UNBOUND: <strong style="color:#ff2a55;">${escapeHtml(yName)}</strong> (All charges expended).`, 'warn');
-      addToast(`Unbound: ${yName}`, 'ALERT');
+      appendLog(`[*] BURNED DRY: <strong style="color:#ff2a55;">${escapeHtml(yName)}</strong> leaves your tether, offended.`, 'warn');
+      addToast(`${yName} departs, offended`, 'ALERT');
     } else {
-      addToast(`${yName}: ${remaining}/${spec.maxCharges} Charges Left`, 'SEAL');
+      addToast(`${yName}: ${remaining}/${maxCharges} charges`, 'SEAL');
     }
   };
 

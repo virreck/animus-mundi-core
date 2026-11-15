@@ -12,6 +12,9 @@ import type { ContractCost } from '../content/yokai/types';
 import type { SectorContract } from './sectorGenerator';
 import { advanceWorld, releaseDemon, TIME_UNITS_PER_TICK } from './world';
 import { isTraining } from './tutorial';
+import {
+  addBond, applySectorClosures, departOffended, getMaxCharges, isBondThree, renewPact, whyCannotBind, KAGE_TUNING
+} from './kage';
 
 export type GameAction =
   | { type: 'START_INVESTIGATION'; payload: { name: string; portrait: string; agency: string } }
@@ -23,7 +26,10 @@ export type GameAction =
   | { type: 'RELEASE_GOETIA'; payload: { goetiaId: string; sectorId: string } }
   | { type: 'DRAFT_CONTRACT'; payload: { yokaiId: string; costs: ContractCost; maxCharges?: number } }
   | { type: 'UNBIND_YOKAI'; payload: string }
-  | { type: 'CONSUME_YOKAI_CHARGE'; payload: { yokaiId: string; maxCharges: number } }
+  | { type: 'CONSUME_YOKAI_CHARGE'; payload: { yokaiId: string; maxCharges?: number } }
+  | { type: 'BREAK_PACT'; payload: string }
+  | { type: 'RENEW_PACT'; payload: string }
+  | { type: 'ADD_BOND'; payload: { yokaiId: string; amount: number } }
   | { type: 'MODIFY_FACTION'; payload: { factionId: string; amount: number } }
   | { type: 'MODIFY_HUMANITY'; payload: number }
   | { type: 'MODIFY_INK'; payload: number }
@@ -65,7 +71,7 @@ function baseReducer(state: GameState, action: GameAction): GameState {
       // YOKAI INTERCEPTOR: Tengu (Safe Travel)
       const isTengu = activeYokai.includes('yokai_tengu');
       const heatPenalty = isTengu ? 0 : 10; // Tengu nullifies travel heat
-      const obolCost = isTengu ? 5 : 0;     // Tengu demands 5 Obols per trip
+      const obolCost = isTengu ? (isBondThree(state, 'yokai_tengu') ? 2 : 5) : 0; // Tengu demands 5 Obols per trip (2 at Bond III)
 
       const nodeId = action.payload;
       const currentSectorEntropy = state.sectorEntropy[nodeId] || 0;
@@ -133,8 +139,12 @@ function baseReducer(state: GameState, action: GameAction): GameState {
       return { ...state, notices: state.notices.filter(n => !action.payload.includes(n.id)) };
 
     case 'DRAFT_CONTRACT': {
-      const { yokaiId, costs, maxCharges } = action.payload;
+      const { yokaiId, costs } = action.payload;
       if (activeYokai.includes(yokaiId)) return state;
+      // KAGE NO SHO: only written pages can be bound, and offended spirits refuse
+      const block = whyCannotBind(state, yokaiId);
+      if (block === 'UNWRITTEN' || block === 'OFFENDED') return state;
+      const maxCharges = getMaxCharges(state, yokaiId);
 
       // THE RULE OF TWO: If you have 2 Yokai, drop the oldest one to make room
       const newTether = [...activeYokai, yokaiId];
@@ -142,7 +152,7 @@ function baseReducer(state: GameState, action: GameAction): GameState {
 
       const yokaiCharges = { ...state.yokaiCharges };
       if (dropped) delete yokaiCharges[dropped];
-      if (maxCharges !== undefined) yokaiCharges[yokaiId] = maxCharges;
+      yokaiCharges[yokaiId] = maxCharges;
 
       const next = setTether(state, newTether);
       return {
@@ -166,11 +176,27 @@ function baseReducer(state: GameState, action: GameAction): GameState {
     }
 
     case 'CONSUME_YOKAI_CHARGE': {
-      const { yokaiId, maxCharges } = action.payload;
-      const remaining = (state.yokaiCharges[yokaiId] ?? maxCharges) - 1;
-      if (remaining <= 0) return baseReducer(state, { type: 'UNBIND_YOKAI', payload: yokaiId });
-      return { ...state, yokaiCharges: { ...state.yokaiCharges, [yokaiId]: remaining } };
+      const { yokaiId } = action.payload;
+      const remaining = (state.yokaiCharges[yokaiId] ?? getMaxCharges(state, yokaiId)) - 1;
+      const bonded = addBond(state, yokaiId, KAGE_TUNING.bondPerInvocation);
+      // Burned dry: the daemon leaves, briefly offended
+      if (remaining <= 0) return departOffended(bonded, yokaiId, KAGE_TUNING.burnedDryOffense, KAGE_TUNING.burnedDryBondLoss);
+      return { ...bonded, yokaiCharges: { ...bonded.yokaiCharges, [yokaiId]: remaining } };
     }
+
+    case 'BREAK_PACT': {
+      // Severing a pact by hand while it still has charges offends the spirit for longer
+      if (!activeYokai.includes(action.payload)) return state;
+      const charges = state.yokaiCharges[action.payload] ?? getMaxCharges(state, action.payload);
+      if (charges <= 0) return baseReducer(state, { type: 'UNBIND_YOKAI', payload: action.payload });
+      return departOffended(state, action.payload, KAGE_TUNING.brokenPactOffense, KAGE_TUNING.brokenPactBondLoss);
+    }
+
+    case 'RENEW_PACT':
+      return renewPact(state, action.payload);
+
+    case 'ADD_BOND':
+      return addBond(state, action.payload.yokaiId, action.payload.amount);
 
     case 'MODIFY_FACTION': {
       const currentFaction = state.factions[action.payload.factionId] ?? 50;
@@ -185,7 +211,7 @@ function baseReducer(state: GameState, action: GameAction): GameState {
       // YOKAI INTERCEPTOR: Noppera-bō (Damage Reduction)
       if (humanityChange < 0 && activeYokai.includes('yokai_noppera')) {
         humanityChange = Math.ceil(humanityChange * 0.5); // Halves damage
-        extraHeat = 5; // The world rejects the faceless illusion
+        extraHeat = isBondThree(state, 'yokai_noppera') ? 2 : 5; // The world rejects the faceless illusion
       }
 
       const newState = {
@@ -224,15 +250,16 @@ function baseReducer(state: GameState, action: GameAction): GameState {
       if (entropyChange > 0) {
         // YOKAI INTERCEPTOR: Kamaitachi (Doubles failure penalty)
         if (activeYokai.includes('yokai_kamaitachi')) {
-          entropyChange *= 2;
+          entropyChange *= isBondThree(state, 'yokai_kamaitachi') ? 1.5 : 2;
         }
 
         // YOKAI INTERCEPTOR: Amabie (Ritual Failure Protection)
         if (activeYokai.includes('yokai_amabie')) {
           const currentObols = state.inventory.obols || 0;
-          if (currentObols >= 15) {
+          const toll = isBondThree(state, 'yokai_amabie') ? 10 : 15;
+          if (currentObols >= toll) {
             entropyChange = 0; // Nullify the spike!
-            obolDrain = 15;    // Take the toll
+            obolDrain = toll;  // Take the toll
           } else {
             entropyChange = ENTROPY_CEILING; // Cannot pay the toll? The Tether snaps. Game over.
           }
@@ -268,7 +295,7 @@ function baseReducer(state: GameState, action: GameAction): GameState {
       // YOKAI INTERCEPTOR: Baku (Double time cost & 10 Obol drain when resting/passing time)
       if (activeYokai.includes('yokai_baku')) {
         timeAmount *= 2;
-        obolDrain = 10;
+        obolDrain = isBondThree(state, 'yokai_baku') ? 5 : 10;
       }
 
       const updatedSectorEntropy = { ...state.sectorEntropy };
@@ -295,7 +322,7 @@ function baseReducer(state: GameState, action: GameAction): GameState {
       // YOKAI INTERCEPTOR: Kitsune Mask (50% Heat Reduction)
       if (heatSpike > 0 && activeYokai.includes('yokai_kitsune')) {
         heatSpike = Math.max(1, Math.floor(heatSpike * 0.5));
-        humanityDrain = 2; // The Kitsune drains your sanity
+        humanityDrain = isBondThree(state, 'yokai_kitsune') ? 1 : 2; // The Kitsune drains your sanity
       }
 
       const currentSectorEntropy = state.sectorEntropy[targetNode] || 0;
@@ -344,7 +371,8 @@ function baseReducer(state: GameState, action: GameAction): GameState {
 
 /** Main reducer: applies the action, then checks whether the run has ended. */
 export function gameReducer(state: GameState, action: GameAction): GameState {
-  const next = baseReducer(state, action);
+  // Sector closures feed the KAGE NO SHO (bonds, tributes, offended spirits cooling off)
+  const next = applySectorClosures(state, baseReducer(state, action));
   if (
     next.gameStage === 'ACTIVE' &&
     !isTraining(next) && // the guided case never ends the run (its game-over screen would wipe the real save)

@@ -17,17 +17,21 @@ export function CodexViewport() {
     setCodexHorsemanFilter,
     selectedSuspectId,
     setSelectedSuspectId,
-    showRuledOut,
-    setShowRuledOut,
+    codexRankFilter,
+    setCodexRankFilter,
+    hideStruck,
+    setHideStruck,
+    requiredSigns,
+    excludedSigns,
+    cycleSignFilter,
+    struckSuspects,
+    toggleStruckSuspect,
     setActiveSealSuspectId,
     isSectorSecured,
     isSectorLost,
     isSectorClosed,
     isReleased,
     currentContract,
-    caseEvidence,
-    suspectFit,
-    consistentCount,
     filteredCodexGoetia,
     processCliCommand,
     activeSectorClueCount,
@@ -100,30 +104,30 @@ export function CodexViewport() {
 
         <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px' }}>
-            <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>2. FILTER PHENOMENA ({deducedSigns.length}/3)</span>
+            <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>2. FILTER PHENOMENA ({requiredSigns.length} ✓ · {excludedSigns.length} ✗)</span>
             {deducedSigns.length > 0 && (
               <button onClick={() => setDeducedSigns([])} className="macro-chip macro-chip-danger" style={{ padding: '2px 8px' }}>CLEAR</button>
             )}
           </div>
           <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
             {PHENOMENON_CATALOG.map(phenom => {
-              const isChecked = deducedSigns.includes(phenom.tag);
+              const isRequired = requiredSigns.includes(phenom.tag);
+              const isExcluded = excludedSigns.includes(phenom.tag);
+              const tint = isRequired ? theme.textBright : isExcluded ? theme.accentRed : '#a8ccaf';
               return (
                 <button
                   key={phenom.tag}
-                  onClick={() => {
-                    ThaumaturgicAudio.keyClick();
-                    setDeducedSigns(prev => prev.includes(phenom.tag) ? prev.filter(t => t !== phenom.tag) : [...prev, phenom.tag]);
-                  }}
+                  onClick={() => { ThaumaturgicAudio.keyClick(); cycleSignFilter(phenom.tag); }}
                   style={{
                     padding: '6px 8px', textAlign: 'left',
-                    backgroundColor: isChecked ? 'rgba(98, 240, 128, 0.2)' : '#030504',
-                    border: `1px solid ${isChecked ? theme.textBright : theme.borderTerminal}`,
-                    color: isChecked ? theme.textBright : '#a8ccaf',
+                    backgroundColor: isRequired ? 'rgba(98, 240, 128, 0.2)' : isExcluded ? 'rgba(255, 42, 85, 0.12)' : '#030504',
+                    border: `1px solid ${isRequired ? theme.textBright : isExcluded ? theme.accentRed : theme.borderTerminal}`,
+                    color: tint,
+                    textDecoration: isExcluded ? 'line-through' : 'none',
                     cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.72rem'
                   }}
                 >
-                  {isChecked ? '[X] ' : '[ ] '} {phenom.label}
+                  {isRequired ? '[✓] ' : isExcluded ? '[✗] ' : '[ ] '} {phenom.label}
                 </button>
               );
             })}
@@ -134,52 +138,69 @@ export function CodexViewport() {
       <section className="codex-col" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', marginBottom: '8px' }}>
           <span style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.8rem' }}>
-            3. SUSPECTS {caseEvidence.length > 0 ? `(${consistentCount} FIT EVIDENCE)` : `(${filteredCodexGoetia.length}/72)`}
+            3. SUSPECTS ({filteredCodexGoetia.length}/72)
           </span>
-          <div style={{ display: 'flex', gap: '3px' }}>
-            {(['ALL', 'CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => (
-              <button key={h} onClick={() => setCodexHorsemanFilter(h)} className={`macro-chip ${codexHorsemanFilter === h ? 'macro-chip-amber' : ''}`} style={{ padding: '2px 5px', fontSize: '0.66rem' }}>
-                {h === 'ALL' ? 'ALL' : h.slice(0, 3)}
-              </button>
-            ))}
-            {caseEvidence.length > 0 && (
-              <button onClick={() => setShowRuledOut(v => !v)} className={`macro-chip ${showRuledOut ? 'macro-chip-danger' : ''}`} style={{ padding: '2px 5px', fontSize: '0.66rem' }}>
-                {showRuledOut ? 'HIDE ✗' : 'SHOW ✗'}
-              </button>
-            )}
-          </div>
+          {struckSuspects.length > 0 && (
+            <button onClick={() => setHideStruck(v => !v)} className={`macro-chip ${hideStruck ? 'macro-chip-danger' : ''}`} style={{ padding: '2px 5px', fontSize: '0.66rem' }}>
+              {hideStruck ? `SHOW STRUCK (${struckSuspects.length})` : `HIDE STRUCK (${struckSuspects.length})`}
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginBottom: '4px' }}>
+          <span style={{ fontSize: '0.62rem', color: theme.textMuted, alignSelf: 'center', width: '42px' }}>COURT</span>
+          {(['ALL', 'CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => (
+            <button key={h} onClick={() => setCodexHorsemanFilter(h)} className={`macro-chip ${codexHorsemanFilter === h ? 'macro-chip-amber' : ''}`} style={{ padding: '2px 5px', fontSize: '0.66rem' }}>
+              {h === 'ALL' ? 'ALL' : h.slice(0, 3)}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginBottom: '8px' }}>
+          <span style={{ fontSize: '0.62rem', color: theme.textMuted, alignSelf: 'center', width: '42px' }}>RANK</span>
+          {(['ALL', 'King', 'Prince', 'Duke', 'Marquis', 'President', 'Earl', 'Knight'] as const).map(r => (
+            <button key={r} onClick={() => setCodexRankFilter(r)} className={`macro-chip ${codexRankFilter === r ? 'macro-chip-amber' : ''}`} style={{ padding: '2px 5px', fontSize: '0.66rem' }}>
+              {r === 'ALL' ? 'ALL' : r.slice(0, 4).toUpperCase()}
+            </button>
+          ))}
         </div>
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
           {filteredCodexGoetia.map(g => {
             const isSealed = state.sealedGoetia.includes(g.id);
             const isSelected = g.id === selectedSuspectId;
-            const fit = suspectFit(g);
+            const isStruck = struckSuspects.includes(g.id);
             return (
-              <button
+              <div
                 key={g.id}
+                role="button"
                 onClick={() => { ThaumaturgicAudio.keyClick(); setSelectedSuspectId(g.id); }}
                 style={{
                   padding: '7px 10px', textAlign: 'left',
                   backgroundColor: isSelected ? '#112217' : '#030504',
                   border: `1px solid ${isSelected ? theme.textBright : theme.borderTerminal}`,
-                  color: isSealed ? theme.textMuted : theme.textBright,
+                  color: isSealed || isStruck ? theme.textMuted : theme.textBright,
+                  opacity: isStruck ? 0.55 : 1,
                   cursor: 'pointer', fontFamily: theme.fontMono,
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px'
                 }}
               >
-                <div>
+                <div style={{ textDecoration: isStruck ? 'line-through' : 'none' }}>
                   <strong>#{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()}</strong>
                   <div style={{ fontSize: '0.68rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance}</div>
-                  {fit.total > 0 && (
-                    <div style={{ fontSize: '0.64rem', color: fit.contradicted ? theme.accentRed : theme.textBright }}>
-                      {fit.contradicted ? `✗ RULED OUT (${fit.matched}/${fit.total})` : `✓ FITS ${fit.matched}/${fit.total}`}
-                    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.66rem', color: isSealed || isReleased(g.id) ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
+                    {isSealed ? 'SEALED' : isReleased(g.id) ? '☠ MANIFESTED' : ''}
+                  </span>
+                  {currentContract && !isSectorClosed(currentContract.sectorId) && !isSealed && !isReleased(g.id) && (
+                    <button
+                      onClick={e => { e.stopPropagation(); ThaumaturgicAudio.keyClick(); toggleStruckSuspect(g.id); }}
+                      className={`macro-chip ${isStruck ? '' : 'macro-chip-danger'}`}
+                      style={{ padding: '1px 6px', fontSize: '0.64rem' }}
+                    >
+                      {isStruck ? 'RESTORE' : 'STRIKE'}
+                    </button>
                   )}
                 </div>
-                <span style={{ fontSize: '0.66rem', color: isSealed || isReleased(g.id) ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
-                  {isSealed ? '✗ SEALED' : isReleased(g.id) ? '☠ MANIFESTED' : '[INSPECT]'}
-                </span>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -300,11 +321,11 @@ export function CodexViewport() {
             <div style={{ fontSize: '0.72rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '4px' }}>UNIQUE 3-SIGN FINGERPRINT:</div>
             {getUniqueGoetiaSigns(selectedSuspect.id).map(tag => {
               const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
-              const isToggled = deducedSigns.includes(tag);
-              const supported = caseEvidence.some(l => l.kind === 'PHENOMENON' && l.candidates?.includes(tag));
+              const isToggled = requiredSigns.includes(tag);
+              const isExcluded = excludedSigns.includes(tag);
               return (
-                <div key={tag} style={{ fontSize: '0.72rem', color: isToggled || supported ? theme.textBright : '#a8ccaf' }}>
-                  {isToggled || supported ? '✓ ' : '• '} <strong>{def?.label || formatLabel(tag)}</strong>{supported ? ' (in evidence)' : ''}
+                <div key={tag} style={{ fontSize: '0.72rem', color: isToggled ? theme.textBright : isExcluded ? theme.accentRed : '#a8ccaf' }}>
+                  {isToggled ? '✓ ' : isExcluded ? '✗ ' : '• '} <strong>{def?.label || formatLabel(tag)}</strong>
                 </div>
               );
             })}

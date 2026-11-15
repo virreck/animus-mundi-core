@@ -377,6 +377,8 @@ export interface SectorContract {
   discoveredLogs: EvidenceLog[];
   /** Environmental modifier for this sector (missing on older saves = NONE). */
   quirk?: SectorQuirk;
+  /** Suspects the player has struck off in the Codex for this case. */
+  struckSuspects?: string[];
 }
 
 // ---------------------------------------------------------------------------

@@ -9,19 +9,20 @@ test('starting a run makes it ACTIVE', () => {
   assert.equal(newRun().gameStage, 'ACTIVE');
 });
 
-test('spending the last Yokai charge keeps the power\'s effect and unbinds the daemon', () => {
+test('spending the last Yokai charge keeps the power\'s effect and sends the daemon away', () => {
   let s = apply(newRun(),
     { type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 100 } },
-    { type: 'DRAFT_CONTRACT', payload: { yokaiId: 'yokai_baku', costs: { obols: 15, humanity: 5 }, maxCharges: 1 } }
+    { type: 'DRAFT_CONTRACT', payload: { yokaiId: 'yokai_baku', costs: { obols: 15, humanity: 5 } } }
   );
   assert.equal(s.humanity, 95);
-  assert.equal(s.yokaiCharges.yokai_baku, 1);
+  assert.equal(s.yokaiCharges.yokai_baku, 2, 'Baku has 2 charges at Bond I');
   s = apply(s,
+    { type: 'CONSUME_YOKAI_CHARGE', payload: { yokaiId: 'yokai_baku' } },
     { type: 'MODIFY_HUMANITY', payload: -30 },
     { type: 'MODIFY_HUMANITY', payload: 20 },
-    { type: 'CONSUME_YOKAI_CHARGE', payload: { yokaiId: 'yokai_baku', maxCharges: 1 } }
+    { type: 'CONSUME_YOKAI_CHARGE', payload: { yokaiId: 'yokai_baku' } }
   );
-  assert.equal(s.humanity, 85, 'heal survives the unbind; Baku does not full-heal outside rest');
+  assert.equal(s.humanity, 85, 'heal survives the departure; Baku does not full-heal outside rest');
   assert.deepEqual(s.tetheredYokai, []);
   assert.equal(s.yokaiCharges.yokai_baku, undefined);
 });

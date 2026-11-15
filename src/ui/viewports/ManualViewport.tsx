@@ -2,6 +2,7 @@
 // [F7] MANUAL viewport.
 import { useState, type CSSProperties as ReactCSSProperties } from 'react';
 import { DEEP_ATTUNE_COST, REFINE_COST } from '../../engine/evidence';
+import { KAGE_TUNING } from '../../engine/kage';
 import { ThaumaturgicAudio } from '../audio';
 import { FONT_ZOOM_MAP, type FontScale, theme } from '../theme';
 
@@ -41,7 +42,7 @@ export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: Fon
           <div style={{ maxWidth: '940px' }}>
             <h3 style={{ color: theme.textBright, marginTop: 0 }}>STEP-BY-STEP ROOM INFILTRATION &amp; 3-TOOL FORENSICS</h3>
             <p>
-              Every Goetian demon has a <strong>unique 3-phenomenon fingerprint</strong>, but field instruments are rarely clean. Most readings come back <strong>degraded</strong>: they narrow a clue to two or three possible phenomena instead of one. Build a case from several kinds of evidence, then use <strong>[F2] CODEX</strong> to see which suspects still fit:
+              Every Goetian demon has a <strong>unique 3-phenomenon fingerprint</strong>, but field instruments are rarely clean. Most readings come back <strong>degraded</strong>: they narrow a clue to two or three possible phenomena instead of one. Build a case from several kinds of evidence, then work the <strong>[F2] CODEX</strong> yourself — click a phenomenon once to require it, twice to rule it out, filter by court and rank, and <strong>STRIKE</strong> suspects as you eliminate them:
             </p>
             <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
               <li><strong>Readings</strong> — 3 clue rooms per sector. <code>refine [#]</code> resolves a degraded reading from anywhere in the sector (-{REFINE_COST.humanity}% HUM, +heat).</li>
@@ -151,15 +152,19 @@ export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: Fon
 
         {tab === 'SHIKIGAMI' && (
           <div style={{ maxWidth: '940px' }}>
-            <h3 style={{ color: theme.accentCyan, marginTop: 0 }}>SHIKIGAMI DAEMONS [F3] &amp; THE SAFEHOUSE [F4]</h3>
+            <h3 style={{ color: theme.accentCyan, marginTop: 0 }}>THE KAGE NO SHO [F3] &amp; THE SAFEHOUSE [F4]</h3>
             <p>
-              <strong>Kami shrines</strong> turn up in some sectors. <code>loot</code> one to wake it, and its spirit's contract appears in <strong>[F3] KAGE</strong>.
-              Binding costs Obols, Humanity and sometimes Esoteric Ink (distilled in KAGE for 10 Obols).
+              The <strong>Kage no Sho</strong> — the Book of Shadows — holds a page for every Yokai you can bargain with. Pages start <strong>unwritten</strong>.
+              <strong> Kami shrines</strong> turn up in some sectors: <code>loot</code> one to wake it and its spirit's page writes itself. Only written pages can be bound.
+              Binding costs Obols, Humanity and sometimes Esoteric Ink (distilled in the book for 10 Obols).
             </p>
             <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
-              <li><strong>Two at most.</strong> Unbind one before binding a third.</li>
-              <li>Any bound daemon halves the Humanity cost of <code>scan</code>.</li>
-              <li>Every daemon has a <strong>passive</strong> effect, usually with a price attached, and a few <strong>charges</strong> of an active invocation, used from the daemon panel in Field Ops. When the last charge is spent the daemon leaves.</li>
+              <li><strong>Two at most.</strong> Any bound daemon halves the Humanity cost of <code>scan</code>.</li>
+              <li>Every daemon has a <strong>passive</strong> effect, usually with a price attached, and a few <strong>charges</strong> of an active invocation, used from the daemon panel in Field Ops.</li>
+              <li><strong>Bonds</strong> grow by {KAGE_TUNING.bondPerInvocation} for each invocation, {KAGE_TUNING.bondPerSecuredSector} for each sector secured while bound, {KAGE_TUNING.bondPerRenewal} for each renewal, and {KAGE_TUNING.bondPerShrineRevisit} for waking a shrine you already know. <strong>Bond II</strong> ({KAGE_TUNING.bondThresholds[0]}) adds a charge; <strong>Bond III</strong> ({KAGE_TUNING.bondThresholds[1]}) adds another and softens the daemon's drawback.</li>
+              <li><strong>Renewal rites:</strong> {KAGE_TUNING.renewalInk} Esoteric Ink and the spirit's favoured offering restore all its charges.</li>
+              <li><strong>Pacts have consequences.</strong> Spend the last charge and the daemon leaves, offended for {KAGE_TUNING.burnedDryOffense} sector. Sever a pact by hand and it stays away for {KAGE_TUNING.brokenPactOffense} sectors and remembers it. Offended spirits come back after that many sectors are secured or lost.</li>
+              <li><strong>Hungry spirits</strong> — Baku, Zashiki-warashi, Kameosa and Kamaitachi — take their offering every time a sector closes. Miss one and the bond weakens; with no bond left, they walk out.</li>
             </ul>
             <p style={{ marginTop: '14px' }}>
               The <strong>Safehouse altar</strong> turns raw salvage (Scrap Metal, Cursed Earth, Alchemical Distillate) plus Obols into the planetary catalysts each spirit's seal needs — every dossier in the Codex lists its own.

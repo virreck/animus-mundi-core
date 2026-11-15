@@ -9,7 +9,7 @@ export function ToastStack() {
   } = useSession();
 
   return (
-    <div style={{ position: 'fixed', top: '52px', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1000, pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', top: 'calc(var(--header-h, 46px) + 6px)', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1000, pointerEvents: 'none' }}>
       {toasts.map(toast => (
         <div
           key={toast.id}
