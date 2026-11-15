@@ -2,9 +2,9 @@
 // [F1] FIELD_OPS: sub-grid map, terminal and command palette.
 import { allYokai } from '../../content/yokai';
 import { YOKAI_DAEMON_SPECS } from '../../content/yokaiSpecs';
-import { DEEP_ATTUNE_COST, REFINE_COST, isAmbiguous } from '../../engine/evidence';
+import {  isAmbiguous } from '../../engine/evidence';
 import { HAZARD_MANIFEST, SECTOR_QUIRKS } from '../../engine/sectorGenerator';
-import { ThaumaturgicAudio } from '../audio';
+
 import { getRipeness } from '../../engine/world';
 import { useSession } from '../session/SessionContext';
 import { FONT_ZOOM_MAP, theme } from '../theme';
@@ -13,7 +13,6 @@ export function FieldOpsViewport() {
   const {
     state,
     isSectorClosed,
-    setViewport,
     mapViewMode,
     setMapViewMode,
     fontScale,
@@ -32,7 +31,6 @@ export function FieldOpsViewport() {
     terminalEndRef,
     cliInputRef,
     securedSectorsCount,
-    isFirstRun,
     currentContract,
     currentSubNode,
     selectedSubNode,
@@ -114,35 +112,31 @@ export function FieldOpsViewport() {
                   </span>
                 )}
               </span>
-              {activeReadingCount >= 3 && isFirstRun ? (
-                <button onClick={() => { ThaumaturgicAudio.scryPing(); setViewport('CODEX'); }} className="macro-chip macro-chip-amber" style={{ padding: '2px 8px', fontWeight: 'bold' }}>
-                  🎯 3/3 READINGS — OPEN [F2] CODEX &rarr;
-                </button>
-              ) : (
-                <span style={{ color: theme.accentAmber }}>
+              <span style={{ color: theme.accentAmber }}>
                   READINGS: <strong>{activeReadingCount}/3</strong> · EVIDENCE: <strong>{activeSectorClueCount}</strong>
                   {currentQuirk !== 'NONE' && <> · <span style={{ color: theme.accentCyan }}>{SECTOR_QUIRKS[currentQuirk].label}</span></>}
                   {currentContract && !isSectorClosed(currentContract.sectorId) && getRipeness(state, currentContract.sectorId) > 0 && (
                     <> · <span style={{ color: getRipeness(state, currentContract.sectorId) >= 75 ? theme.accentRed : theme.accentAmber }}>RIPENESS: <strong>{getRipeness(state, currentContract.sectorId)}%</strong></span></>
                   )}
                 </span>
-              )}
             </div>
 
             {currentSubNode ? (
               <div style={{ color: currentSubNode.hazard !== 'NONE' ? theme.accentCyan : currentSubNode.status === 'CLEARED' ? theme.textBright : '#ffffff' }}>
                 <strong>CURRENT ROOM ({currentSubNode.label}): </strong>
                 {currentSubNode.hazard !== 'NONE'
-                  ? `⚠️ TRAP ACTIVE: "${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"`
+                  ? `⚠️ THRESHOLD ANOMALY: "${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"`
                   : currentSubNode.status === 'CLEARED'
                   ? `✓ Cleared.`
                   : currentSubNode.nodeType === 'WITNESS'
-                  ? `🗣 A shaken witness is here — run interview.`
+                  ? `🗣 LIFE SIGNS: one civilian.`
                   : currentSubNode.nodeType === 'ANCHOR'
-                  ? `⚡ Conduit anchor — run attune to read its court and rank.`
+                  ? `⚡ CONDUIT ANCHOR.`
                   : currentSubNode.rawSignalSymptom
-                  ? `🔎 CLUE SIGNAL: "${currentSubNode.rawSignalSymptom}"`
-                  : `⛩️ Shrine / Salvage ready.`}
+                  ? `🔎 SIGNAL: "${currentSubNode.rawSignalSymptom}"`
+                  : currentSubNode.nodeType === 'SHRINE'
+                  ? `⛩️ SHRINE.`
+                  : `📦 SALVAGE.`}
               </div>
             ) : (
               <div style={{ color: '#a8ccaf' }}>
@@ -222,13 +216,13 @@ export function FieldOpsViewport() {
         {controlMode === 'PALETTE' && (
           <div style={{ backgroundColor: '#060a07', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.66rem', color: theme.accentAmber, fontWeight: 'bold', width: '74px' }}>1. RECON:</span>
+              <span style={{ fontSize: '0.66rem', color: theme.accentAmber, fontWeight: 'bold', width: '74px' }}>RECON</span>
               <button onClick={() => processCliCommand(`scan ${selectedSubNode?.index || 1}`)} className="macro-chip">📡 scan {selectedSubNode?.index || 1}</button>
-              <button onClick={() => processCliCommand(`enter ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-amber">⚡ enter {selectedSubNode?.index || 1} (+{selectedRoomHeatCost}% Heat)</button>
+              <button onClick={() => processCliCommand(`enter ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-amber">⚡ enter {selectedSubNode?.index || 1}</button>
               <button onClick={() => processCliCommand('loot')} className="macro-chip">📦 loot</button>
               {currentSubNode?.nodeType === 'ANCHOR' && (
                 <button onClick={() => processCliCommand('attune')} className="macro-chip macro-chip-amber">
-                  ⚡ attune ({(currentContract?.discoveredLogs || []).some(l => l.kind === 'COURT') ? `deep: rank, -${DEEP_ATTUNE_COST.humanity}% HUM` : 'court, +4s Seal'})
+                  ⚡ attune
                 </button>
               )}
               {currentSubNode?.nodeType === 'WITNESS' && currentSubNode.status !== 'CLEARED' && (
@@ -237,7 +231,7 @@ export function FieldOpsViewport() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.66rem', color: theme.accentCyan, fontWeight: 'bold', width: '74px' }}>2. DISARM:</span>
+              <span style={{ fontSize: '0.66rem', color: theme.accentCyan, fontWeight: 'bold', width: '74px' }}>COUNTER</span>
               <button onClick={() => processCliCommand(`decoy ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-danger">🐕 decoy {selectedSubNode?.index || 1}</button>
               <button onClick={() => processCliCommand(`degauss ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-cyan">degauss {selectedSubNode?.index || 1}</button>
               <button onClick={() => processCliCommand(`bypass ${selectedSubNode?.index || 1}`)} className="macro-chip macro-chip-cyan">bypass {selectedSubNode?.index || 1}</button>
@@ -246,15 +240,15 @@ export function FieldOpsViewport() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.66rem', color: theme.textBright, fontWeight: 'bold', width: '74px' }}>3. TOOLS:</span>
-              <button onClick={() => processCliCommand('vox')} className="macro-chip">🎙️ vox (Audio)</button>
-              <button onClick={() => processCliCommand('assay')} className="macro-chip">🧪 assay (Matter)</button>
-              <button onClick={() => processCliCommand('auspex')} className="macro-chip">👁️ auspex (Astral)</button>
+              <span style={{ fontSize: '0.66rem', color: theme.textBright, fontWeight: 'bold', width: '74px' }}>FORENSIC</span>
+              <button onClick={() => processCliCommand('vox')} className="macro-chip">🎙️ vox</button>
+              <button onClick={() => processCliCommand('assay')} className="macro-chip">🧪 assay</button>
+              <button onClick={() => processCliCommand('auspex')} className="macro-chip">👁️ auspex</button>
               {(currentContract?.discoveredLogs || []).some(isAmbiguous) && (
-                <button onClick={() => processCliCommand('refine')} className="macro-chip macro-chip-amber">≈ refine (-{REFINE_COST.humanity}% HUM)</button>
+                <button onClick={() => processCliCommand('refine')} className="macro-chip macro-chip-amber">≈ refine</button>
               )}
-              <button onClick={() => processCliCommand('spoof')} className="macro-chip macro-chip-danger">📡 spoof (-15 Ob)</button>
-              <button onClick={() => processCliCommand('bribe')} className="macro-chip macro-chip-danger">🪙 bribe (-25 Ob)</button>
+              <button onClick={() => processCliCommand('spoof')} className="macro-chip macro-chip-danger">📡 spoof</button>
+              <button onClick={() => processCliCommand('bribe')} className="macro-chip macro-chip-danger">🪙 bribe</button>
             </div>
           </div>
         )}
@@ -273,7 +267,7 @@ export function FieldOpsViewport() {
             ref={cliInputRef}
             value={cliInput}
             onChange={e => setCliInput(e.target.value)}
-            placeholder="Type command (scan 1, enter 1, vox, refine, interview, attune, help)..."
+            placeholder="_"
             style={{ flex: 1, backgroundColor: 'transparent', color: theme.textBright, border: 'none', outline: 'none', fontFamily: theme.fontMono, fontSize: '0.8rem' }}
           />
           <button type="submit" className="macro-chip">EXEC</button>

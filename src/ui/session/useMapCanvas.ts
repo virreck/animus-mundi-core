@@ -3,6 +3,7 @@
 import { useEffect, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import { MACRO_SECTORS } from '../../content/map';
 import { getRipeness } from '../../engine/world';
+import { isTraining } from '../../engine/tutorial';
 import { SECTOR_QUIRKS, getSectorQuirk } from '../../engine/sectorGenerator';
 import { ThaumaturgicAudio } from '../audio';
 import type { FieldOps } from './useFieldOps';
@@ -370,9 +371,14 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
         const nx = sec.x * w;
         const ny = sec.y * h;
         if (Math.hypot(wx - nx, wy - ny) <= 26) {
+          if (isTraining(state) && sec.id !== state.currentNode) {
+            ThaumaturgicAudio.errorBuzz();
+            addToast('TRAINING TETHER LOCKED TO SECTOR', 'ALERT');
+            return;
+          }
           if (!isSectorUnlocked(sec)) {
             ThaumaturgicAudio.errorBuzz();
-            addToast(`Sector Locked! Secure an adjacent sector first.`, 'ALERT');
+            addToast('SECTOR LOCKED', 'ALERT');
             return;
           }
           ThaumaturgicAudio.scryPing();

@@ -3,6 +3,7 @@ import { useReducer, useEffect } from 'react';
 import type { YokaiId, NodeId, GoetiaId, FactionId, GameState } from '../../engine/state';
 import { initialGameState, normalizeLoadedState } from '../../engine/state';
 import { gameReducer } from '../../engine/reducer';
+import { isTraining } from '../../engine/tutorial';
 import type { ContractCost } from '../../content/yokai/types';
 
 export const SAVE_KEY = 'thaumaturgic_os_save_v1';
@@ -25,7 +26,8 @@ export function useEngine() {
 
   // Auto-Save (GAME_OVER is saved too, so a dead run can't be reloaded one step before death)
   useEffect(() => {
-    if (state.gameStage === 'ACTIVE' || state.gameStage === 'GAME_OVER') {
+    // The guided first case is a sandbox and never overwrites the real save
+    if ((state.gameStage === 'ACTIVE' || state.gameStage === 'GAME_OVER') && !isTraining(state)) {
       try {
         localStorage.setItem(SAVE_KEY, JSON.stringify(state));
       } catch (error) {

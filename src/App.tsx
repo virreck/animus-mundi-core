@@ -19,7 +19,17 @@ import { HorsemenViewport } from './ui/viewports/HorsemenViewport';
 import { KageViewport } from './ui/viewports/KageViewport';
 import { ManualViewport } from './ui/viewports/ManualViewport';
 import { SafehouseViewport } from './ui/viewports/SafehouseViewport';
+import { TutorialOverlay } from './ui/components/TutorialOverlay';
+import { TUTORIAL_DONE_KEY, TUTORIAL_RESUME_FLAG, TUTORIAL_TITLE_FLAG, type TutorialReturn } from './engine/tutorial';
 import './ui/styles.css';
+
+const hasSeenTutorial = () => {
+  try {
+    return localStorage.getItem(TUTORIAL_DONE_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
 
 export default function App() {
   const core = useSessionCore();
@@ -37,8 +47,16 @@ export default function App() {
     hudFlash,
     activeBanishmentTarget,
     handleFullReset,
-    currentHeat
+    currentHeat,
+    startTutorial,
+    isTrainingRun
   } = session;
+
+  /** Which screen the guided case should return to if it is (re)started right now. */
+  const replayReturn = (): TutorialReturn =>
+    !isTrainingRun ? 'RESUME_RUN' : state.flags[TUTORIAL_RESUME_FLAG] ? 'RESUME_RUN' : state.flags[TUTORIAL_TITLE_FLAG] ? 'TITLE' : 'NEW_RUN';
+  const replayTutorial = () =>
+    startTutorial({ name: state.playerName, portrait: state.playerPortrait, agency: state.agencyName }, replayReturn());
 
   const HORSEMEN = ['conquest', 'war', 'famine', 'death'] as const;
   const allBanished = HORSEMEN.every(h => state.flags[`banished_${h}`]);
@@ -62,11 +80,19 @@ export default function App() {
                 [X] RETURN TO LOGIN
               </button>
             </div>
-            <ManualViewport fontScale={fontScale} />
+            <ManualViewport
+              fontScale={fontScale}
+              onReplayTutorial={() => {
+                setShowManual(false);
+                startTutorial({ name: 'OPERATIVE', portrait: '/portraits/thaumaturge_m1.png', agency: 'DARKWIRE' }, 'TITLE');
+              }}
+            />
           </div>
         )}
         <StartScreen
-          onStart={startInvestigation}
+          onStart={(name, portrait, agency) =>
+            hasSeenTutorial() ? startInvestigation(name, portrait, agency) : startTutorial({ name, portrait, agency }, 'NEW_RUN')
+          }
           onLoad={loadGame}
           onOpenManual={() => setShowManual(true)}
           onFullReset={handleFullReset}
@@ -101,9 +127,10 @@ export default function App() {
         {viewport === 'SAFEHOUSE_ALTAR' && <SafehouseViewport />}
         {viewport === 'HORSEMEN' && <HorsemenViewport />}
         {viewport === 'DOSSIER' && <DossierViewport />}
-        {viewport === 'MANUAL' && <ManualViewport fontScale={fontScale} />}
+        {viewport === 'MANUAL' && <ManualViewport fontScale={fontScale} onReplayTutorial={replayTutorial} />}
 
         <ActiveRituals />
+        <TutorialOverlay />
         <ToastStack />
       </div>
     </SessionContext.Provider>

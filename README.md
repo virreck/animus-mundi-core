@@ -17,6 +17,12 @@ You are a remote **Thaumaturge Operative** jacked into **Thaumaturgic OS v4.10**
 
 No hand-holding. No quest markers. Just raw forensic clues, a command line, and a ticking clock before reality unravels.
 
+### The Guided First Case
+
+New operatives start with a training run at **St. Lawrence Crypt**, talked through it over the wire by their handler, **Vesper**. It opens with the story of how the seals failed, then walks through every instrument once — scanning, wards, the three forensic tools, degraded readings and `refine`, patrols, the witness, a kami shrine and its Shikigami, anchor resonance, the Codex, the altar, the Sealing Rite, the Regional Map clock and the Horsemen. The world clock is frozen and failures are refunded; nothing in training touches your save. The Grand Rite is left to the **[F7] MANUAL**, and the whole case can be replayed from there at any time.
+
+Outside the training run the interface gives no tips — what you know, you learned.
+
 ---
 
 ## // THE CORE LOOP: INFILTRATE, TRIANGULATE, BIND

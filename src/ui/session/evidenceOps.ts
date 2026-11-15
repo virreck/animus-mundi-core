@@ -16,7 +16,6 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
     state,
     dispatch,
     updateContract,
-    consumeFirstTimeHint,
     triggerHudFlash,
     addMicroEntropy,
     addToast,
@@ -42,17 +41,17 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
   // (and calibrates the vessel for +4s); a second, costlier deep attunement reads its RANK.
   const handleAttuneAnchor = () => {
     if (!currentContract || !currentSubNode) {
-      appendLog(`[-] Enter a room first.`, 'error');
+      appendLog(`[-] NO POSITION.`, 'error');
       return;
     }
     if (blockIfSectorLost()) return;
     if (currentSubNode.nodeType !== 'ANCHOR') {
-      appendLog(`[-] You can only run <code>attune</code> inside the <strong>[ANCHOR]</strong> chamber.`, 'warn');
+      appendLog(`[-] NO CONDUIT IN RANGE.`, 'warn');
       return;
     }
     if (currentSubNode.hazard !== 'NONE') {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] The anchor's threshold trap is still live — disarm it before attuning.`, 'error');
+      appendLog(`[!] VESSEL INTERFERENCE — THRESHOLD STILL LIVE.`, 'error');
       return;
     }
     const target = allGoetia.find(g => g.id === currentContract.targetGoetiaId);
@@ -68,17 +67,17 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
       appendLog(
         `<div style="border-left:3px solid #ffb800;padding-left:10px;margin:4px 0;color:#ffb800;">` +
         `<strong>[⚡ VESSEL ATTUNED — COURT RESONANCE]</strong><br/>${COURT_RESONANCE[target.allegiance]}<br/>` +
-        `<span style="color:#a8ccaf;">+4s Sealing Rite bonus. Run <code>attune</code> again for a deep reading of the anchor's rank (-${DEEP_ATTUNE_COST.humanity}% HUM, +heat).</span>` +
+        `<span style="color:#a8ccaf;">Vessel calibrated: +4s.</span>` +
         `</div>`,
         'success'
       );
-      addToast(`Court identified: ${target.allegiance} (+4s Seal)`, 'INTEL');
+      addToast(`Court: ${target.allegiance}`, 'INTEL');
       return;
     }
     if (!hasRank) {
       if (state.humanity <= DEEP_ATTUNE_COST.humanity) {
         ThaumaturgicAudio.errorBuzz();
-        appendLog(`[-] A deep attunement needs more than ${DEEP_ATTUNE_COST.humanity}% Humanity.`, 'error');
+        appendLog(`[-] TETHER TOO WEAK FOR A DEEP READING.`, 'error');
         return;
       }
       ThaumaturgicAudio.heavyStampImpact();
@@ -92,29 +91,29 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
         `</div>`,
         'warn'
       );
-      addToast(`Rank identified: ${target.rank.toUpperCase()}`, 'INTEL');
+      addToast(`Rank: ${target.rank.toUpperCase()}`, 'INTEL');
       return;
     }
-    appendLog(`[i] The anchor has nothing more to tell you. Court and rank are logged in the [F2] CODEX.`, 'system');
+    appendLog(`[i] Conduit exhausted. Resonance logged to case file.`, 'system');
   };
 
   const handleInterviewWitness = () => {
     if (!currentContract || !currentSubNode) {
-      appendLog(`[-] Enter a room first.`, 'error');
+      appendLog(`[-] NO POSITION.`, 'error');
       return;
     }
     if (blockIfSectorLost()) return;
     if (currentSubNode.nodeType !== 'WITNESS' || !currentSubNode.witnessText) {
-      appendLog(`[-] There's nobody here to interview. Witnesses show as <strong>[WITNESS]</strong> on the sub-grid.`, 'warn');
+      appendLog(`[-] NO SUBJECT PRESENT.`, 'warn');
       return;
     }
     if (currentSubNode.status === 'CLEARED') {
-      appendLog(`[i] You've already taken this statement. It's in the [F2] CODEX.`, 'system');
+      appendLog(`[i] Statement already on file.`, 'system');
       return;
     }
     if (currentSubNode.hazard !== 'NONE') {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] The witness won't talk while <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> — disarm the room first.`, 'error');
+      appendLog(`[!] Subject unresponsive: <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em>`, 'error');
       return;
     }
     ThaumaturgicAudio.typewriterClack();
@@ -131,11 +130,10 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
       `<div style="background:rgba(0,243,255,0.07);border-left:3px solid #00f3ff;padding:8px 10px;margin:4px 0;">` +
       `<div style="color:#00f3ff;font-weight:bold;">[🗣 WITNESS STATEMENT — ${escapeHtml(currentSubNode.witnessName || 'UNNAMED')}]</div>` +
       `<div style="color:#ffffff;margin-top:4px;">"${escapeHtml(currentSubNode.witnessText)}"</div>` +
-      `<div style="color:#a8ccaf;margin-top:4px;font-size:0.9em;">Compare it against suspect descriptions in the [F2] CODEX.</div>` +
       `</div>`,
       'success'
     );
-    addToast('Witness statement taken', 'INTEL');
+    addToast('Statement on file', 'INTEL');
     if (currentSubNode.salvageDrop) {
       const { itemId, amount, obols } = currentSubNode.salvageDrop;
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
@@ -156,23 +154,23 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
     const readings = sectorEvidence('PHENOMENON');
     const pending = readings.filter(isAmbiguous);
     if (pending.length === 0) {
-      appendLog(readings.length === 0 ? `[-] No forensic readings to refine yet.` : `[i] All readings in this sector are already resolved.`, 'system');
+      appendLog(readings.length === 0 ? `[-] NO READINGS ON FILE.` : `[i] NO DEGRADED READINGS.`, 'system');
       return;
     }
     const num = parseInt((arg || '').trim(), 10);
     const log = !isNaN(num) ? readings[num - 1] : pending[pending.length - 1];
     if (!log || !isAmbiguous(log)) {
-      appendLog(`[-] Reading ${escapeHtml(arg || '')} isn't degraded. Degraded readings: ${pending.map(l => `#${readings.indexOf(l) + 1}`).join(', ')}.`, 'warn');
+      appendLog(`[-] READING ${escapeHtml(arg || '')} NOT DEGRADED. DEGRADED: ${pending.map(l => `#${readings.indexOf(l) + 1}`).join(', ')}.`, 'warn');
       return;
     }
     if (currentHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT). Can't run signal processing under a cordon.`, 'error');
+      appendLog(`[!] MALLEUS CORDON ACTIVE — SIGNAL PROCESSING JAMMED.`, 'error');
       return;
     }
     if (state.humanity <= REFINE_COST.humanity) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Refining a reading needs more than ${REFINE_COST.humanity}% Humanity.`, 'error');
+      appendLog(`[-] TETHER TOO WEAK TO REPROCESS.`, 'error');
       return;
     }
     const tag = log.trueTag || log.candidates![0];
@@ -199,12 +197,12 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
     if (blockIfSectorLost()) return;
     if (!currentContract || !currentSubNode) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Enter Room 1 first (<code>enter 1</code>).`, 'error');
+      appendLog(`[-] NO POSITION.`, 'error');
       return;
     }
     if (currentHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT). Forensic tools jammed!`, 'error');
+      appendLog(`[!] MALLEUS CORDON ACTIVE — INSTRUMENTS JAMMED.`, 'error');
       return;
     }
     if (currentSubNode.status === 'CLEARED') {
@@ -217,13 +215,13 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
       const shockHum = state.tetheredYokai.includes('yokai_baku') ? -3 : -6;
       dispatch({ type: 'MODIFY_HUMANITY', payload: shockHum });
       const shockHeat = addSectorHeat(10);
-      appendLog(`[!] TRAP INTERFERENCE! Running <code>${toolCmd}</code> while <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> is active caused feedback damage (${shockHum}% HUM, +${shockHeat}% Heat)!`, 'error');
-      addToast(`Trap Blocked Scan! Disarm First!`, 'ALERT');
+      appendLog(`[!] FEEDBACK: <code>${toolCmd}</code> against <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> (${shockHum}% HUM, +${shockHeat}% Heat).`, 'error');
+      addToast(`Feedback shock ${shockHum}% HUM`, 'ALERT');
       return;
     }
 
     if (currentSubNode.nodeType === 'WITNESS') {
-      appendLog(`[i] Instruments pick up nothing but a frightened heartbeat. Run <code>interview</code> to take the witness's statement.`, 'system');
+      appendLog(`[i] Instruments pick up nothing but a frightened heartbeat.`, 'system');
       return;
     }
     if (!currentSubNode.signalChannel) {
@@ -234,8 +232,8 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
     if (currentSubNode.signalChannel !== expectedChannel) {
       ThaumaturgicAudio.errorBuzz();
       const wrongHeat = addSectorHeat(5);
-      appendLog(`[-] WRONG INSTRUMENT: <strong>${toolLabel}</strong> (<code>${toolCmd}</code>) returned static against: <em>"${currentSubNode.rawSignalSymptom}"</em> (+${wrongHeat}% Heat).`, 'warn');
-      addToast(`Wrong Forensic Tool! (+${wrongHeat}% Heat)`, 'ALERT');
+      appendLog(`[-] ${toolLabel}: STATIC. (+${wrongHeat}% Heat)`, 'warn');
+      addToast(`${toolLabel}: no signal`, 'ALERT');
       return;
     }
 
@@ -260,12 +258,12 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
         `<div style="color:${group ? '#ffb800' : '#62f080'};font-weight:bold;">[${group ? '≈' : '✓'} ${toolLabel} // READING ${readingCount}/3 AT ${currentSubNode.label}${group ? ' — DEGRADED' : ''}]</div>` +
         `<div style="color:#ffffff;margin-top:4px;">"${escapeHtml(newLog.text)}"</div>` +
         (group
-          ? `<div style="color:#a8ccaf;margin-top:4px;font-size:0.9em;">Could be: <strong>${options.join(' / ')}</strong>. Run <code>refine ${readingCount}</code> to resolve it (-${REFINE_COST.humanity}% HUM, +heat), or work around it.</div>`
+          ? `<div style="color:#a8ccaf;margin-top:4px;font-size:0.9em;">UNRESOLVED: <strong>${options.join(' / ')}</strong></div>`
           : '') +
         `</div>`,
         'success'
       );
-      addToast(group ? `Reading ${readingCount}/3: degraded signal` : `Reading ${readingCount}/3 decoded!`, 'INTEL');
+      addToast(group ? `Reading ${readingCount}/3: degraded` : `Reading ${readingCount}/3 decoded`, 'INTEL');
     }
 
     if (currentSubNode.salvageDrop) {
@@ -273,16 +271,6 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
       appendLog(`[📦 SALVAGE] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
-    }
-
-    if (readingCount >= 3 && consumeFirstTimeHint('three_clues_ready')) {
-      appendLog(
-        `<div style="background:rgba(255,184,0,0.14);border:1px solid #ffb800;padding:10px;margin:6px 0;color:#ffb800;">` +
-        `<strong>🎯 [3/3 READINGS TAKEN — OPEN THE CASE FILE]</strong><br/>` +
-        `Press <strong>[F2] CODEX</strong> to see which suspects fit your evidence. Narrow it down with the witness statement, anchor <code>attune</code> readings, or <code>refine</code>, then craft catalysts in <strong>[F4] SAFEHOUSE</strong>.` +
-        `</div>`,
-        'warn'
-      );
     }
 
     const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
@@ -300,12 +288,12 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
     if (blockIfSectorLost()) return;
     if (!currentContract || !currentSubNode) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Enter Room 1 first (<code>enter 1</code>).`, 'error');
+      appendLog(`[-] NO POSITION.`, 'error');
       return;
     }
     if (currentHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] SECTOR LOCKDOWN (100% HEAT).`, 'error');
+      appendLog(`[!] MALLEUS CORDON ACTIVE — SECTOR HEAT 100%.`, 'error');
       return;
     }
     if (currentSubNode.status === 'CLEARED') {
@@ -317,15 +305,15 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
       triggerHudFlash('DAMAGE');
       dispatch({ type: 'MODIFY_HUMANITY', payload: -6 });
       const lootHeat = addSectorHeat(10);
-      appendLog(`[!] TRAP BLOCKED LOOTING: <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> (-6% HUM, +${lootHeat}% Heat)!`, 'error');
+      appendLog(`[!] FEEDBACK: <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> (-6% HUM, +${lootHeat}% Heat).`, 'error');
       return;
     }
     if (currentSubNode.nodeType === 'WITNESS') {
-      appendLog(`[i] A shaken witness is huddled here. Run <code>interview</code> to take their statement.`, 'system');
+      appendLog(`[i] The witness flinches away from your hands.`, 'system');
       return;
     }
     if (!bypassSignalCheck && currentSubNode.signalChannel) {
-      appendLog(`[!] UNDECODED CLUE IN ROOM: <em>"${currentSubNode.rawSignalSymptom}"</em>`, 'warn');
+      appendLog(`[!] UNDECODED SIGNAL: <em>"${currentSubNode.rawSignalSymptom}"</em>`, 'warn');
       return;
     }
 
@@ -337,12 +325,9 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
       const yokai = allYokai.find(y => y.id === currentSubNode.shrineYokaiId);
       if (yokai && yokai.unlockFlag) {
         dispatch({ type: 'SET_FLAG', payload: { flagId: yokai.unlockFlag, value: true } });
-        const kageIntro = consumeFirstTimeHint('shrine_kage_intro')
-          ? `<br/>Open <strong>[F3] KAGE</strong> to bind up to 2 Shikigami daemons—bound daemons halve your <code>scan</code> Humanity cost (-2% HUM) and grant active field powers.`
-          : '';
         appendLog(
           `<div style="border-left:3px solid #00f3ff;padding-left:10px;margin:4px 0;color:#00f3ff;">` +
-          `<strong>[⛩️ KAMI SHRINE AWAKENED: ${yokai.nameEn.toUpperCase()}]</strong>${kageIntro}` +
+          `<strong>[⛩️ SHRINE AWAKENED: ${yokai.nameEn.toUpperCase()}]</strong> New contract available in KAGE.` +
           `</div>`,
           'success'
         );

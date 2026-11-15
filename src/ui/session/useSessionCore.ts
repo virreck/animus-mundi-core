@@ -8,6 +8,16 @@ import { type SectorContract, generateSectorContract, getUniqueGoetiaSigns } fro
 import { getMaxHumanity, getTotalGlobalEntropy, isSectorFailed } from '../../engine/state';
 import { useEngine } from '../hooks/useEngine';
 import {
+  createTutorialState,
+  isTraining,
+  TUTORIAL_DONE_KEY,
+  TUTORIAL_RESUME_FLAG,
+  TUTORIAL_TITLE_FLAG,
+  TUTORIAL_SECTOR_LABEL,
+  type OperativeIdentity,
+  type TutorialReturn
+} from '../../engine/tutorial';
+import {
   isSectorSecured as engineIsSectorSecured,
   isSectorClosed as engineIsSectorClosed,
   isSectorUnlocked as engineIsSectorUnlocked
@@ -40,14 +50,6 @@ export function useSessionCore() {
   /** Functional update of one sector's contract, always based on the latest stored value. */
   const updateContract = (sectorId: string, fn: (c: SectorContract) => SectorContract) =>
     setContracts(prev => (prev[sectorId] ? { ...prev, [sectorId]: fn(prev[sectorId]) } : prev));
-
-  const shownHintsRef = useRef<Record<string, boolean>>((() => {
-    const saved = localStorage.getItem('thaumaturgic_os_hints_v1');
-    if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
-    }
-    return {};
-  })());
 
   // Persisted in the save file via the reducer
   const yokaiCharges = state.yokaiCharges || {};
@@ -88,26 +90,52 @@ export function useSessionCore() {
   const lostSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorLost(s.id)).length;
 
   const securedSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorSecured(s.id)).length;
-  const isFirstRun = state.sealedGoetia.length === 0 && securedSectorsCount === 0;
-
-  const consumeFirstTimeHint = (key: string): boolean => {
-    if (!isFirstRun) return false;
-    if (shownHintsRef.current[key]) return false;
-    shownHintsRef.current[key] = true;
-    localStorage.setItem('thaumaturgic_os_hints_v1', JSON.stringify(shownHintsRef.current));
-    return true;
-  };
 
   const triggerHudFlash = (kind: 'DAMAGE' | 'DECODE') => {
     setHudFlash(kind);
     setTimeout(() => setHudFlash('NONE'), 420);
   };
 
+  // --- GUIDED FIRST CASE -----------------------------------------------------
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const isTrainingRun = isTraining(state);
+
+  /** Swaps in the sandboxed training crypt. The real save is untouched (autosave is off in training). */
+  const startTutorial = (identity: OperativeIdentity, returnTo: TutorialReturn) => {
+    setActiveSealSuspectId(null);
+    setActiveBanishmentTarget(null);
+    setTerminalLines([]);
+    setViewport('FIELD_OPS');
+    setMapViewMode('SUB_GRID');
+    setSelectedSuspectId('01_bael');
+    setTutorialStep(0);
+    dispatch({ type: 'LOAD_GAME', payload: createTutorialState(identity, returnTo) });
+    appendLog(`[+] TRAINING TETHER ESTABLISHED // ${escapeHtml(TUTORIAL_SECTOR_LABEL)}`, 'info');
+  };
+
+  /** Ends (or skips) the guided case: back to the saved run, the title screen, or a brand-new run. */
+  const finishTutorial = () => {
+    try { localStorage.setItem(TUTORIAL_DONE_KEY, '1'); } catch { /* ignore */ }
+    const identity = { name: state.playerName, portrait: state.playerPortrait, agency: state.agencyName };
+    const resume = !!state.flags[TUTORIAL_RESUME_FLAG];
+    const toTitle = !!state.flags[TUTORIAL_TITLE_FLAG];
+    setActiveSealSuspectId(null);
+    setTerminalLines([]);
+    setViewport('FIELD_OPS');
+    setMapViewMode('SUB_GRID');
+    setTutorialStep(0);
+    if (resume) {
+      loadGame();
+    } else {
+      dispatch({ type: 'RESET_GAME' });
+      if (!toTitle) startInvestigation(identity.name, identity.portrait, identity.agency);
+    }
+  };
+
   const handleFullReset = () => {
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith('thaumaturgic_os')) localStorage.removeItem(k);
     });
-    shownHintsRef.current = {};
     setContracts({});
     setTerminalLines([]);
     setActiveSealSuspectId(null);
@@ -162,21 +190,7 @@ export function useSessionCore() {
         dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'alchemical_distillate', amount: 2 } });
       }
 
-      if (consumeFirstTimeHint('boot_onboarding')) {
-        appendLog(
-          `<div style="border-left:2px solid #62f080;padding-left:10px;margin:4px 0;">` +
-          `<div style="color:#62f080;font-weight:bold;">// THAUMATURGIC OS v4.14 — FIRST-RUN BRIEFING</div>` +
-          `<div style="color:#a8ccaf;line-height:1.5;">` +
-          `1. <strong>RECON:</strong> Run <code style="color:#ffb800;">scan 1</code> to inspect Room 1 before entering.<br/>` +
-          `2. <strong>DISARM:</strong> Clear Patrols (<code style="color:#ff2a55;">decoy</code>) or Traps (<code style="color:#00f3ff;">degauss</code>, <code style="color:#00f3ff;">bypass</code>, <code style="color:#00f3ff;">purge</code>, <code style="color:#00f3ff;">dispel</code>) from outside before running <code style="color:#ffb800;">enter</code>.<br/>` +
-          `3. <strong>DECODE:</strong> Inside a room, match <code style="color:#62f080;">vox</code> (Audio), <code style="color:#62f080;">assay</code> (Matter), or <code style="color:#62f080;">auspex</code> (Astral/Thermal) to the clue signal. Degraded readings can be <code style="color:#62f080;">refine</code>d.<br/>` +
-          `4. <strong>BUILD THE CASE:</strong> <code style="color:#00f3ff;">interview</code> the witness and <code style="color:#ffb800;">attune</code> at the [ANCHOR], then check which suspects still fit in <strong>[F2] CODEX</strong>.` +
-          `</div></div>`,
-          'info'
-        );
-      } else {
-        appendLog(`[+] TETHER ESTABLISHED // ${escapeHtml(state.playerName.toUpperCase())} ONLINE.`, 'info');
-      }
+      appendLog(`[+] TETHER ESTABLISHED // ${escapeHtml(state.playerName.toUpperCase())} ONLINE.`, 'info');
     }
   }, [state.gameStage, contracts, state.sealedGoetia, state.inventory, dispatch]);
 
@@ -272,6 +286,11 @@ export function useSessionCore() {
 
 
   return {
+    tutorialStep,
+    setTutorialStep,
+    isTrainingRun,
+    startTutorial,
+    finishTutorial,
     state,
     dispatch,
     draftContract,
@@ -304,7 +323,6 @@ export function useSessionCore() {
     contracts,
     setContracts,
     updateContract,
-    shownHintsRef,
     yokaiCharges,
     attunedSectors,
     deducedSigns,
@@ -338,8 +356,6 @@ export function useSessionCore() {
     isSectorUnlocked,
     lostSectorsCount,
     securedSectorsCount,
-    isFirstRun,
-    consumeFirstTimeHint,
     triggerHudFlash,
     handleFullReset,
     addMicroEntropy,

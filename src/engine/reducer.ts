@@ -11,6 +11,7 @@ import {
 import type { ContractCost } from '../content/yokai/types';
 import type { SectorContract } from './sectorGenerator';
 import { advanceWorld, releaseDemon, TIME_UNITS_PER_TICK } from './world';
+import { isTraining } from './tutorial';
 
 export type GameAction =
   | { type: 'START_INVESTIGATION'; payload: { name: string; portrait: string; agency: string } }
@@ -346,6 +347,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   const next = baseReducer(state, action);
   if (
     next.gameStage === 'ACTIVE' &&
+    !isTraining(next) && // the guided case never ends the run (its game-over screen would wipe the real save)
     (next.humanity <= HUMANITY_FLOOR || getTotalGlobalEntropy(next) >= ENTROPY_CEILING)
   ) {
     return { ...next, gameStage: 'GAME_OVER' };

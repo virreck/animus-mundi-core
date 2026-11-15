@@ -14,7 +14,6 @@ export interface SealingTerminalProps {
   actualAnchorId: string;
   sealCost: Record<string, number>;
   attunedBonusSeconds: number;
-  showFirstTimeHint: boolean;
   onClose: () => void;
   onSuccessSeal: (goetiaId: string) => string[];
   /** Sector being worked; a failed rite loses it permanently. */
@@ -23,6 +22,8 @@ export interface SealingTerminalProps {
   sealGoetia: (id: string) => void;
   addToast: (msg: string, type: 'INTEL'|'ITEM'|'ALERT'|'SEAL') => void;
   tetheredYokai: string[];
+  /** Guided first case: failures refund the catalysts instead of being permanent. */
+  isTraining?: boolean;
 }
 
 export const SealingTerminal = ({
@@ -30,14 +31,14 @@ export const SealingTerminal = ({
   actualAnchorId,
   sealCost,
   attunedBonusSeconds,
-  showFirstTimeHint,
   onClose,
   onSuccessSeal,
   sectorId,
   dispatch,
   sealGoetia,
   addToast,
-  tetheredYokai
+  tetheredYokai,
+  isTraining = false
 }: SealingTerminalProps) => {
   const [matrix] = useState(() => generateSealMatrix());
   const [phase, setPhase] = useState<'AUTH' | 'WARDING' | 'COMPLETE' | 'MISIDENTIFIED' | 'FAILED'>('AUTH');
@@ -97,7 +98,7 @@ export const SealingTerminal = ({
     e.preventDefault();
     if (nameInput.trim().toUpperCase() !== suspect.name.toUpperCase()) {
       ThaumaturgicAudio.errorBuzz();
-      addToast("Vocalization mismatch! Type the exact True Name of your suspect.", "ALERT");
+      addToast("VOCALIZATION MISMATCH", "ALERT");
       dispatch({ type: 'MODIFY_HUMANITY', payload: -5 });
       return;
     }
@@ -106,6 +107,12 @@ export const SealingTerminal = ({
     );
     if (suspect.id !== actualAnchorId) {
       ThaumaturgicAudio.errorBuzz();
+      if (isTraining) {
+        refundCatalysts();
+        setPhase('MISIDENTIFIED');
+        addToast(`FALSE DEDUCTION. Training refund issued.`, 'ALERT');
+        return;
+      }
       dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 15 });
       dispatch({ type: 'MODIFY_HUMANITY', payload: -20 });
       setPhase('MISIDENTIFIED');
@@ -125,9 +132,19 @@ export const SealingTerminal = ({
 
   // Running out of time is permanent: the demon manifests, can never be sealed,
   // and this sector is lost for the rest of the run.
+  const refundCatalysts = () =>
+    (Object.entries(sealCost) as [string, number][]).forEach(([item, amount]) =>
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: item, amount } })
+    );
+
   const failSeal = () => {
     setPhase('FAILED');
     ThaumaturgicAudio.errorBuzz();
+    if (isTraining) {
+      refundCatalysts();
+      addToast(`RITUAL FRACTURE. Training tether caught the spirit — try again.`, 'ALERT');
+      return;
+    }
     addToast(`RITUAL FRACTURE. ${suspect.name} has MANIFESTED! Sector lost. Global Entropy +10%.`, 'ALERT');
     dispatch({ type: 'RELEASE_GOETIA', payload: { goetiaId: suspect.id, sectorId } });
     dispatch({ type: 'MODIFY_GLOBAL_ENTROPY', payload: 10 });
@@ -145,15 +162,9 @@ export const SealingTerminal = ({
           <form onSubmit={handleAuthSubmit}>
             <p style={{ fontSize: '0.8rem', marginBottom: '10px', lineHeight: '1.5' }}>
               HYPOTHESIS LOCKED: <strong style={{ color: theme.textBright }}>{suspect.name.toUpperCase()}</strong> ({suspect.rank} of {suspect.allegiance}).<br/>
-              <span style={{ color: theme.accentAmber }}>WARNING: If this entity is NOT the true Anchor of the current Sector, your catalysts will burn and spike Global Entropy (+15%).</span>
+              <span style={{ color: theme.accentAmber }}>WARNING: MISIDENTIFICATION BURNS CATALYSTS · +15% GLOBAL ENTROPY</span>
             </p>
-            {showFirstTimeHint && (
-              <div style={{ padding: '10px', marginBottom: '12px', backgroundColor: '#030604', border: `1px solid ${theme.textBright}`, fontSize: '0.76rem', color: '#ffffff', lineHeight: '1.5' }}>
-                <strong style={{ color: theme.textBright }}>FIRST-TIME RITUAL BRIEFING:</strong><br/>
-                Once you commit, a timer starts. <strong>Click and drag continuously</strong> (or click node-to-node) starting from the <strong>pulsing green ring</strong>, following the ring as it jumps along the geometry until all lines are lit!
-              </div>
-            )}
-            <input autoFocus type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder={`TYPE "${suspect.name.toUpperCase()}" TO COMMIT`} style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }} />
+            <input autoFocus type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="TRUE NAME" style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }} />
             <button type="submit" style={{ marginTop: '12px', padding: '10px', width: '100%', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>&gt; BURN CATALYSTS &amp; START SEALING RITE</button>
             <button type="button" onClick={onClose} style={{ marginTop: '8px', padding: '10px', width: '100%', backgroundColor: 'transparent', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer' }}>&gt; ABORT</button>
           </form>
@@ -172,12 +183,19 @@ export const SealingTerminal = ({
         )}
         {phase === 'FAILED' && (
           <div style={{ textAlign: 'center', padding: '15px 0' }}>
-            <h2 style={{ color: theme.accentRed, letterSpacing: '3px', margin: '0 0 10px 0' }}>! {suspect.name.toUpperCase()} HAS MANIFESTED !</h2>
-            <p style={{ fontSize: '0.82rem', color: '#ffb3b3', lineHeight: '1.6' }}>
-              The binding geometry was not completed in time and <strong>{suspect.name}</strong> tore free of the vessel, anchoring itself permanently in the mundane world.<br/><br/>
-              <strong>PENALTY:</strong> Catalysts burned | +10.00% Global Entropy<br/>
-              <strong>{suspect.name}</strong> can never be sealed, and this sector is <strong>LOST</strong> for the rest of the run.
-            </p>
+            <h2 style={{ color: theme.accentRed, letterSpacing: '3px', margin: '0 0 10px 0' }}>! {suspect.name.toUpperCase()} {isTraining ? 'BROKE THE BINDING' : 'HAS MANIFESTED'} !</h2>
+            {isTraining ? (
+              <p style={{ fontSize: '0.82rem', color: '#ffb3b3', lineHeight: '1.6' }}>
+                The binding geometry was not completed in time. The training tether held it — catalysts refunded.<br/><br/>
+                In a live operation <strong>{suspect.name}</strong> would now be loose for good, and this sector lost.
+              </p>
+            ) : (
+              <p style={{ fontSize: '0.82rem', color: '#ffb3b3', lineHeight: '1.6' }}>
+                The binding geometry was not completed in time and <strong>{suspect.name}</strong> tore free of the vessel, anchoring itself permanently in the mundane world.<br/><br/>
+                <strong>PENALTY:</strong> Catalysts burned | +10.00% Global Entropy<br/>
+                <strong>{suspect.name}</strong> can never be sealed, and this sector is <strong>LOST</strong> for the rest of the run.
+              </p>
+            )}
             <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', width: '100%', backgroundColor: theme.accentRed, color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontFamily: theme.fontMono }}>
               &gt; EMERGENCY DISCONNECT
             </button>
@@ -189,11 +207,6 @@ export const SealingTerminal = ({
               <span style={{ color: theme.textBright, fontWeight: 'bold' }}>STEP {path.length}/{matrix.sequence.length}</span>
               <span style={{ color: timeLeft <= 5 ? theme.accentRed : theme.textBright, fontWeight: 'bold' }}>00:{timeLeft.toString().padStart(2, '0')}</span>
             </div>
-            {showFirstTimeHint && (
-              <div style={{ width: '100%', textAlign: 'center', padding: '6px', marginBottom: '10px', backgroundColor: '#030504', border: `1px dashed ${theme.textBright}`, color: '#ffffff', fontSize: '0.75rem' }}>
-                Trace or click the <strong style={{ color: theme.textBright }}>PULSING GREEN TARGET NODE</strong> to weave the containment sigil!
-              </div>
-            )}
             <div style={{ position: 'relative', width: '280px', height: '280px', border: `1px solid ${theme.borderTerminal}`, backgroundColor: theme.bgDark, borderRadius: '50%', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2, pointerEvents: 'none' }}>
                 <SmartGoetiaSigil goetia={suspect} isRevealed={false} size={175} />

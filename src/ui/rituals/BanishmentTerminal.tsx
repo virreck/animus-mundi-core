@@ -95,7 +95,7 @@ export const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToas
                 <div style={{ fontSize: '0.74rem', color: overrideTheme.text }}>{HORSEMAN_LORE[horseman].riderTitle}</div>
               </div>
             </div>
-            <p style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>Each sealed Goetia Lieutenant of {horseman} adds +5% to your Grand Rite stabilization roll (5% Base + {sealedCount} × 5%).{manifestedCount > 0 && <> Each of the <strong style={{ color: '#ff2a55' }}>{manifestedCount} manifested</strong> lieutenant{manifestedCount === 1 ? '' : 's'} costs 5% and 3 seconds.</>}</p>
+            <p style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>SEALED LIEUTENANTS: <strong>{sealedCount}/18</strong>{manifestedCount > 0 && <> · <strong style={{ color: '#ff2a55' }}>MANIFESTED: {manifestedCount}</strong></>}</p>
             <div style={{ maxHeight: '160px', overflowY: 'auto', fontSize: '0.76rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: 'black', padding: '10px', border: `1px solid ${overrideTheme.border}` }}>
               {lieutenants.map(g => {
                 const isSealed = state.sealedGoetia.includes(g.id);
