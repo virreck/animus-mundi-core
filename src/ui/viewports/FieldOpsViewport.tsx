@@ -5,12 +5,14 @@ import { YOKAI_DAEMON_SPECS } from '../../content/yokaiSpecs';
 import { DEEP_ATTUNE_COST, REFINE_COST, isAmbiguous } from '../../engine/evidence';
 import { HAZARD_MANIFEST, SECTOR_QUIRKS } from '../../engine/sectorGenerator';
 import { ThaumaturgicAudio } from '../audio';
+import { getRipeness } from '../../engine/world';
 import { useSession } from '../session/SessionContext';
 import { FONT_ZOOM_MAP, theme } from '../theme';
 
 export function FieldOpsViewport() {
   const {
     state,
+    isSectorClosed,
     setViewport,
     mapViewMode,
     setMapViewMode,
@@ -120,6 +122,9 @@ export function FieldOpsViewport() {
                 <span style={{ color: theme.accentAmber }}>
                   READINGS: <strong>{activeReadingCount}/3</strong> · EVIDENCE: <strong>{activeSectorClueCount}</strong>
                   {currentQuirk !== 'NONE' && <> · <span style={{ color: theme.accentCyan }}>{SECTOR_QUIRKS[currentQuirk].label}</span></>}
+                  {currentContract && !isSectorClosed(currentContract.sectorId) && getRipeness(state, currentContract.sectorId) > 0 && (
+                    <> · <span style={{ color: getRipeness(state, currentContract.sectorId) >= 75 ? theme.accentRed : theme.accentAmber }}>RIPENESS: <strong>{getRipeness(state, currentContract.sectorId)}%</strong></span></>
+                  )}
                 </span>
               )}
             </div>

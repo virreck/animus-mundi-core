@@ -9,6 +9,8 @@ import {
   ENTROPY_CEILING
 } from './state';
 import type { ContractCost } from '../content/yokai/types';
+import type { SectorContract } from './sectorGenerator';
+import { advanceWorld, releaseDemon, TIME_UNITS_PER_TICK } from './world';
 
 export type GameAction =
   | { type: 'START_INVESTIGATION'; payload: { name: string; portrait: string; agency: string } }
@@ -37,6 +39,10 @@ export type GameAction =
   | { type: 'LOAD_GAME'; payload: GameState }
   | { type: 'SET_CURRENT_NODE'; payload: string }
   | { type: 'EXIT_TO_MENU' }
+  | { type: 'SET_CONTRACTS'; payload: Record<string, SectorContract> }
+  /** Functional update of the contracts map, always applied to the latest state. */
+  | { type: 'UPDATE_CONTRACTS'; payload: (prev: Record<string, SectorContract>) => Record<string, SectorContract> }
+  | { type: 'ACK_NOTICES'; payload: number[] }
   | { type: 'RESET_GAME' };
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -63,7 +69,8 @@ function baseReducer(state: GameState, action: GameAction): GameState {
       const nodeId = action.payload;
       const currentSectorEntropy = state.sectorEntropy[nodeId] || 0;
 
-      return {
+      // Each trip is one tick of world time: anchors elsewhere ripen, manifested demons spread
+      return advanceWorld({
         ...state,
         currentNode: nodeId,
         sectorEntropy: {
@@ -74,7 +81,7 @@ function baseReducer(state: GameState, action: GameAction): GameState {
           ...state.inventory,
           obols: Math.max(0, (state.inventory.obols || 0) - obolCost)
         }
-      };
+      }, 1, nodeId);
     }
 
     case 'SET_CURRENT_NODE':
@@ -111,16 +118,18 @@ function baseReducer(state: GameState, action: GameAction): GameState {
       if (state.sealedGoetia.includes(action.payload) || state.releasedGoetia.includes(action.payload)) return state;
       return { ...state, sealedGoetia: [...state.sealedGoetia, action.payload] };
 
-    case 'RELEASE_GOETIA': {
+    case 'RELEASE_GOETIA':
       // A failed Sealing Rite: the demon manifests permanently and its sector is lost.
-      const { goetiaId, sectorId } = action.payload;
-      if (state.sealedGoetia.includes(goetiaId)) return state;
-      return {
-        ...state,
-        releasedGoetia: state.releasedGoetia.includes(goetiaId) ? state.releasedGoetia : [...state.releasedGoetia, goetiaId],
-        flags: { ...state.flags, [`sector_failed_${sectorId}`]: true }
-      };
-    }
+      return releaseDemon(state, action.payload.goetiaId, action.payload.sectorId);
+
+    case 'SET_CONTRACTS':
+      return { ...state, contracts: action.payload };
+
+    case 'UPDATE_CONTRACTS':
+      return { ...state, contracts: action.payload(state.contracts || {}) };
+
+    case 'ACK_NOTICES':
+      return { ...state, notices: state.notices.filter(n => !action.payload.includes(n.id)) };
 
     case 'DRAFT_CONTRACT': {
       const { yokaiId, costs, maxCharges } = action.payload;
@@ -266,14 +275,14 @@ function baseReducer(state: GameState, action: GameAction): GameState {
         updatedSectorEntropy[nodeId] = Math.min(100, updatedSectorEntropy[nodeId] + timeAmount);
       });
 
-      return {
+      return advanceWorld({
         ...state,
         sectorEntropy: updatedSectorEntropy,
         inventory: {
           ...state.inventory,
           obols: Math.max(0, (state.inventory.obols || 0) - obolDrain)
         }
-      };
+      }, Math.round(timeAmount / TIME_UNITS_PER_TICK));
     }
 
     case 'MODIFY_SECTOR_ENTROPY': {

@@ -2,6 +2,7 @@
 // [F5] HORSEMEN: war room and Grand Rite of Banishment.
 import { allGoetia } from '../../content/goetia';
 import { HORSEMAN_LORE } from '../../content/horsemen';
+import { countManifestedOfCourt, getBanishmentOdds } from '../../engine/world';
 import { HorsemanSigilSvg } from '../components/HorsemanSigilSvg';
 import { useSession } from '../session/SessionContext';
 import { FONT_ZOOM_MAP, theme } from '../theme';
@@ -23,7 +24,8 @@ export function HorsemenViewport() {
           const info = HORSEMAN_LORE[h];
           const lieutenants = allGoetia.filter(g => g.allegiance === h);
           const sealedCount = lieutenants.filter(g => state.sealedGoetia.includes(g.id)).length;
-          const winProb = Math.min(95, 5 + sealedCount * 5);
+          const winProb = getBanishmentOdds(state, h);
+          const manifestedCount = countManifestedOfCourt(state, h);
           const isBanished = !!state.flags[`banished_${h.toLowerCase()}`];
 
           return (
@@ -43,7 +45,10 @@ export function HorsemenViewport() {
                 <p style={{ fontSize: '0.7rem', color: '#a8ccaf', lineHeight: '1.4' }}>{info.omenDesc}</p>
                 <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '7px', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', marginBottom: '4px' }}>
-                    <span>ANCHORS: <strong>{sealedCount}/18</strong></span>
+                    <span>
+                      ANCHORS: <strong>{sealedCount}/18</strong>
+                      {manifestedCount > 0 && <span style={{ color: theme.accentRed }}> · ☠ {manifestedCount} LOOSE</span>}
+                    </span>
                     <span style={{ color: info.color, fontWeight: 'bold' }}>ODDS: {winProb}%</span>
                   </div>
                   <div style={{ height: '5px', backgroundColor: '#000', border: `1px solid ${theme.borderTerminal}` }}>

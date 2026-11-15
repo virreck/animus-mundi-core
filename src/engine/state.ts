@@ -1,4 +1,5 @@
 // src/engine/state.ts
+import type { SectorContract } from './sectorGenerator';
 
 export type NodeId = string;
 export type GoetiaId = string;
@@ -51,6 +52,22 @@ export interface GameState {
   attunedSectors: Record<NodeId, boolean>;
   /** Phenomena the player has ticked in the Codex for the current case. */
   deducedSigns: string[];
+
+  // --- THE WORLD ---
+  /** Every sector's case file (layout, target demon, evidence). Used to live outside the save. */
+  contracts: Record<NodeId, SectorContract>;
+  /** How close each open sector's anchor is to manifesting on its own (0-100). */
+  sectorRipeness: Record<NodeId, number>;
+  /** Where each released demon broke through (goetiaId -> sectorId). */
+  manifestations: Record<GoetiaId, NodeId>;
+  /** Messages the engine wants shown in the terminal; the UI acknowledges them. */
+  notices: EngineNotice[];
+}
+
+export interface EngineNotice {
+  id: number;
+  kind: 'WARN' | 'MANIFEST' | 'SPREAD';
+  text: string;
 }
 
 /** Humanity at or below this ends the run. */
@@ -98,14 +115,23 @@ export const initialGameState: GameState = {
   microEntropy: 0,
   yokaiCharges: {},
   attunedSectors: {},
-  deducedSigns: []
+  deducedSigns: [],
+  contracts: {},
+  sectorRipeness: {},
+  manifestations: {},
+  notices: []
 };
 
 /**
  * Fills in any fields missing from an older save so the rest of the engine
  * can rely on them being present.
  */
-export function normalizeLoadedState(raw: Partial<GameState>, legacyMicroEntropy = 0): GameState {
+export function normalizeLoadedState(
+  raw: Partial<GameState>,
+  legacyMicroEntropy = 0,
+  /** Contracts from the pre-v3 separate localStorage key. */
+  legacyContracts: Record<NodeId, SectorContract> = {}
+): GameState {
   const tethered = raw.tetheredYokai || raw.activeContracts || [];
   return {
     ...initialGameState,
@@ -124,6 +150,10 @@ export function normalizeLoadedState(raw: Partial<GameState>, legacyMicroEntropy
     microEntropy: typeof raw.microEntropy === 'number' ? raw.microEntropy : legacyMicroEntropy,
     yokaiCharges: raw.yokaiCharges || {},
     attunedSectors: raw.attunedSectors || {},
-    deducedSigns: raw.deducedSigns || []
+    deducedSigns: raw.deducedSigns || [],
+    contracts: raw.contracts && Object.keys(raw.contracts).length > 0 ? raw.contracts : legacyContracts,
+    sectorRipeness: raw.sectorRipeness || {},
+    manifestations: raw.manifestations || {},
+    notices: raw.notices || []
   };
 }

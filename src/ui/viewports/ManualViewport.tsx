@@ -120,6 +120,12 @@ export const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
             <p>
               <strong style={{ color: theme.accentRed }}>Failure is permanent.</strong> If the Sealing Rite timer runs out before the binding geometry is complete, the spirit <strong>manifests</strong>: it can never be sealed, its sector is <strong>lost</strong> for the rest of the run, and its Horseman's court will always be one lieutenant short at the Grand Rite.
             </p>
+            <p>
+              <strong style={{ color: theme.accentAmber }}>Anchors ripen.</strong> Every trip you make (and every rest at the Safehouse) is time the other open sectors spend ripening. The ring around each sector on the Regional Map shows how close its anchor is; the sector you are heading into holds still. Higher Global Entropy speeds every anchor up. At 100% the demon <strong>manifests on its own</strong> and the sector is lost.
+            </p>
+            <p>
+              <strong style={{ color: theme.accentRed }}>Manifested demons don't stay put.</strong> Each one bleeds Heat into neighbouring sectors, adds a trickle of Global Entropy, and makes neighbouring anchors ripen faster. Every manifested lieutenant also costs its Horseman's Grand Rite 5% odds and 3 seconds.
+            </p>
           </div>
         )}
 
