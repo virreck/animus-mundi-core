@@ -323,15 +323,19 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
 
     if (currentSubNode.nodeType === 'SHRINE' && currentSubNode.shrineYokaiId) {
       const yokai = allYokai.find(y => y.id === currentSubNode.shrineYokaiId);
-      if (yokai && yokai.unlockFlag) {
+      if (yokai && yokai.unlockFlag && state.flags[yokai.unlockFlag]) {
+        // A page already written: the spirit remembers you
+        dispatch({ type: 'ADD_BOND', payload: { yokaiId: yokai.id, amount: 1 } });
+        appendLog(`[⛩️ SHRINE] ${escapeHtml(yokai.nameEn.toUpperCase())} remembers you. Bond deepens.`, 'success');
+      } else if (yokai && yokai.unlockFlag) {
         dispatch({ type: 'SET_FLAG', payload: { flagId: yokai.unlockFlag, value: true } });
         appendLog(
           `<div style="border-left:3px solid #00f3ff;padding-left:10px;margin:4px 0;color:#00f3ff;">` +
-          `<strong>[⛩️ SHRINE AWAKENED: ${yokai.nameEn.toUpperCase()}]</strong> New contract available in KAGE.` +
+          `<strong>[⛩️ SHRINE AWAKENED: ${yokai.nameEn.toUpperCase()}]</strong> A new page fills in the KAGE NO SHO.` +
           `</div>`,
           'success'
         );
-        addToast(`Shikigami Unlocked: ${yokai.nameEn}`, 'SEAL');
+        addToast(`Page written: ${yokai.nameEn}`, 'SEAL');
       }
     }
 

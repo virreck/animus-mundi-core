@@ -13,7 +13,7 @@
 
 Reality across Greater London and the Surrey Hills is tearing open at the seams. The **Four Horsemen of the Apocalypse**—**CONQUEST**, **WAR**, **FAMINE**, and **DEATH**—are bleeding into mundane geography, anchoring themselves to our world through the **72 Spirits of Solomon**.
 
-You are a remote **Thaumaturge Operative** jacked into **Thaumaturgic OS v4.10**. From behind a phosphor-green CRT terminal, you breach haunted precincts, analyze raw supernatural telemetry, outmaneuver **Ordo Malleus** Inquisition strike teams, bind Japanese Shikigami daemons into your OS kernel, and trace geometric seals to trap ancient demons inside a Solomonic Brass Vessel.
+You are a **Thaumaturge Operative**, on the ground and in the rooms, carrying **Thaumaturgic OS v4.14** — a phosphor-green field rig of wrist terminal, bone-conduction earpiece and occult instruments that reads what your senses can't and holds a thread of warding between you and the ordinary world. You breach haunted precincts, analyze raw supernatural telemetry, outmaneuver **Ordo Malleus** Inquisition strike teams, bind Japanese Shikigami daemons into your OS kernel, and trace geometric seals to trap ancient demons inside a Solomonic Brass Vessel.
 
 No hand-holding. No quest markers. Just raw forensic clues, a command line, and a ticking clock before reality unravels.
 
@@ -38,7 +38,7 @@ Every compromised sector is a procedurally laid-out tactical sub-grid (5–8 roo
 4. **Build the Case:** Field readings are rarely clean — most come back **degraded**, narrowing a clue to two or three possible phenomena. Resolve them with `refine` (costs Humanity and Heat) or reason around them using other evidence:
    * **Witness statements** — `interview` the sector's civilian witness for a partly redacted account of what they saw, then compare it with the Lemegeton entries in the Codex.
    * **Anchor resonance** — `attune` at the **[ANCHOR]** chamber to learn which Horseman's court the demon serves (plus a +4s sealing bonus). Attune again for a costly deep reading of its rank.
-   * The **Codex** ranks all 72 suspects by how well they fit your evidence and rules out the ones that contradict it — the final call is yours, and a wrong True Name burns your catalysts.
+   * The **Codex** is your notebook, not an oracle: tick phenomena you're sure of, cross out ones you've ruled out, filter by court and rank, and strike suspects off by hand. Nothing is narrowed for you — and a wrong True Name burns your catalysts.
 5. **Synthesize & Seal:** Transmute raw salvage (`Scrap Metal`, `Cursed Earth`, `Alchemical Distillate`) into planetary Solomonic metals (`Gold Leaf`, `Silver Shavings`, `Copper Wire`, `Quicksilver Drops`, `Sacred Sand`, `Cold Iron Filings`, `Lead Weights`), type the demon's True Name, and trace its binding geometry before the connection collapses.
 6. **Trigger Resonance Cascades:** The Ars Goetia is a feudal hierarchy. Sealing a high-ranking **King**, **Prince**, or **Duke** sends a shockwave through their legion, automatically collapsing **1 to 2 lesser vassals** of that Horseman's court straight into your Brass Vessel.
 
@@ -52,7 +52,7 @@ Switch instantaneously across seven specialized OS screens via function keys or 
 
 * **`[F1] FIELD_OPS` — Tactical Sub-Grid, Regional Map & TTY1 Console:** Zoom and pan across 16 interconnected sectors from Caterham and Croydon up to Highgate and St. Paul's Cathedral. Monitor live room symptoms, waveform spikes, and execute field directives.
 * **`[F2] CODEX` — Goetian Deduction Engine:** Filter all 72 spirits of the *Lemegeton* by Horseman allegiance and observed manifestation signs, inspect glitched/obscured demon sigils, and initiate the **Vessel Sealing Protocol**.
-* **`[F3] KAGE` — Kage-no-Sho (Shikigami Kernel Interceptors):** Forge pacts with up to **2 Yokai daemons** simultaneously (`KITSUNE.SYS`, `TENGU.DMN`, `BAKU.EXE`, `ZASHIKI.BOT`, `KAMEOSA.ALC`, `KAMAITACHI.VEX`, `AMABIE.iso`, `NOPPERA.MSK`). Each spirit installs a continuous passive OS hook alongside finite active field invocations.
+* **`[F3] KAGE_NO_SHO` — the Book of Shadows:** Forge pacts with up to **2 Yokai daemons** simultaneously (`KITSUNE.SYS`, `TENGU.DMN`, `BAKU.EXE`, `ZASHIKI.BOT`, `KAMEOSA.ALC`, `KAMAITACHI.VEX`, `AMABIE.iso`, `NOPPERA.MSK`). Each spirit installs a continuous passive OS hook alongside finite active field invocations. Pages stay **unwritten** until you wake the spirit's kami shrine in the field; **bonds** grow with use (Bond II and III add charges and soften drawbacks); **renewal rites** spend Esoteric Ink and the spirit's favoured offering to restore charges; and pacts have consequences — burn a daemon dry or sever it by hand and it leaves offended for a while, and the hungry ones take tribute every sector.
 * **`[F4] SAFEHOUSE` — Alchemical Altar & Tether Recovery:** Craft planetary catalysts, rest at the brass-warded hearth to restore Humanity, and spend Obols to jam Ordo Malleus direction-finders across hot sectors.
 * **`[F5] HORSEMEN` — Apocalypse War Room:** Track all four Riders via custom vector Apocalypse Sigils, inspect the 18 Goetian anchors tethered to each court, and launch the triple-matrix **Grand Rite of Banishment**.
 * **`[F6] DOSSIER` — Operative Service Record:** View your full-body ink operative portrait, Brass Vessel ledger, `0.01%` precision Global Entropy meter, and session save controls.
@@ -62,7 +62,7 @@ Switch instantaneously across seven specialized OS screens via function keys or 
 
 ## // SURVIVAL METRICS & THE ORDO MALLEUS
 
-* **Humanity (`0%–100%`):** Your remote mental tether. Drained by Auspex probes, Inquisition ambushes, and botched hazard protocols. Restored at the Safehouse.
+* **Humanity (`0%–100%`):** The thread of warding (your *tether*) that keeps you anchored to the ordinary world while you stand in thin places. Drained by Auspex probes, Inquisition ambushes, and botched hazard protocols. Restored at the Safehouse.
 * **Inquisition Heat (`0%–100%`):** The Vatican-Crown **Ordo Malleus** monitors ley-line spikes with mobile tracking vans and witch-hound packs. At **75%+ Heat**, your CRT display flickers crimson with triangulation warnings. At **100% Heat**, the sector enters **Total Lockdown**—all room actions are blocked until you run `spoof` (`-15` Obols), `bribe` (`-25` Obols), invoke a stealth Shikigami, or retreat to the Safehouse.
 * **Global Entropy (`0.00%` Precision):** Tracks the irreversible fraying of mundane reality. Ticks up by $+0.01\%$ to $+0.05\%$ during travel, breaches, and safehouse rest, and spikes violently if you misidentify a demon or fracture a ritual.
 * **Ripening Anchors:** Every trip and every rest is time the other open sectors spend ripening (faster at high entropy, faster still next to a manifested demon). At 100% an anchor manifests on its own and its sector is lost — the Regional Map's rings show how close each one is.

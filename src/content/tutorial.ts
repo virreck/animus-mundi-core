@@ -42,7 +42,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'INCOMING TRANSMISSION // {agency} SECURE RELAY',
     fullscreen: true,
     lines: [
-      'Operative {name}. Vesper here. If you can read this, the jack took and you are still you. Mostly.',
+      'Operative {name}. Vesper here. If you can read this, the rig booted and you are still you. Mostly.',
       'Three weeks ago the Solomonic seals failed. Not cracked — failed. Seventy-two spirits the old kings bound in brass came loose in the same breath, and something larger came through behind them.'
     ],
     continueLabel: 'CONTINUE'
@@ -62,10 +62,11 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'THE TETHER',
     fullscreen: true,
     lines: [
-      'You do not go in body. You go in by tether — this OS — riding instruments into rooms you will never stand in. It costs. Every scan, every shock off a ward, takes a little of what makes you human. Run that to nothing and there is no you left to pull back.',
+      'You go in on foot. The OS is your kit — the terminal on your wrist, the bone-set behind your ear, the instruments in your coat. It reads what your senses cannot, and it spins a thread of warding between you and the ordinary world. That thread is your tether.',
+      'Thin places pull at it. Every scan, every shock off a ward, every hour in rooms that should not exist takes a little of what makes you human. Run that to nothing and the thread snaps — and whatever walks back out will not be you.',
       'Tonight is a training run. St. Lawrence Crypt, Caterham. Something has been howling under the church since Michaelmas. I have frozen the clock on everything else. Learn the instruments. Then we go to war.'
     ],
-    continueLabel: 'OPEN THE TETHER'
+    continueLabel: 'BOOT THE RIG'
   },
 
   // ---------------------------------------------------------------- FIELD OPS
@@ -73,7 +74,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: 'interface',
     title: 'FIELD OPS',
     lines: [
-      'This is Field Ops. The grid is the crypt — rooms, corridors, and you at the perimeter. The wire under it is where everything your instruments report lands.',
+      'This is Field Ops. The grid is the crypt as your rig maps it — rooms, corridors, and you, standing at the lychgate in the rain. The wire under it is where everything your instruments report lands.',
       'Along the top: ENTROPY is how frayed the world is. HUM is you. OBOLS pay for everything. Watch all three.'
     ],
     continueLabel: 'UNDERSTOOD'
@@ -141,7 +142,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'THE HOUNDS',
     lines: [
       'Room 3. Scan it.',
-      'If the scan shows Malleus witch-hounds, do not walk in — they will maul your tether. A DECOY throws a phantom signal down the corridor and they follow it.'
+      'If the scan shows Malleus witch-hounds, do not walk in — they will take you apart. A DECOY throws a phantom signal down the corridor and they follow it.'
     ],
     objective: 'Scan Room 3, decoy the patrol, then enter.',
     done: ctx => at(ctx, TUTORIAL_ROOMS.belfry) && roomOf(ctx, TUTORIAL_ROOMS.belfry)?.patrolActive === false
@@ -167,10 +168,10 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: 'kage',
     title: 'SHIKIGAMI',
     lines: [
-      'Open KAGE — F3. Shikigami bind straight into the OS kernel. Two at most. Each has a passive price and a few charges of active power, and once the charges are spent it leaves.',
-      'The fox mask hides you from the Malleus. Bind it.'
+      'Open the KAGE NO SHO — F3, the Book of Shadows. Every shrine you wake writes a spirit\u2019s page, and only a written page can be bound. Two at most. Each has a passive price and a few charges of power.',
+      'Work with one and the bond deepens. Feed it ink and its favoured offering and its charges return. Burn it dry, or cut it loose, and it leaves you offended. The fox mask hides you from the Malleus. Bind it.'
     ],
-    objective: 'Bind the Kitsune Mask in [F3] KAGE.',
+    objective: 'Bind the Kitsune Mask in [F3] KAGE NO SHO.',
     done: ctx => ctx.state.tetheredYokai.includes(TUTORIAL_YOKAI_ID)
   },
   {
@@ -205,7 +206,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: 'codex',
     title: 'THE CASE FILE',
     lines: [
-      'Open the CODEX — F2. Every suspect your evidence contradicts is struck off. What is left, you judge yourself: read the witness against the Lemegeton entries.',
+      'Open the CODEX — F2. Nobody narrows the Lemegeton for you. Tick the phenomena you are sure of, cross out the ones you have ruled out, filter by the court and rank the anchor gave you, and STRIKE anyone who does not fit.',
+      'Whoever is left, read against the witness. A degraded reading is still evidence: the right spirit has one of its possibilities.',
       'Name the wrong spirit in a live operation and your catalysts burn for nothing.'
     ],
     objective: 'Open [F2] CODEX and select the spirit you believe is anchored here.',

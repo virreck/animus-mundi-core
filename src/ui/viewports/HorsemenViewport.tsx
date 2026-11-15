@@ -21,7 +21,7 @@ export function HorsemenViewport() {
 
   return (
     <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
-      <div className="grid-4col" style={{ flex: 1, overflowY: 'auto' }}>
+      <div className="grid-4col horsemen-grid" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         {(['CONQUEST', 'WAR', 'FAMINE', 'DEATH'] as const).map(h => {
           const info = HORSEMAN_LORE[h];
           const lieutenants = allGoetia.filter(g => g.allegiance === h);
@@ -31,7 +31,7 @@ export function HorsemenViewport() {
           const isBanished = !!state.flags[`banished_${h.toLowerCase()}`];
 
           return (
-            <div key={h} style={{ backgroundColor: theme.bgPanel, border: `1px solid ${isBanished ? theme.textBright : info.color}`, padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div key={h} style={{ backgroundColor: theme.bgPanel, border: `1px solid ${isBanished ? theme.textBright : info.color}`, padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.66rem', color: info.color }}>
                   <span>{info.sealName}</span>
@@ -57,7 +57,8 @@ export function HorsemenViewport() {
                     <div style={{ width: `${(sealedCount / 18) * 100}%`, height: '100%', backgroundColor: info.color }} />
                   </div>
                 </div>
-                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '180px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '6px' }}>
+                {/* Grows with the window; only scrolls if the window is too short to show all 18 */}
+                <div className="horsemen-anchor-list" style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '6px' }}>
                   {lieutenants.map(g => {
                     const isSealed = state.sealedGoetia.includes(g.id);
                     const released = isReleased(g.id);

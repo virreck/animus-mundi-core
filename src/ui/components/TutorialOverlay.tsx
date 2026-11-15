@@ -79,7 +79,7 @@ export function TutorialOverlay() {
     return (
       <button
         onClick={() => setMinimised(false)}
-        style={{ position: 'fixed', top: '52px', right: '8px', zIndex: 90, maxWidth: 'min(340px, calc(100vw - 16px))', padding: '6px 10px', backgroundColor: 'rgba(5,7,6,0.97)', border: `1px solid ${theme.accentAmber}`, color: theme.accentAmber, fontFamily: theme.fontMono, fontSize: '0.7rem', cursor: 'pointer', textAlign: 'left' }}
+        style={{ position: 'fixed', top: 'calc(var(--header-h, 46px) + 6px)', right: '8px', zIndex: 90, maxWidth: 'min(340px, calc(100vw - 16px))', padding: '6px 10px', backgroundColor: 'rgba(5,7,6,0.97)', border: `1px solid ${theme.accentAmber}`, color: theme.accentAmber, fontFamily: theme.fontMono, fontSize: '0.7rem', cursor: 'pointer', textAlign: 'left' }}
       >
         ◆ {step.objective ? fill(step.objective) : fill(step.title)}
       </button>
@@ -90,7 +90,7 @@ export function TutorialOverlay() {
     <div
       key={step.id}
       style={{
-        position: 'fixed', top: '52px', right: '8px', zIndex: 90,
+        position: 'fixed', top: 'calc(var(--header-h, 46px) + 6px)', right: '8px', zIndex: 90,
         width: 'min(360px, calc(100vw - 16px))', maxHeight: '46vh', overflowY: 'auto',
         backgroundColor: 'rgba(5,7,6,0.97)', border: `1px solid ${complete ? theme.textBright : theme.accentAmber}`,
         boxShadow: '0 6px 24px rgba(0,0,0,0.85)', padding: '10px 12px', fontFamily: theme.fontMono, fontSize: '0.74rem',

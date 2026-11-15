@@ -62,11 +62,14 @@ export interface GameState {
   manifestations: Record<GoetiaId, NodeId>;
   /** Messages the engine wants shown in the terminal; the UI acknowledges them. */
   notices: EngineNotice[];
+
+  /** KAGE NO SHO: bond points per Yokai, and how many more sectors an offended spirit stays away. */
+  kage: { bond: Record<YokaiId, number>; offended: Record<YokaiId, number> };
 }
 
 export interface EngineNotice {
   id: number;
-  kind: 'WARN' | 'MANIFEST' | 'SPREAD';
+  kind: 'WARN' | 'MANIFEST' | 'SPREAD' | 'KAGE';
   text: string;
 }
 
@@ -83,9 +86,10 @@ export function getTotalGlobalEntropy(state: Pick<GameState, 'globalEntropy' | '
 export const isSectorFailed = (state: Pick<GameState, 'flags'>, sectorId: string) =>
   !!state.flags[`sector_failed_${sectorId}`];
 
-export function getMaxHumanity(state: Pick<GameState, 'tetheredYokai'>): number {
-  // Zashiki-warashi permanently lowers your max humanity while bound
-  return (state.tetheredYokai || []).includes('yokai_zashiki') ? 85 : 100;
+export function getMaxHumanity(state: Pick<GameState, 'tetheredYokai'> & Partial<Pick<GameState, 'kage'>>): number {
+  // Zashiki-warashi lowers your max humanity while bound (less once its bond reaches III)
+  if (!(state.tetheredYokai || []).includes('yokai_zashiki')) return 100;
+  return (state.kage?.bond?.yokai_zashiki || 0) >= 7 ? 92 : 85;
 }
 
 export const initialGameState: GameState = {
@@ -119,7 +123,8 @@ export const initialGameState: GameState = {
   contracts: {},
   sectorRipeness: {},
   manifestations: {},
-  notices: []
+  notices: [],
+  kage: { bond: {}, offended: {} }
 };
 
 /**
@@ -154,6 +159,7 @@ export function normalizeLoadedState(
     contracts: raw.contracts && Object.keys(raw.contracts).length > 0 ? raw.contracts : legacyContracts,
     sectorRipeness: raw.sectorRipeness || {},
     manifestations: raw.manifestations || {},
-    notices: raw.notices || []
+    notices: raw.notices || [],
+    kage: { bond: raw.kage?.bond || {}, offended: raw.kage?.offended || {} }
   };
 }

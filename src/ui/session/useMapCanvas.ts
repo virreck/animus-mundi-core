@@ -1,6 +1,6 @@
 // src/ui/session/useMapCanvas.ts
 // Map canvas rendering and pointer interaction.
-import { useEffect, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
+import { useEffect, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { MACRO_SECTORS } from '../../content/map';
 import { getRipeness } from '../../engine/world';
 import { isTraining } from '../../engine/tutorial';
@@ -25,6 +25,9 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
     isPanningRef,
     panStartRef,
     didDragRef,
+    pointersRef,
+    pinchRef,
+    mapWrapRef,
     contracts,
     updateContract,
     setDeducedSigns,
@@ -55,11 +58,6 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
 
       const canvas = mapCanvasRef.current;
       if (canvas) {
-        const rect = canvas.parentElement?.getBoundingClientRect();
-        if (rect && (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height))) {
-          canvas.width = Math.floor(rect.width);
-          canvas.height = Math.floor(rect.height);
-        }
         const ctx = canvas.getContext('2d');
         if (ctx) {
           const w = canvas.width;
@@ -314,12 +312,55 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
     return () => cancelAnimationFrame(animId);
   }, [state.gameStage, viewport, mapViewMode, currentContract, state.currentNode, state.sectorEntropy, state.flags, mapZoom, mapPan]);
 
+  // Size the canvas from its own wrapper (layout px, unaffected by CSS zoom). The wrapper's size
+  // never depends on the canvas, so there is no feedback loop on auto-height mobile layouts.
+  useEffect(() => {
+    if (state.gameStage !== 'ACTIVE' || viewport !== 'FIELD_OPS') return;
+    const wrap = mapWrapRef.current;
+    const canvas = mapCanvasRef.current;
+    if (!wrap || !canvas) return;
+    const fit = () => {
+      const w = Math.max(1, Math.floor(wrap.clientWidth));
+      const h = Math.max(1, Math.floor(wrap.clientHeight));
+      if (canvas.width !== w) canvas.width = w;
+      if (canvas.height !== h) canvas.height = h;
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, [state.gameStage, viewport]);
+
+  // Wheel zoom needs a non-passive listener, or the page scrolls underneath the map
+  useEffect(() => {
+    if (state.gameStage !== 'ACTIVE' || viewport !== 'FIELD_OPS') return;
+    const canvas = mapCanvasRef.current;
+    if (!canvas) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.18 : -0.18;
+      setMapZoom(prev => clampZoom(prev + delta));
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, [state.gameStage, viewport]);
+
+  const clampZoom = (z: number) => Math.min(2.8, Math.max(0.6, +z.toFixed(2)));
+  /** Keeps the map from being flung out of view. */
+  const clampPan = (p: { x: number; y: number }, zoom: number) => {
+    const canvas = mapCanvasRef.current;
+    const limX = ((canvas?.width || 400) * zoom) / 2;
+    const limY = ((canvas?.height || 300) * zoom) / 2;
+    return { x: Math.max(-limX, Math.min(limX, p.x)), y: Math.max(-limY, Math.min(limY, p.y)) };
+  };
+
   const getWorldCoordsFromClient = (clientX: number, clientY: number) => {
     const canvas = mapCanvasRef.current;
     if (!canvas) return { wx: 0, wy: 0, w: 1, h: 1 };
     const rect = canvas.getBoundingClientRect();
-    const sx = clientX - rect.left;
-    const sy = clientY - rect.top;
+    // Client px -> canvas px (rect is scaled by CSS zoom / text size; the canvas buffer is not)
+    const sx = ((clientX - rect.left) * canvas.width) / (rect.width || 1);
+    const sy = ((clientY - rect.top) * canvas.height) / (rect.height || 1);
     const w = canvas.width;
     const h = canvas.height;
     const wx = (sx - w / 2 - mapPan.x) / mapZoom + w / 2;
@@ -327,28 +368,56 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
     return { wx, wy, w, h };
   };
 
+  // One pointer pans; two pointers pinch-zoom around their midpoint.
   const handleCanvasPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    isPanningRef.current = true;
-    didDragRef.current = false;
-    panStartRef.current = { x: e.clientX - mapPan.x, y: e.clientY - mapPan.y };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointersRef.current.size === 1) {
+      isPanningRef.current = true;
+      didDragRef.current = false;
+      panStartRef.current = { x: e.clientX - mapPan.x, y: e.clientY - mapPan.y };
+    } else if (pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      pinchRef.current = {
+        dist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        zoom: mapZoom,
+        mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+        pan: mapPan
+      };
+      isPanningRef.current = false;
+      didDragRef.current = true;
+    }
   };
 
   const handleCanvasPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pinch = pinchRef.current;
+    if (pinch && pointersRef.current.size >= 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      const zoom = clampZoom(pinch.zoom * ((Math.hypot(a.x - b.x, a.y - b.y) || 1) / pinch.dist));
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      setMapZoom(zoom);
+      setMapPan(clampPan({ x: pinch.pan.x + (mid.x - pinch.mid.x), y: pinch.pan.y + (mid.y - pinch.mid.y) }, zoom));
+      return;
+    }
     if (!isPanningRef.current) return;
-    const dx = e.clientX - panStartRef.current.x;
-    const dy = e.clientY - panStartRef.current.y;
-    if (Math.hypot(dx - mapPan.x, dy - mapPan.y) > 5) didDragRef.current = true;
-    setMapPan({ x: dx, y: dy });
+    const next = { x: e.clientX - panStartRef.current.x, y: e.clientY - panStartRef.current.y };
+    if (Math.hypot(next.x - mapPan.x, next.y - mapPan.y) > 5) didDragRef.current = true;
+    if (didDragRef.current) setMapPan(clampPan(next, mapZoom));
   };
 
-  const handleCanvasPointerUp = () => {
-    isPanningRef.current = false;
-  };
-
-  const handleCanvasWheel = (e: ReactWheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.18 : -0.18;
-    setMapZoom(prev => Math.min(2.8, Math.max(0.6, +(prev + delta).toFixed(2))));
+  const handleCanvasPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+    if (pointersRef.current.size === 1) {
+      // Lifting one finger of a pinch: continue panning with the other, without a jump
+      const [rest] = [...pointersRef.current.values()];
+      isPanningRef.current = true;
+      panStartRef.current = { x: rest.x - mapPan.x, y: rest.y - mapPan.y };
+    } else if (pointersRef.current.size === 0) {
+      isPanningRef.current = false;
+    }
   };
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {
@@ -408,7 +477,6 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
     handleCanvasPointerDown,
     handleCanvasPointerMove,
     handleCanvasPointerUp,
-    handleCanvasWheel,
     handleCanvasClick
   };
 }

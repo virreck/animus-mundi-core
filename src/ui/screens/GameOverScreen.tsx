@@ -22,7 +22,7 @@ export function GameOverScreen() {
         </h1>
         <p style={{ fontSize: '0.84rem', lineHeight: '1.6', margin: '0 0 16px 0' }}>
           {tetherSevered
-            ? `Operative ${state.playerName.toUpperCase() || 'UNKNOWN'} lost the last of their Humanity. The remote link has gone dark.`
+            ? `Operative ${state.playerName.toUpperCase() || 'UNKNOWN'} lost the last of their Humanity. Something walked back out of that sector. It was not them.`
             : `Global Entropy reached ${totalGlobalEntropy.toFixed(2)}%. The mundane world has frayed beyond repair.`}
         </p>
         <div style={{ fontSize: '0.78rem', color: '#a8ccaf', lineHeight: '1.7', marginBottom: '18px' }}>

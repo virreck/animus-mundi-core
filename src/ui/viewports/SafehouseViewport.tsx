@@ -3,6 +3,7 @@
 import { MACRO_SECTORS } from '../../content/map';
 import { ALTAR_RECIPES } from '../../engine/sectorGenerator';
 import { ThaumaturgicAudio } from '../audio';
+import { isBondThree } from '../../engine/kage';
 import { useSession } from '../session/SessionContext';
 import { FONT_ZOOM_MAP, formatLabel, theme } from '../theme';
 
@@ -42,7 +43,8 @@ export function SafehouseViewport() {
             const effObolCost = isKameosa ? 0 : recipe.obolCost;
             const haveRaw = state.inventory[recipe.rawMaterialId] || 0;
             const haveObols = state.inventory.obols || 0;
-            const canCraft = haveRaw >= recipe.rawAmount && haveObols >= effObolCost && (!isKameosa || state.humanity > 2);
+            const kameosaHum = isBondThree(state, 'yokai_kameosa') ? 1 : 2;
+            const canCraft = haveRaw >= recipe.rawAmount && haveObols >= effObolCost && (!isKameosa || state.humanity > kameosaHum);
             const ownedOutput = state.inventory[recipe.outputId] || 0;
 
             return (
@@ -56,13 +58,13 @@ export function SafehouseViewport() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px dashed ${theme.borderTerminal}`, paddingTop: '6px' }}>
                   <span style={{ fontSize: '0.68rem', color: theme.textMuted }}>
-                    {recipe.rawAmount}x {formatLabel(recipe.rawMaterialId)} + {isKameosa ? '2% HUM' : `${effObolCost} Obols`}
+                    {recipe.rawAmount}x {formatLabel(recipe.rawMaterialId)} + {isKameosa ? `${kameosaHum}% HUM` : `${effObolCost} Obols`}
                   </span>
                   <button
                     onClick={() => {
                       ThaumaturgicAudio.scryPing();
                       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: recipe.rawMaterialId, amount: -recipe.rawAmount } });
-                      if (isKameosa) dispatch({ type: 'MODIFY_HUMANITY', payload: -2 });
+                      if (isKameosa) dispatch({ type: 'MODIFY_HUMANITY', payload: -kameosaHum });
                       else dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -effObolCost } });
                       dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: recipe.outputId, amount: 1 } });
                       addToast(`Synthesized +1 ${recipe.label}`, 'ITEM');

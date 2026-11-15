@@ -5,7 +5,9 @@ import { YOKAI_DAEMON_SPECS } from '../../content/yokaiSpecs';
 import {  isAmbiguous } from '../../engine/evidence';
 import { HAZARD_MANIFEST, SECTOR_QUIRKS } from '../../engine/sectorGenerator';
 
+import { useState } from 'react';
 import { getRipeness } from '../../engine/world';
+import { getMaxCharges } from '../../engine/kage';
 import { useSession } from '../session/SessionContext';
 import { FONT_ZOOM_MAP, theme } from '../theme';
 
@@ -46,18 +48,31 @@ export function FieldOpsViewport() {
     handleCanvasPointerDown,
     handleCanvasPointerMove,
     handleCanvasPointerUp,
-    handleCanvasWheel,
+    mapWrapRef,
+    mobilePane,
+    setMobilePane,
     handleCanvasClick
   } = useSession();
+  const [confirmSever, setConfirmSever] = useState<string | null>(null);
 
   return (
     <main
-      className="responsive-split"
+      className="responsive-split field-ops"
+      data-pane={mobilePane}
       style={{
         backgroundColor: hudFlash === 'DAMAGE' ? 'rgba(255,42,85,0.18)' : hudFlash === 'DECODE' ? 'rgba(98,240,128,0.12)' : 'transparent',
         transition: 'background-color 0.25s'
       }}
     >
+      {/* Compact screens only: choose map + wire together, or either one full height */}
+      <div className="mobile-only field-ops-switch">
+        {(['SPLIT', 'MAP', 'WIRE'] as const).map(p => (
+          <button key={p} onClick={() => setMobilePane(p)} className={`macro-chip ${mobilePane === p ? 'macro-chip-amber' : ''}`} style={{ flex: 1, padding: '6px' }}>
+            {p === 'SPLIT' ? 'MAP + WIRE' : p}
+          </button>
+        ))}
+      </div>
+
       <section className="pane-left">
         <div style={{ backgroundColor: currentHeat >= 75 ? '#1f050a' : theme.bgPanel, border: `1px solid ${currentHeat >= 75 ? theme.accentRed : theme.borderTerminal}`, padding: '9px 10px', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '5px', flexWrap: 'wrap', gap: '4px' }}>
@@ -76,7 +91,7 @@ export function FieldOpsViewport() {
           </div>
         </div>
 
-        <div style={{ flex: 1, minHeight: '240px', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div className="map-panel" style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ position: 'absolute', top: 6, left: 8, right: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, fontSize: '0.7rem', flexWrap: 'wrap', gap: '4px' }}>
             <div style={{ display: 'flex', gap: '4px' }}>
               <button onClick={() => { setMapViewMode('SUB_GRID'); setMapZoom(1); setMapPan({ x: 0, y: 0 }); }} className={`macro-chip ${mapViewMode === 'SUB_GRID' ? 'macro-chip-amber' : ''}`}>LOCAL SUB-GRID</button>
@@ -90,17 +105,18 @@ export function FieldOpsViewport() {
             </div>
           </div>
 
-          <canvas
-            ref={mapCanvasRef}
-            onPointerDown={handleCanvasPointerDown}
-            onPointerMove={handleCanvasPointerMove}
-            onPointerUp={handleCanvasPointerUp}
-            onPointerCancel={handleCanvasPointerUp}
-            onPointerLeave={handleCanvasPointerUp}
-            onWheel={handleCanvasWheel}
-            onClick={handleCanvasClick}
-            style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none', cursor: 'grab' }}
-          />
+          {/* The canvas sits absolutely inside its own box, so it can never stretch the layout */}
+          <div ref={mapWrapRef} style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+            <canvas
+              ref={mapCanvasRef}
+              onPointerDown={handleCanvasPointerDown}
+              onPointerMove={handleCanvasPointerMove}
+              onPointerUp={handleCanvasPointerUp}
+              onPointerCancel={handleCanvasPointerUp}
+              onClick={handleCanvasClick}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', touchAction: 'none', cursor: 'grab' }}
+            />
+          </div>
 
           <div style={{ backgroundColor: 'rgba(5,7,6,0.96)', borderTop: `1px solid ${theme.borderTerminal}`, padding: '8px 10px', zIndex: 10, fontSize: '0.72rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
@@ -161,24 +177,33 @@ export function FieldOpsViewport() {
           <div style={{ flex: '1 1 240px' }}>
             <div style={{ color: theme.textBright, fontWeight: 'bold', marginBottom: '4px' }}>ACTIVE SHIKIGAMI DAEMONS ({state.tetheredYokai.length}/2)</div>
             {state.tetheredYokai.length === 0 ? (
-              <div style={{ color: theme.textMuted }}>No Daemons bound in <strong style={{ color: theme.textBright }}>[F3] KAGE</strong>.</div>
+              <div style={{ color: theme.textMuted }}>No Daemons bound in <strong style={{ color: theme.textBright }}>[F3] KAGE NO SHO</strong>.</div>
             ) : (
               <div style={{ display: 'flex', gap: '6px' }}>
                 {state.tetheredYokai.map(yid => {
                   const y = allYokai.find(item => item.id === yid);
                   const spec = YOKAI_DAEMON_SPECS[yid];
-                  const charges = yokaiCharges[yid] ?? (spec?.maxCharges || 1);
+                  const maxCharges = getMaxCharges(state, yid);
+                  const charges = yokaiCharges[yid] ?? maxCharges;
                   return (
                     <div key={yid} style={{ flex: 1, padding: '5px 7px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <strong style={{ color: theme.textBright, fontSize: '0.7rem' }}>{y?.nameEn}</strong>
-                        <span style={{ color: theme.accentAmber, fontSize: '0.65rem' }}>[{charges}/{spec?.maxCharges} USES]</span>
+                        <span style={{ color: theme.accentAmber, fontSize: '0.65rem' }}>{charges}/{maxCharges}</span>
                       </div>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button onClick={() => handleInvokeYokaiPower(yid)} title={spec?.activeDesc} className="macro-chip macro-chip-amber" style={{ flex: 1, padding: '3px 5px', fontSize: '0.65rem' }}>
                           ⚡ {spec?.activeLabel}
                         </button>
-                        <button onClick={() => handleUnbindYokai(yid, 'Manually severed')} className="macro-chip macro-chip-danger" style={{ padding: '3px 6px', fontSize: '0.65rem' }}>✕</button>
+                        {/* Severing offends the spirit, so it takes a second tap */}
+                        <button
+                          onClick={() => (confirmSever === yid ? (setConfirmSever(null), handleUnbindYokai(yid)) : setConfirmSever(yid))}
+                          onBlur={() => setConfirmSever(null)}
+                          className="macro-chip macro-chip-danger"
+                          style={{ padding: '3px 6px', fontSize: '0.65rem' }}
+                        >
+                          {confirmSever === yid ? 'SEVER?' : '✕'}
+                        </button>
                       </div>
                     </div>
                   );
@@ -268,6 +293,7 @@ export function FieldOpsViewport() {
             value={cliInput}
             onChange={e => setCliInput(e.target.value)}
             placeholder="_"
+            className="cli-input"
             style={{ flex: 1, backgroundColor: 'transparent', color: theme.textBright, border: 'none', outline: 'none', fontFamily: theme.fontMono, fontSize: '0.8rem' }}
           />
           <button type="submit" className="macro-chip">EXEC</button>

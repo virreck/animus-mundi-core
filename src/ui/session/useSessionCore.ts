@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { allGoetia } from '../../content/goetia';
 import { MACRO_SECTORS, type MacroSectorDef } from '../../content/map';
-import { type EvidenceLog, scoreSuspect } from '../../engine/evidence';
+import { type EvidenceLog } from '../../engine/evidence';
 import { type SectorContract, generateSectorContract, getUniqueGoetiaSigns } from '../../engine/sectorGenerator';
 import { getMaxHumanity, getTotalGlobalEntropy, isSectorFailed } from '../../engine/state';
 import { useEngine } from '../hooks/useEngine';
+import type { GoeticRank } from '../../content/goetia/types';
 import {
   createTutorialState,
   isTraining,
@@ -40,6 +41,13 @@ export function useSessionCore() {
   const isPanningRef = useRef(false);
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const didDragRef = useRef(false);
+  /** Active touch/mouse pointers on the map (for pinch-zoom), and the pinch baseline. */
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchRef = useRef<{ dist: number; zoom: number; mid: { x: number; y: number }; pan: { x: number; y: number } } | null>(null);
+  /** The map's own box; the canvas is sized from this, never from a parent that contains it. */
+  const mapWrapRef = useRef<HTMLDivElement>(null);
+  /** Phones and folded foldables show Field Ops as map + wire split, or either one full-height. */
+  const [mobilePane, setMobilePane] = useState<'SPLIT' | 'MAP' | 'WIRE'>('SPLIT');
 
   // Contracts live in the game state (and the save file); these helpers keep the old call style.
   const contracts: Record<string, SectorContract> = state.contracts || {};
@@ -59,7 +67,8 @@ export function useSessionCore() {
     dispatch({ type: 'SET_DEDUCED_SIGNS', payload: typeof next === 'function' ? next(deducedSigns) : next });
   const [codexHorsemanFilter, setCodexHorsemanFilter] = useState<'ALL' | 'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH'>('ALL');
   const [selectedSuspectId, setSelectedSuspectId] = useState<string>('01_bael');
-  const [showRuledOut, setShowRuledOut] = useState(false);
+  const [codexRankFilter, setCodexRankFilter] = useState<'ALL' | GoeticRank>('ALL');
+  const [hideStruck, setHideStruck] = useState(false);
 
   const [activeSealSuspectId, setActiveSealSuspectId] = useState<string | null>(null);
   const [activeBanishmentTarget, setActiveBanishmentTarget] = useState<'CONQUEST' | 'WAR' | 'FAMINE' | 'DEATH' | null>(null);
@@ -78,7 +87,6 @@ export function useSessionCore() {
     angle: number;
     wavePhase: number;
   }>({ sonarRings: [], angle: 0, wavePhase: 0 });
-
 
   const isSectorSecured = (sectorId: string) => engineIsSectorSecured(state, sectorId);
   /** Lost for good: the anchor broke free of a failed Sealing Rite. */
@@ -256,26 +264,31 @@ export function useSessionCore() {
   const selectedSubNode = currentContract?.subNodes.find(n => n.id === currentContract.selectedSubNodeId) || null;
   const currentHeat = state.sectorEntropy[state.currentNode] || 0;
 
-  // --- CODEX: suspects ranked by how well they fit this sector's evidence ---
+  // --- CODEX: the player narrows the field; nothing is filtered automatically ---
   const caseEvidence: EvidenceLog[] = currentContract && !isSectorClosed(currentContract.sectorId) ? currentContract.discoveredLogs : [];
-  const suspectFit = (g: typeof allGoetia[0]) => scoreSuspect(g, getUniqueGoetiaSigns(g.id), caseEvidence);
-  const rankedCodexGoetia = allGoetia
-    .filter(g => {
-      if (codexHorsemanFilter !== 'ALL' && g.allegiance !== codexHorsemanFilter) return false;
-      if (deducedSigns.length === 0) return true;
-      const uniqueSigns = getUniqueGoetiaSigns(g.id);
-      return deducedSigns.every(tag => uniqueSigns.includes(tag));
-    })
-    .map(g => ({ g, fit: suspectFit(g) }))
-    .sort((a, b) =>
-      Number(a.fit.contradicted) - Number(b.fit.contradicted) ||
-      b.fit.matched - a.fit.matched ||
-      a.g.manifestId - b.g.manifestId
+  // deducedSigns holds required tags; tags the player has ruled out are stored with a leading '!'
+  const requiredSigns = deducedSigns.filter(t => !t.startsWith('!'));
+  const excludedSigns = deducedSigns.filter(t => t.startsWith('!')).map(t => t.slice(1));
+  /** Cycles a phenomenon filter: neutral -> required -> excluded -> neutral. */
+  const cycleSignFilter = (tag: string) =>
+    setDeducedSigns(prev =>
+      prev.includes(tag) ? [...prev.filter(t => t !== tag), `!${tag}`] : prev.includes(`!${tag}`) ? prev.filter(t => t !== `!${tag}`) : [...prev, tag]
     );
-  const consistentCount = rankedCodexGoetia.filter(r => !r.fit.contradicted).length;
-  const filteredCodexGoetia = rankedCodexGoetia
-    .filter(r => showRuledOut || !r.fit.contradicted)
-    .map(r => r.g);
+  const struckSuspects: string[] = (currentContract && !isSectorClosed(currentContract.sectorId) && currentContract.struckSuspects) || [];
+  const toggleStruckSuspect = (goetiaId: string) => {
+    if (!currentContract) return;
+    updateContract(currentContract.sectorId, c => {
+      const struck = c.struckSuspects || [];
+      return { ...c, struckSuspects: struck.includes(goetiaId) ? struck.filter(id => id !== goetiaId) : [...struck, goetiaId] };
+    });
+  };
+  const filteredCodexGoetia = allGoetia.filter(g => {
+    if (codexHorsemanFilter !== 'ALL' && g.allegiance !== codexHorsemanFilter) return false;
+    if (codexRankFilter !== 'ALL' && g.rank !== codexRankFilter) return false;
+    if (hideStruck && struckSuspects.includes(g.id)) return false;
+    const signs = getUniqueGoetiaSigns(g.id);
+    return requiredSigns.every(tag => signs.includes(tag)) && excludedSigns.every(tag => !signs.includes(tag));
+  });
 
   useEffect(() => {
     // Keep a valid selection, but never auto-pick "the answer" for the player
@@ -283,7 +296,6 @@ export function useSessionCore() {
       setSelectedSuspectId(filteredCodexGoetia[0].id);
     }
   }, [filteredCodexGoetia, selectedSuspectId]);
-
 
   return {
     tutorialStep,
@@ -320,6 +332,11 @@ export function useSessionCore() {
     isPanningRef,
     panStartRef,
     didDragRef,
+    pointersRef,
+    pinchRef,
+    mapWrapRef,
+    mobilePane,
+    setMobilePane,
     contracts,
     setContracts,
     updateContract,
@@ -331,8 +348,10 @@ export function useSessionCore() {
     setCodexHorsemanFilter,
     selectedSuspectId,
     setSelectedSuspectId,
-    showRuledOut,
-    setShowRuledOut,
+    codexRankFilter,
+    hideStruck,
+    setCodexRankFilter,
+    setHideStruck,
     activeSealSuspectId,
     setActiveSealSuspectId,
     activeBanishmentTarget,
@@ -368,9 +387,11 @@ export function useSessionCore() {
     selectedSubNode,
     currentHeat,
     caseEvidence,
-    suspectFit,
-    rankedCodexGoetia,
-    consistentCount,
+    requiredSigns,
+    excludedSigns,
+    cycleSignFilter,
+    struckSuspects,
+    toggleStruckSuspect,
     filteredCodexGoetia
   };
 }
