@@ -25,7 +25,7 @@ function runWithContracts(): GameState {
   return gameReducer(newRun(), { type: 'SET_CONTRACTS', payload: contracts });
 }
 
-const act = (s: GameState, ...actions: GameAction[]) => actions.reduce(gameReducer, s);
+const act = (s: GameState, ...actions: GameAction[]) => actions.reduce((acc, a) => gameReducer(acc, a), s);
 const flag = (flagId: string, value = true): GameAction => ({ type: 'SET_FLAG', payload: { flagId, value } });
 
 /** What a successful Sealing Rite does (mirrors ActiveRituals.onSuccessSeal). */

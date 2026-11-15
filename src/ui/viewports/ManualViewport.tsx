@@ -160,8 +160,8 @@ export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: Fon
           <div style={{ maxWidth: '940px' }}>
             <h3 style={{ color: theme.accentCyan, marginTop: 0 }}>THE KAGE NO SHO [F3] &amp; THE SAFEHOUSE [F4]</h3>
             <p>
-              The <strong>Kage no Sho</strong> — the Book of Shadows — holds a page for every Yokai you can bargain with. Pages start <strong>unwritten</strong>.
-              <strong> Kami shrines</strong> turn up in some sectors: <code>loot</code> one to wake it and its spirit's page writes itself. Only written pages can be bound.
+              The <strong>Kage no Sho</strong> — the Book of Shadows — holds a page for every Yokai you can bargain with. Pages start <strong>unwritten</strong>.{' '}
+              <strong>Kami shrines</strong> turn up in some sectors: <code>loot</code> one to wake it and its spirit's page writes itself. Only written pages can be bound.
               Binding costs Obols, Humanity and sometimes Esoteric Ink (distilled in the book for 10 Obols).
             </p>
             <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
@@ -174,8 +174,8 @@ export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: Fon
             </ul>
             <p style={{ marginTop: '14px' }}>
               The <strong>Safehouse altar</strong> turns raw salvage (Scrap Metal, Cursed Earth, Alchemical Distillate) plus Obols into the planetary catalysts each spirit's seal needs — every dossier in the Codex lists its own.
-              The <strong>hearth</strong> restores 30% Humanity, but resting is time: the world clock ticks and open anchors ripen.
-              <strong> Counter-intelligence</strong> suppresses 35% Heat in a chosen sector for 20 Obols.
+              The <strong>hearth</strong> restores 30% Humanity, but resting is time: the world clock ticks and open anchors ripen.{' '}
+              <strong>Counter-intelligence</strong> suppresses 35% Heat in a chosen sector for 20 Obols.
             </p>
           </div>
         )}

@@ -5,7 +5,7 @@
 import type { MacroSectorDef } from '../content/map';
 import { allGoetia } from '../content/goetia';
 import type { HorsemanAllegiance } from '../content/goetia/types';
-import { type GameState, type NodeId, type EngineNotice, getTotalGlobalEntropy, isSectorFailed, ENTROPY_CEILING, TOTAL_GOETIA } from './state';
+import { type GameState, type EngineNotice, getTotalGlobalEntropy, isSectorFailed, ENTROPY_CEILING, TOTAL_GOETIA } from './state';
 import { generateSectorContract } from './sectorGenerator';
 import { generateSite, getAllSectors, getSectorDef, isProceduralSite, MAX_PROCEDURAL_SITES, type ProceduralSiteDef } from './sites';
 
@@ -58,10 +58,10 @@ export const WORLD_CLOCK_PAUSED_FLAG = 'world_clock_paused';
 // ---------------------------------------------------------------------------
 type FlagState = Pick<GameState, 'flags'> & Partial<Pick<GameState, 'campaign'>>;
 
-export const isSectorSecured = (state: FlagState, sectorId: NodeId) => !!state.flags[`sector_secured_${sectorId}`];
+export const isSectorSecured = (state: FlagState, sectorId: string) => !!state.flags[`sector_secured_${sectorId}`];
 
 /** Resolved either way (secured or lost) — no further operations possible. */
-export const isSectorClosed = (state: FlagState, sectorId: NodeId) => isSectorSecured(state, sectorId) || isSectorFailed(state, sectorId);
+export const isSectorClosed = (state: FlagState, sectorId: string) => isSectorSecured(state, sectorId) || isSectorFailed(state, sectorId);
 
 export function isSectorUnlocked(state: FlagState, sec: MacroSectorDef): boolean {
   if (sec.unlockedByDefault || state.flags[`sector_unlocked_${sec.id}`] || isSectorClosed(state, sec.id)) return true;
@@ -74,17 +74,17 @@ export function getOpenSectors(state: FlagState): MacroSectorDef[] {
   return getAllSectors(state).filter(s => s.id !== 'safehouse' && isSectorUnlocked(state, s) && !isSectorClosed(state, s.id));
 }
 
-export const getRipeness = (state: Pick<GameState, 'sectorRipeness'>, sectorId: NodeId) => state.sectorRipeness?.[sectorId] || 0;
+export const getRipeness = (state: Pick<GameState, 'sectorRipeness'>, sectorId: string) => state.sectorRipeness?.[sectorId] || 0;
 
 /** Sectors next to `sectorId` that currently hold a manifested demon. */
-export function countAdjacentManifestations(state: Pick<GameState, 'manifestations'> & Partial<Pick<GameState, 'campaign'>>, sectorId: NodeId): number {
+export function countAdjacentManifestations(state: Pick<GameState, 'manifestations'> & Partial<Pick<GameState, 'campaign'>>, sectorId: string): number {
   const def = getSectorDef(state, sectorId);
   if (!def) return 0;
   const haunted = new Set(Object.values(state.manifestations || {}));
   return def.connections.filter(c => haunted.has(c)).length;
 }
 
-export function getRipenRate(state: GameState, sectorId: NodeId): number {
+export function getRipenRate(state: GameState, sectorId: string): number {
   return (
     WORLD_TUNING.ripenBase +
     Math.floor(getTotalGlobalEntropy(state) / WORLD_TUNING.ripenEntropyStep) +
@@ -99,7 +99,7 @@ let noticeSeq = 0;
 const notice = (kind: EngineNotice['kind'], text: string): EngineNotice => ({ id: Date.now() * 1000 + (noticeSeq++ % 1000), kind, text });
 
 /** A demon breaks free: it can never be sealed, and the sector it broke through is lost. */
-export function releaseDemon(state: GameState, goetiaId: string, sectorId: NodeId): GameState {
+export function releaseDemon(state: GameState, goetiaId: string, sectorId: string): GameState {
   if (state.sealedGoetia.includes(goetiaId)) return state;
   return {
     ...state,
@@ -114,7 +114,7 @@ export function releaseDemon(state: GameState, goetiaId: string, sectorId: NodeI
  * neighbouring sectors, every open sector's anchor ripens (except `exclude`, the sector
  * the operative is heading into), and anchors that reach 100% manifest on their own.
  */
-export function advanceWorld(state: GameState, ticks: number, exclude?: NodeId): GameState {
+export function advanceWorld(state: GameState, ticks: number, exclude?: string): GameState {
   if (ticks <= 0 || state.gameStage !== 'ACTIVE' || state.flags[WORLD_CLOCK_PAUSED_FLAG]) return state;
   let next: GameState = { ...state, sectorRipeness: { ...state.sectorRipeness }, sectorEntropy: { ...state.sectorEntropy }, notices: [...state.notices] };
 
@@ -137,7 +137,7 @@ export function advanceWorld(state: GameState, ticks: number, exclude?: NodeId):
       const before = getRipeness(next, sec.id);
       const after = Math.min(100, before + getRipenRate(next, sec.id));
       next.sectorRipeness[sec.id] = after;
-      const crossed = WORLD_TUNING.warnAt.filter(w => before < w && after >= w).pop();
+      const crossed = WORLD_TUNING.warnAt.findLast(w => before < w && after >= w);
       if (crossed && after < 100) {
         next.notices.push(notice('WARN', `ANCHOR INSTABILITY at ${sec.label}: ${after}% toward manifestation.`));
       }
@@ -175,10 +175,10 @@ export function getUnhousedGoetia(state: GameState): string[] {
 export const isCampaignExhausted = (state: GameState) =>
   state.sealedGoetia.length + (state.releasedGoetia || []).length >= TOTAL_GOETIA;
 
-const hashId = (id: string) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+const hashId = (id: string) => [...id].reduce((h, ch) => (h * 31 + (ch.codePointAt(0) ?? 0)) >>> 0, 7);
 
 /** Dormant ticks before `sectorId` re-infests, varied per sector and per cycle. */
-export function getReinfestThreshold(state: Pick<GameState, 'campaign'>, sectorId: NodeId): number {
+export function getReinfestThreshold(state: Pick<GameState, 'campaign'>, sectorId: string): number {
   const cycle = state.campaign?.cycles?.[sectorId] || 0;
   return CAMPAIGN_TUNING.reinfestAfter + (hashId(sectorId) + cycle * 5) % (CAMPAIGN_TUNING.reinfestJitter + 1);
 }
@@ -227,7 +227,7 @@ function reinfest(state: GameState, sec: MacroSectorDef): GameState {
  * sites break open on a schedule. At most one new case arrives per tick, and none while the
  * map already has `maxOpenCases` open sectors or every spirit already has a home.
  */
-export function stepCampaign(state: GameState, exclude?: NodeId): GameState {
+export function stepCampaign(state: GameState, exclude?: string): GameState {
   const sectors = getAllSectors(state).filter(s => s.id !== 'safehouse');
   const dormancy = { ...state.campaign.dormancy };
   sectors.forEach(sec => {
@@ -284,7 +284,7 @@ export function applyCampaignMilestones(prev: GameState, next: GameState): GameS
  * `sectorId`. Never another King or Prince, never a released spirit, and never the anchor of
  * another sector still in play (that sector would be left with nothing to seal).
  */
-export function pickCascadeVassals(state: GameState, sealedId: string, sectorId: NodeId): string[] {
+export function pickCascadeVassals(state: GameState, sealedId: string, sectorId: string): string[] {
   const lord = allGoetia.find(g => g.id === sealedId);
   if (!lord || !['King', 'Prince', 'Duke'].includes(lord.rank)) return [];
   const reserved = new Set(

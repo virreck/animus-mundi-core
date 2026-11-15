@@ -21,7 +21,7 @@ export function SafehouseViewport() {
 
   return (
     <main className="responsive-split" style={{ zoom: FONT_ZOOM_MAP[fontScale] }}>
-      <section className="pane-left" style={{ width: '60%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
+      <section className="pane-left pane-w60" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
           <div>
             <h2 style={{ margin: 0, color: theme.textBright, fontSize: '0.95rem' }}>&gt; SAFEHOUSE ALTAR // CATALYST SYNTHESIS</h2>
@@ -81,7 +81,7 @@ export function SafehouseViewport() {
         </div>
       </section>
 
-      <section className="pane-right" style={{ width: '40%', gap: '10px' }}>
+      <section className="pane-right pane-w40" style={{ gap: '10px' }}>
         <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
           <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.88rem' }}>&gt; SAFEHOUSE HEARTH // TETHER RECOVERY</h3>
           <p style={{ fontSize: '0.74rem', color: '#a8ccaf', lineHeight: '1.5' }}>

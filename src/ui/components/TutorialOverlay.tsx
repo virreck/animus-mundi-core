@@ -58,8 +58,8 @@ export function TutorialOverlay() {
             ▌VESPER // ENCRYPTED // {progress}
           </div>
           <h2 style={{ color: theme.textBright, letterSpacing: '4px', fontSize: '1.15rem', margin: '0 0 18px 0' }}>{fill(step.title)}</h2>
-          {step.lines.map((line, i) => (
-            <p key={i} style={{ color: '#d6f5dc', fontSize: '0.92rem', lineHeight: '1.75', margin: '0 0 14px 0' }}>{fill(line)}</p>
+          {step.lines.map(line => (
+            <p key={line} style={{ color: '#d6f5dc', fontSize: '0.92rem', lineHeight: '1.75', margin: '0 0 14px 0' }}>{fill(line)}</p>
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '26px', gap: '10px', flexWrap: 'wrap' }}>
             {!isLast ? skipControls : <span />}
@@ -102,8 +102,8 @@ export function TutorialOverlay() {
         <button onClick={() => setMinimised(true)} className="macro-chip" style={{ padding: '0 6px' }}>_</button>
       </div>
       <div style={{ color: theme.textBright, fontWeight: 'bold', letterSpacing: '2px', marginBottom: '6px' }}>{fill(step.title)}</div>
-      {step.lines.map((line, i) => (
-        <p key={i} style={{ color: '#d6f5dc', lineHeight: '1.55', margin: '0 0 7px 0' }}>{fill(line)}</p>
+      {step.lines.map(line => (
+        <p key={line} style={{ color: '#d6f5dc', lineHeight: '1.55', margin: '0 0 7px 0' }}>{fill(line)}</p>
       ))}
       {step.objective && (
         <div style={{ marginTop: '8px', padding: '6px 8px', border: `1px dashed ${complete ? theme.textBright : theme.accentAmber}`, color: complete ? theme.textBright : theme.accentAmber }}>

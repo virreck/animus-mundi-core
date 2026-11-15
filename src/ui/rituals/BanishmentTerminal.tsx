@@ -100,9 +100,13 @@ export const BanishmentTerminal = ({ horseman, state, dispatch, onClose, addToas
               {lieutenants.map(g => {
                 const isSealed = state.sealedGoetia.includes(g.id);
                 const released = (state.releasedGoetia || []).includes(g.id);
+                let colour = overrideTheme.text;
+                let tag = '[ACTIVE]';
+                if (isSealed) { colour = '#62f080'; tag = '[SEALED]'; }
+                else if (released) { colour = '#ff2a55'; tag = '[MANIFESTED]'; }
                 return (
-                  <div key={g.id} style={{ color: isSealed ? '#62f080' : released ? '#ff2a55' : overrideTheme.text, textDecoration: released ? 'line-through' : 'none' }}>
-                    #{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()} {isSealed ? '[SEALED]' : released ? '[MANIFESTED]' : '[ACTIVE]'}
+                  <div key={g.id} style={{ color: colour, textDecoration: released ? 'line-through' : 'none' }}>
+                    #{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()} {tag}
                   </div>
                 );
               })}

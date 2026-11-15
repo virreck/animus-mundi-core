@@ -38,7 +38,7 @@ interface SigilTracingBoardProps {
   hitRadius?: number;
 }
 
-export function SigilTracingBoard({ matrix, path, onNodeHit, enabled, palette, hitRadius = 17 }: SigilTracingBoardProps) {
+export function SigilTracingBoard({ matrix, path, onNodeHit, enabled, palette, hitRadius = 17 }: Readonly<SigilTracingBoardProps>) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
 
@@ -84,12 +84,15 @@ export function SigilTracingBoard({ matrix, path, onNodeHit, enabled, palette, h
   };
 
   const toPoints = (ids: number[]) => ids.map(id => { const n = nodeById(id); return `${n.x},${n.y}`; }).join(' ');
-  const last = path.length > 0 ? nodeById(path[path.length - 1]) : null;
+  const lastId = path.at(-1);
+  const last = lastId === undefined ? null : nodeById(lastId);
 
   return (
     <svg
       ref={svgRef}
       viewBox="0 0 100 100"
+      role="img"
+      aria-label="Sigil tracing board: draw the star in order through every node"
       style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 10, cursor: 'crosshair', touchAction: 'none' }}
       onPointerDown={handleDown}
       onPointerMove={handleMove}

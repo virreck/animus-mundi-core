@@ -1,6 +1,6 @@
 // src/ui/rituals/SealingTerminal.tsx
 // Sealing Rite overlay: True Name entry and sigil tracing.
-import { useState, useEffect, type Dispatch as ReactDispatch, type FormEvent as ReactFormEvent } from 'react';
+import { useState, useEffect, useRef, type Dispatch as ReactDispatch, type FormEvent as ReactFormEvent } from 'react';
 import { allGoetia } from '../../content/goetia';
 import type { GameAction } from '../../engine/reducer';
 import { generateSealMatrix } from '../../engine/sealMatrix';
@@ -49,6 +49,12 @@ export const SealingTerminal = ({
   const [typedName, setTypedName] = useState('');
   const [showSealed, setShowSealed] = useState(false);
   const [cascadedNames, setCascadedNames] = useState<string[]>([]);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Put the cursor in the true-name field when the rite opens
+  useEffect(() => {
+    if (phase === 'AUTH') nameInputRef.current?.focus();
+  }, [phase]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval>;
@@ -164,7 +170,7 @@ export const SealingTerminal = ({
               HYPOTHESIS LOCKED: <strong style={{ color: theme.textBright }}>{suspect.name.toUpperCase()}</strong> ({suspect.rank} of {suspect.allegiance}).<br/>
               <span style={{ color: theme.accentAmber }}>WARNING: MISIDENTIFICATION BURNS CATALYSTS · +15% GLOBAL ENTROPY</span>
             </p>
-            <input autoFocus type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="TRUE NAME" style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }} />
+            <input ref={nameInputRef} aria-label="True name of the spirit" type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="TRUE NAME" style={{ padding: '10px', width: '100%', backgroundColor: 'black', color: theme.textBright, border: `1px solid ${theme.borderTerminal}`, fontFamily: theme.fontMono, outline: 'none', textTransform: 'uppercase' }} />
             <button type="submit" style={{ marginTop: '12px', padding: '10px', width: '100%', backgroundColor: theme.textBright, color: 'black', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>&gt; BURN CATALYSTS &amp; START SEALING RITE</button>
             <button type="button" onClick={onClose} style={{ marginTop: '8px', padding: '10px', width: '100%', backgroundColor: 'transparent', color: theme.accentRed, border: `1px solid ${theme.accentRed}`, cursor: 'pointer' }}>&gt; ABORT</button>
           </form>

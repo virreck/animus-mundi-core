@@ -3,7 +3,7 @@
 // renewing pacts with Esoteric Ink, and the consequences of breaking them.
 import { allYokai } from '../content/yokai';
 import { YOKAI_DAEMON_SPECS } from '../content/yokaiSpecs';
-import type { GameState, YokaiId, EngineNotice } from './state';
+import type { GameState, EngineNotice } from './state';
 
 // ---------------------------------------------------------------------------
 // TUNING
@@ -30,7 +30,7 @@ export const KAGE_TUNING = {
 } as const;
 
 /** Each spirit's favoured offering, used for renewal rites (and tribute, for the hungry ones). */
-export const YOKAI_OFFERINGS: Record<YokaiId, { itemId: string; amount: number; label: string; hungry: boolean }> = {
+export const YOKAI_OFFERINGS: Record<string, { itemId: string; amount: number; label: string; hungry: boolean }> = {
   yokai_kitsune: { itemId: 'alchemical_distillate', amount: 1, label: 'a saucer of distillate, as if it were sake', hungry: false },
   yokai_tengu: { itemId: 'scrap_metal', amount: 1, label: 'a bright scrap of metal for its nest', hungry: false },
   yokai_baku: { itemId: 'alchemical_distillate', amount: 1, label: 'one dream, bottled', hungry: true },
@@ -42,7 +42,7 @@ export const YOKAI_OFFERINGS: Record<YokaiId, { itemId: string; amount: number; 
 };
 
 /** What Bond III softens for each daemon (shown on its page). */
-export const BOND_THREE_EASE: Record<YokaiId, string> = {
+export const BOND_THREE_EASE: Record<string, string> = {
   yokai_kitsune: 'Masking drains 1% Humanity instead of 2%.',
   yokai_tengu: 'The wind\u2019s toll falls to 2 Obols per trip.',
   yokai_baku: 'Resting costs 5 Obols instead of 10.',
@@ -58,38 +58,39 @@ export const BOND_THREE_EASE: Record<YokaiId, string> = {
 // ---------------------------------------------------------------------------
 type KageState = Pick<GameState, 'kage' | 'flags' | 'tetheredYokai'>;
 
-export const getYokaiDef = (id: YokaiId) => allYokai.find(y => y.id === id);
+export const getYokaiDef = (id: string) => allYokai.find(y => y.id === id);
 
 /** A page is written once its shrine has been woken (or the daemon is already bound from an older save). */
-export function isPageWritten(state: KageState, id: YokaiId): boolean {
+export function isPageWritten(state: KageState, id: string): boolean {
   const flag = getYokaiDef(id)?.unlockFlag;
   return state.tetheredYokai.includes(id) || (!!flag && !!state.flags[flag]);
 }
 
 export const countWrittenPages = (state: KageState) => allYokai.filter(y => isPageWritten(state, y.id)).length;
 
-export const getBondPoints = (state: Pick<GameState, 'kage'>, id: YokaiId) => state.kage?.bond?.[id] || 0;
+export const getBondPoints = (state: Pick<GameState, 'kage'>, id: string) => state.kage?.bond?.[id] || 0;
 
 /** 1, 2 or 3. */
-export function getBondLevel(state: Pick<GameState, 'kage'>, id: YokaiId): 1 | 2 | 3 {
+export function getBondLevel(state: Pick<GameState, 'kage'>, id: string): 1 | 2 | 3 {
   const points = getBondPoints(state, id);
   const [two, three] = KAGE_TUNING.bondThresholds;
-  return points >= three ? 3 : points >= two ? 2 : 1;
+  if (points >= three) return 3;
+  return points >= two ? 2 : 1;
 }
 
 /** Bond III softens the daemon's passive drawback. */
-export const isBondThree = (state: Pick<GameState, 'kage'>, id: YokaiId) => getBondLevel(state, id) === 3;
+export const isBondThree = (state: Pick<GameState, 'kage'>, id: string) => getBondLevel(state, id) === 3;
 
 /** Base charges, +1 at Bond II, +1 more at Bond III. */
-export const getMaxCharges = (state: Pick<GameState, 'kage'>, id: YokaiId) =>
+export const getMaxCharges = (state: Pick<GameState, 'kage'>, id: string) =>
   (YOKAI_DAEMON_SPECS[id]?.maxCharges || 1) + (getBondLevel(state, id) - 1);
 
 /** Sectors that must still close before an offended spirit will deal with you again. */
-export const getOffense = (state: Pick<GameState, 'kage'>, id: YokaiId) => state.kage?.offended?.[id] || 0;
+export const getOffense = (state: Pick<GameState, 'kage'>, id: string) => state.kage?.offended?.[id] || 0;
 
 export type BindBlock = 'UNWRITTEN' | 'OFFENDED' | 'BOUND' | 'SATURATED' | null;
 
-export function whyCannotBind(state: KageState, id: YokaiId): BindBlock {
+export function whyCannotBind(state: KageState, id: string): BindBlock {
   if (state.tetheredYokai.includes(id)) return 'BOUND';
   if (!isPageWritten(state, id)) return 'UNWRITTEN';
   if (getOffense(state, id) > 0) return 'OFFENDED';
@@ -97,7 +98,7 @@ export function whyCannotBind(state: KageState, id: YokaiId): BindBlock {
   return null;
 }
 
-export function canRenew(state: GameState, id: YokaiId): boolean {
+export function canRenew(state: GameState, id: string): boolean {
   if (!state.tetheredYokai.includes(id)) return false;
   const offering = YOKAI_OFFERINGS[id];
   const charges = state.yokaiCharges[id] ?? getMaxCharges(state, id);
@@ -113,9 +114,9 @@ export function canRenew(state: GameState, id: YokaiId): boolean {
 // ---------------------------------------------------------------------------
 let noticeSeq = 0;
 const notice = (text: string): EngineNotice => ({ id: Date.now() * 1000 + 500 + (noticeSeq++ % 500), kind: 'KAGE', text });
-const nameOf = (id: YokaiId) => getYokaiDef(id)?.nameEn.toUpperCase() || id;
+const nameOf = (id: string) => getYokaiDef(id)?.nameEn.toUpperCase() || id;
 
-export function addBond(state: GameState, id: YokaiId, amount: number): GameState {
+export function addBond(state: GameState, id: string, amount: number): GameState {
   const before = getBondLevel(state, id);
   const bond = { ...state.kage.bond, [id]: Math.max(0, getBondPoints(state, id) + amount) };
   const next = { ...state, kage: { ...state.kage, bond } };
@@ -127,7 +128,7 @@ export function addBond(state: GameState, id: YokaiId, amount: number): GameStat
 }
 
 /** Removes a daemon from the tether and marks it offended for `sectors` closed sectors. */
-export function departOffended(state: GameState, id: YokaiId, sectors: number, bondLoss: number): GameState {
+export function departOffended(state: GameState, id: string, sectors: number, bondLoss: number): GameState {
   const tether = state.tetheredYokai.filter(y => y !== id);
   const yokaiCharges = { ...state.yokaiCharges };
   delete yokaiCharges[id];
@@ -142,7 +143,7 @@ export function departOffended(state: GameState, id: YokaiId, sectors: number, b
 }
 
 /** Renewal rite: ink + offering restores every charge and deepens the bond. */
-export function renewPact(state: GameState, id: YokaiId): GameState {
+export function renewPact(state: GameState, id: string): GameState {
   if (!canRenew(state, id)) return state;
   const offering = YOKAI_OFFERINGS[id];
   const inventory = { ...state.inventory };
@@ -182,7 +183,7 @@ export function applySectorClosures(prev: GameState, next: GameState): GameState
     });
     s = { ...s, kage: { ...s.kage, offended } };
 
-    for (const id of [...s.tetheredYokai]) {
+    for (const id of s.tetheredYokai) {
       if (secured) s = addBond(s, id, KAGE_TUNING.bondPerSecuredSector);
       const offering = YOKAI_OFFERINGS[id];
       if (!offering?.hungry) continue;

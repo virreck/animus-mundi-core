@@ -18,7 +18,7 @@ test('sectors have 5-8 rooms: entry first, anchor last', () => {
     const n = c.subNodes;
     assert.ok(n.length >= 5 && n.length <= 8, `${n.length} rooms`);
     assert.equal(n[0].index, 1);
-    assert.equal(n[n.length - 1].nodeType, 'ANCHOR');
+    assert.equal(n.at(-1)!.nodeType, 'ANCHOR');
     assert.equal(n.filter(r => r.nodeType === 'ANCHOR').length, 1);
   }
 });
@@ -48,7 +48,7 @@ test('corridors are two-way, every room is reachable, and the anchor is never ne
     const queue = [c.subNodes[0].id];
     while (queue.length) for (const id of byId.get(queue.shift()!)!.connections) if (!seen.has(id)) { seen.add(id); queue.push(id); }
     assert.equal(seen.size, c.subNodes.length, 'unreachable room');
-    assert.ok(!c.subNodes[0].connections.includes(c.subNodes[c.subNodes.length - 1].id));
+    assert.ok(!c.subNodes[0].connections.includes(c.subNodes.at(-1)!.id));
   }
 });
 

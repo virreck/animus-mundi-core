@@ -9,7 +9,7 @@ export const ThaumaturgicAudio = {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) this.ctx = new AudioCtx();
     }
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx?.state === 'suspended') this.ctx.resume().catch(() => { /* resumes on the next user gesture */ });
   },
   playTone(freq: number, type: OscillatorType = 'sine', duration = 0.08, vol = 0.06, slideTo: number | null = null) {
     if (!this.enabled) return;

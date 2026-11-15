@@ -3,7 +3,7 @@
 // where the infestation starts. As the campaign runs, new sites break open and get
 // linked into the map until every spirit has had somewhere to anchor.
 import { MACRO_SECTORS, type MacroSectorDef } from '../content/map';
-import type { GameState, NodeId } from './state';
+import type { GameState } from './state';
 
 /** A generated site: a normal map node plus the room names its case files use. */
 export interface ProceduralSiteDef extends MacroSectorDef {
@@ -18,9 +18,9 @@ export interface CampaignState {
   /** Sites that have broken open, in the order they appeared. */
   sites: ProceduralSiteDef[];
   /** Ticks each secured sector has lain dormant (cleared when it re-infests). */
-  dormancy: Record<NodeId, number>;
+  dormancy: Record<string, number>;
   /** How many times each sector has re-infested. */
-  cycles: Record<NodeId, number>;
+  cycles: Record<string, number>;
   /** Earliest tick the next new site may break open. */
   nextSiteAt: number;
   /** Sectors secured over the whole run (re-infested ones count again). */
@@ -86,7 +86,10 @@ export function getAllSectors(state: SiteState): MacroSectorDef[] {
   const hit = mergedCache.get(sites);
   if (hit) return hit;
   const backLinks: Record<string, string[]> = {};
-  sites.forEach(s => s.connections.forEach(c => (backLinks[c] ||= []).push(s.id)));
+  sites.forEach(s => s.connections.forEach(c => {
+    backLinks[c] ??= [];
+    backLinks[c].push(s.id);
+  }));
   const merged = [...MACRO_SECTORS, ...sites].map(s => {
     const extra = (backLinks[s.id] || []).filter(id => !s.connections.includes(id));
     return extra.length ? { ...s, connections: [...s.connections, ...extra] } : s;
@@ -95,7 +98,7 @@ export function getAllSectors(state: SiteState): MacroSectorDef[] {
   return merged;
 }
 
-export const getSectorDef = (state: SiteState, sectorId: NodeId): MacroSectorDef | undefined =>
+export const getSectorDef = (state: SiteState, sectorId: string): MacroSectorDef | undefined =>
   getAllSectors(state).find(s => s.id === sectorId);
 
 export const isProceduralSite = (sec: MacroSectorDef | undefined): sec is ProceduralSiteDef =>
