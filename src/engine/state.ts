@@ -1,5 +1,6 @@
 // src/engine/state.ts
 import type { SectorContract } from './sectorGenerator';
+import { initialCampaign, type CampaignState } from './sites';
 
 export type NodeId = string;
 export type GoetiaId = string;
@@ -65,16 +66,22 @@ export interface GameState {
 
   /** KAGE NO SHO: bond points per Yokai, and how many more sectors an offended spirit stays away. */
   kage: { bond: Record<YokaiId, number>; offended: Record<YokaiId, number> };
+
+  /** THE LONG CAMPAIGN: world clock, generated sites, re-infestation timers. */
+  campaign: CampaignState;
 }
 
 export interface EngineNotice {
   id: number;
-  kind: 'WARN' | 'MANIFEST' | 'SPREAD' | 'KAGE';
+  kind: 'WARN' | 'MANIFEST' | 'SPREAD' | 'KAGE' | 'CAMPAIGN';
   text: string;
 }
 
 /** Humanity at or below this ends the run. */
 export const HUMANITY_FLOOR = 0;
+/** The full Lesser Key. */
+export const TOTAL_GOETIA = 72;
+
 /** Combined global entropy at or above this ends the run. */
 export const ENTROPY_CEILING = 100;
 
@@ -124,7 +131,8 @@ export const initialGameState: GameState = {
   sectorRipeness: {},
   manifestations: {},
   notices: [],
-  kage: { bond: {}, offended: {} }
+  kage: { bond: {}, offended: {} },
+  campaign: initialCampaign()
 };
 
 /**
@@ -160,6 +168,7 @@ export function normalizeLoadedState(
     sectorRipeness: raw.sectorRipeness || {},
     manifestations: raw.manifestations || {},
     notices: raw.notices || [],
-    kage: { bond: raw.kage?.bond || {}, offended: raw.kage?.offended || {} }
+    kage: { bond: raw.kage?.bond || {}, offended: raw.kage?.offended || {} },
+    campaign: { ...initialCampaign(), ...(raw.campaign || {}) }
   };
 }

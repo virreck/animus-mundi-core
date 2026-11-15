@@ -21,7 +21,8 @@ import {
 import {
   isSectorSecured as engineIsSectorSecured,
   isSectorClosed as engineIsSectorClosed,
-  isSectorUnlocked as engineIsSectorUnlocked
+  isSectorUnlocked as engineIsSectorUnlocked,
+  getAllSectors
 } from '../../engine/world';
 import { type ControlMode, type FontScale, type TerminalEntry, type ViewportMode, escapeHtml } from '../theme';
 
@@ -95,9 +96,11 @@ export function useSessionCore() {
   const isSectorClosed = (sectorId: string) => engineIsSectorClosed(state, sectorId);
   const isReleased = (goetiaId: string) => (state.releasedGoetia || []).includes(goetiaId);
   const isSectorUnlocked = (sec: MacroSectorDef) => engineIsSectorUnlocked(state, sec);
-  const lostSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorLost(s.id)).length;
+  /** The sixteen starting sectors plus every site the campaign has opened since. */
+  const allSectors = getAllSectors(state);
+  const lostSectorsCount = allSectors.filter(s => s.id !== 'safehouse' && isSectorLost(s.id)).length;
 
-  const securedSectorsCount = MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorSecured(s.id)).length;
+  const securedSectorsCount = allSectors.filter(s => s.id !== 'safehouse' && isSectorSecured(s.id)).length;
 
   const triggerHudFlash = (kind: 'DAMAGE' | 'DECODE') => {
     setHudFlash(kind);
@@ -173,6 +176,9 @@ export function useSessionCore() {
       if (n.kind === 'MANIFEST') {
         appendLog(`<div style="border-left:3px solid #ff2a55;padding-left:10px;margin:4px 0;color:#ff2a55;"><strong>[☠ ${escapeHtml(n.text)}]</strong></div>`, 'error');
         addToast(n.text, 'ALERT');
+      } else if (n.kind === 'CAMPAIGN') {
+        appendLog(`<div style="border-left:3px solid #00f3ff;padding-left:10px;margin:4px 0;color:#00f3ff;"><strong>[◈ ${escapeHtml(n.text)}]</strong></div>`, 'info');
+        addToast(n.text, 'INTEL');
       } else {
         appendLog(`[⚠ ${escapeHtml(n.text)}]`, 'warn');
       }
@@ -373,6 +379,7 @@ export function useSessionCore() {
     isSectorClosed,
     isReleased,
     isSectorUnlocked,
+    allSectors,
     lostSectorsCount,
     securedSectorsCount,
     triggerHudFlash,

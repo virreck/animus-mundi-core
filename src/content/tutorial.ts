@@ -234,7 +234,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: 'map',
     title: 'THE MAP',
     lines: [
-      'Switch the grid to the REGIONAL MAP. Sixteen sectors.',
+      'Switch the grid to the REGIONAL MAP. Sixteen sectors to begin with. They will not be the last.',
       'Every trip you make and every night you rest, the anchors you are not working ripen — the rings show how close they are. At 100% they tear through on their own, and whatever gets loose bleeds into its neighbours.'
     ],
     objective: 'Open the Regional Map.',

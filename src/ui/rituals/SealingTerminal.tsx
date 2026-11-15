@@ -246,7 +246,7 @@ export const SealingTerminal = ({
                   [SEALED]
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#a8ccaf', marginTop: '12px' }}>
-                  +5% Banishment Probability toward <strong>{suspect.allegiance}</strong> | Sector Permanently Secured!
+                  +5% Banishment Probability toward <strong>{suspect.allegiance}</strong> | Sector Secured!
                 </p>
                 {cascadedNames.length > 0 && (
                   <div style={{ marginTop: '8px', padding: '10px', backgroundColor: 'rgba(255, 184, 0, 0.12)', border: `1px solid ${theme.accentAmber}`, color: theme.accentAmber, fontSize: '0.75rem', lineHeight: '1.45' }}>
