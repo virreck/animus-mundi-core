@@ -134,6 +134,12 @@ export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: Fon
             <p>
               <strong style={{ color: theme.accentRed }}>Manifested demons don't stay put.</strong> Each one bleeds Heat into neighbouring sectors, adds a trickle of Global Entropy, and makes neighbouring anchors ripen faster. Every manifested lieutenant also costs its Horseman's Grand Rite 5% odds and 3 seconds.
             </p>
+            <p>
+              <strong style={{ color: '#00f3ff' }}>The long campaign.</strong> Sixteen sectors cannot hold seventy-two spirits, so the map keeps moving. A secured sector lies dormant for a while, then <strong>re-infests</strong>: a new anchor takes root with a fresh layout and a fresh case file. As the campaign runs, <strong>new sites break open</strong> on the Regional Map (marked with a dashed ring) and link into the sectors around them. New cases only arrive while fewer than five sectors are open, and stop for good once every spirit has been sealed or has broken free. Lost sectors never come back.
+            </p>
+            <p>
+              <strong style={{ color: theme.accentAmber }}>Two endings.</strong> Banishing all four Horsemen ends the run whenever you choose to do it. Sealing all 72 spirits <em>first</em> (the full Lesser Key, with nothing released) is the perfect ending.
+            </p>
           </div>
         )}
 
@@ -184,7 +190,7 @@ export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: Fon
               <li><strong>Odds:</strong> 5% base, <strong>+5%</strong> for every sealed lieutenant of that court, <strong>−5%</strong> for every manifested one. Never below 5% or above 95%.</li>
               <li><strong>The rite:</strong> trace three binding matrices in a row against one timer (60 seconds; Kamaitachi adds 15; every manifested lieutenant of that court takes 3).</li>
               <li><strong>Resolution:</strong> complete all three and the odds are rolled. Success banishes the Horseman. Failure — or running out of time — spikes Global Entropy by 25%. You may try again.</li>
-              <li><strong>Victory:</strong> banish all four Horsemen to close the operation. Your debrief scores sectors lost, spirits left loose and final entropy.</li>
+              <li><strong>Victory:</strong> banish all four Horsemen to close the operation. Your debrief scores sectors lost, spirits left loose and final entropy. Seal all 72 before the last banishment for the perfect ending.</li>
             </ul>
             <p style={{ marginTop: '14px', color: theme.accentAmber }}>
               The Rite is not available during the guided training case.

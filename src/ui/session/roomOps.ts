@@ -33,7 +33,7 @@ export function createRoomOps(s: SessionCore & SectorRules) {
     if (!currentContract) return;
     if (blockIfSectorLost()) return;
     if (isSectorSecured(currentContract.sectorId)) {
-      appendLog(`[✓] Sector is permanently SECURED. Switch to REGIONAL MAP to deploy elsewhere.`, 'success');
+      appendLog(`[✓] Sector SECURED. It will lie dormant for a while. Switch to REGIONAL MAP to deploy elsewhere.`, 'success');
       return;
     }
     if (currentHeat >= 100) {

@@ -10,7 +10,7 @@ import {
 } from './state';
 import type { ContractCost } from '../content/yokai/types';
 import type { SectorContract } from './sectorGenerator';
-import { advanceWorld, releaseDemon, TIME_UNITS_PER_TICK } from './world';
+import { advanceWorld, applyCampaignMilestones, releaseDemon, TIME_UNITS_PER_TICK } from './world';
 import { isTraining } from './tutorial';
 import {
   addBond, applySectorClosures, departOffended, getMaxCharges, isBondThree, renewPact, whyCannotBind, KAGE_TUNING
@@ -372,7 +372,8 @@ function baseReducer(state: GameState, action: GameAction): GameState {
 /** Main reducer: applies the action, then checks whether the run has ended. */
 export function gameReducer(state: GameState, action: GameAction): GameState {
   // Sector closures feed the KAGE NO SHO (bonds, tributes, offended spirits cooling off)
-  const next = applySectorClosures(state, baseReducer(state, action));
+  // ...and the long campaign (cases closed, the full Lesser Key)
+  const next = applyCampaignMilestones(state, applySectorClosures(state, baseReducer(state, action)));
   if (
     next.gameStage === 'ACTIVE' &&
     !isTraining(next) && // the guided case never ends the run (its game-over screen would wipe the real save)

@@ -502,7 +502,9 @@ export function generateSectorContract(
   sealedGoetia: string[],
   usedGoetiaIds: string[] = [],
   /** Rebuild a sector around an existing target (used to upgrade untouched contracts from older saves). */
-  forcedTargetId?: string
+  forcedTargetId?: string,
+  /** Room names for a generated site: entry, four middle rooms, anchor, two spares. */
+  roomNames?: string[]
 ): SectorContract {
   const available = allGoetia.filter(g => !sealedGoetia.includes(g.id) && !usedGoetiaIds.includes(g.id));
   const fallbackPool = allGoetia.filter(g => !sealedGoetia.includes(g.id));
@@ -567,10 +569,10 @@ export function generateSectorContract(
   });
 
   // --- NAMES ----------------------------------------------------------------
-  const baseNames = ROOM_NAMES_BY_SECTOR[sectorId] || GENERIC_ROOM_NAMES.slice(0, 6);
+  const baseNames = (roomNames && roomNames.slice(0, 6)) || ROOM_NAMES_BY_SECTOR[sectorId] || GENERIC_ROOM_NAMES.slice(0, 6);
   const entryName = baseNames[0];
   const anchorName = baseNames[baseNames.length - 1];
-  const middleNames = shuffle([...baseNames.slice(1, -1), ...(EXTRA_ROOM_NAMES[sectorId] || GENERIC_ROOM_NAMES.slice(6, 8))]);
+  const middleNames = shuffle([...baseNames.slice(1, -1), ...((roomNames && roomNames.slice(6, 8)) || EXTRA_ROOM_NAMES[sectorId] || GENERIC_ROOM_NAMES.slice(6, 8))]);
 
   // --- CLUES ----------------------------------------------------------------
   const requiredTags = getUniqueGoetiaSigns(target.id);

@@ -1,6 +1,5 @@
 // src/ui/viewports/SafehouseViewport.tsx
 // [F4] SAFEHOUSE: altar crafting, rest and heat jamming.
-import { MACRO_SECTORS } from '../../content/map';
 import { ALTAR_RECIPES } from '../../engine/sectorGenerator';
 import { ThaumaturgicAudio } from '../audio';
 import { isBondThree } from '../../engine/kage';
@@ -14,6 +13,7 @@ export function SafehouseViewport() {
     fontScale,
     isSectorClosed,
     isSectorUnlocked,
+    allSectors,
     addMicroEntropy,
     maxHumanity,
     addToast
@@ -107,7 +107,7 @@ export function SafehouseViewport() {
         <div style={{ flex: 1, backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.88rem' }}>&gt; INQUISITION COUNTER-INTELLIGENCE</h3>
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {MACRO_SECTORS.filter(s => s.id !== 'safehouse' && isSectorUnlocked(s) && !isSectorClosed(s.id)).map(sec => {
+            {allSectors.filter(s => s.id !== 'safehouse' && isSectorUnlocked(s) && !isSectorClosed(s.id)).map(sec => {
               const heat = state.sectorEntropy[sec.id] || 0;
               return (
                 <div key={sec.id} style={{ padding: '8px', backgroundColor: '#030504', border: `1px solid ${heat >= 100 ? theme.accentRed : theme.borderTerminal}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

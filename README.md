@@ -67,8 +67,9 @@ Switch instantaneously across seven specialized OS screens via function keys or 
 * **Global Entropy (`0.00%` Precision):** Tracks the irreversible fraying of mundane reality. Ticks up by $+0.01\%$ to $+0.05\%$ during travel, breaches, and safehouse rest, and spikes violently if you misidentify a demon or fracture a ritual.
 * **Ripening Anchors:** Every trip and every rest is time the other open sectors spend ripening (faster at high entropy, faster still next to a manifested demon). At 100% an anchor manifests on its own and its sector is lost — the Regional Map's rings show how close each one is.
 * **Manifested Demons Spread:** Loose demons bleed Heat into neighbouring sectors, trickle Global Entropy, and cost their Horseman's Grand Rite 5% odds and 3 seconds each.
+* **The Long Campaign:** Sealing all 72 spirits is a campaign played over many sessions. Secured sectors lie dormant, then **re-infest** with a new anchor and a fresh layout. **New procedural sites** (plague pits, tube sidings, gasholders, music halls and more) break open on the Regional Map and link into the sectors around them. New cases only arrive while fewer than five sectors are open, and stop once every spirit is sealed or loose. Lost sectors stay lost.
 * **Game Over:** The run ends if Humanity hits `0%` (*Tether Severed*) or Global Entropy reaches `100%` (*Reality Unravelled*).
-* **Victory:** Banish all four Horsemen to close the operation. The debrief scores your run — sectors lost, spirits left manifested, and final entropy decide whether you retire as an *Archon of the Brass Vessel* or a *Pyrrhic Survivor*.
+* **Victory:** Banish all four Horsemen to close the operation. The debrief scores your run — sectors lost, spirits left manifested, and final entropy decide whether you retire as an *Archon of the Brass Vessel* or a *Pyrrhic Survivor*. Seal all 72 before the last banishment for the perfect ending: *Keeper of the Lesser Key*.
 
 ---
 

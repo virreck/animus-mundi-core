@@ -1,8 +1,8 @@
 // src/ui/session/useMapCanvas.ts
 // Map canvas rendering and pointer interaction.
 import { useEffect, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { MACRO_SECTORS } from '../../content/map';
 import { getRipeness } from '../../engine/world';
+import { isProceduralSite } from '../../engine/sites';
 import { isTraining } from '../../engine/tutorial';
 import { SECTOR_QUIRKS, getSectorQuirk } from '../../engine/sectorGenerator';
 import { ThaumaturgicAudio } from '../audio';
@@ -38,6 +38,7 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
     isSectorLost,
     isSectorClosed,
     isSectorUnlocked,
+    allSectors,
     addMicroEntropy,
     addToast,
     appendLog,
@@ -219,10 +220,10 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
               }
             });
           } else {
-            MACRO_SECTORS.forEach(node => {
+            allSectors.forEach(node => {
               const unlockedA = isSectorUnlocked(node);
               node.connections.forEach(tid => {
-                const target = MACRO_SECTORS.find(n => n.id === tid);
+                const target = allSectors.find(n => n.id === tid);
                 if (!target) return;
                 const unlockedB = isSectorUnlocked(target);
                 ctx.beginPath();
@@ -234,7 +235,7 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
               });
             });
 
-            MACRO_SECTORS.forEach(node => {
+            allSectors.forEach(node => {
               const nx = node.x * w;
               const ny = node.y * h;
               const isCurrent = node.id === state.currentNode;
@@ -257,6 +258,17 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
               ctx.lineWidth = isCurrent ? 2.5 : 1.8;
               ctx.stroke();
 
+              // Sites the campaign opened later get a dashed halo so they read as new ground
+              if (isProceduralSite(node)) {
+                ctx.beginPath();
+                ctx.setLineDash([3, 3]);
+                ctx.arc(nx, ny, (isCurrent ? 13 : 9) + 8, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(0, 243, 255, 0.45)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.setLineDash([]);
+              }
+
               // Ripeness ring: how close this anchor is to manifesting on its own
               const ripeness = getRipeness(state, node.id);
               if (unlocked && !secured && !lost && node.id !== 'safehouse' && ripeness > 0) {
@@ -275,7 +287,8 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
               if (unlocked) {
                 ctx.font = '9px "Courier New", monospace';
                 ctx.fillStyle = color;
-                const statusTxt = node.id === 'safehouse' ? '[SAFEHOUSE]' : secured ? '✓ SECURED' : lost ? '☠ LOST' : `HEAT:${nodeHeat}% · RIPE:${ripeness}%`;
+                const cycle = state.campaign?.cycles?.[node.id] || 0;
+                const statusTxt = node.id === 'safehouse' ? '[SAFEHOUSE]' : secured ? '✓ SECURED' : lost ? '☠ LOST' : `${cycle > 0 ? `RE-INF ${cycle} · ` : ''}HEAT:${nodeHeat}% · RIPE:${ripeness}%`;
                 ctx.fillText(statusTxt, nx, ny + 34);
               }
             });
@@ -310,7 +323,7 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
 
     animId = requestAnimationFrame(renderLoop);
     return () => cancelAnimationFrame(animId);
-  }, [state.gameStage, viewport, mapViewMode, currentContract, state.currentNode, state.sectorEntropy, state.flags, mapZoom, mapPan]);
+  }, [state.gameStage, viewport, mapViewMode, currentContract, state.currentNode, state.sectorEntropy, state.sectorRipeness, state.flags, allSectors, mapZoom, mapPan]);
 
   // Size the canvas from its own wrapper (layout px, unaffected by CSS zoom). The wrapper's size
   // never depends on the canvas, so there is no feedback loop on auto-height mobile layouts.
@@ -436,7 +449,7 @@ export function useMapCanvas(s: SessionCore & FieldOps) {
         }
       }
     } else {
-      for (const sec of MACRO_SECTORS) {
+      for (const sec of allSectors) {
         const nx = sec.x * w;
         const ny = sec.y * h;
         if (Math.hypot(wx - nx, wy - ny) <= 26) {
