@@ -5,17 +5,17 @@ import { gameReducer, type GameAction } from '../../engine/reducer';
 import { isTraining } from '../../engine/tutorial';
 import type { ContractCost } from '../../content/yokai/types';
 import {
-  LEGACY_CONTRACTS_KEY, LEGACY_MICRO_ENTROPY_KEY, LEGACY_SAVE_KEY, deleteSlot, getActiveSlot, readSlot, setActiveSlot, writeSlot
+  LEGACY_CONTRACTS_KEY, LEGACY_MICRO_ENTROPY_KEY, deleteSlot, getActiveSlot, readSlot, setActiveSlot as persistActiveSlot, writeSlot
 } from '../saves';
 import { describeAction, installErrorCapture, logDebug, setDebugContext, snapshotOf, snapshotWorthy } from '../debug/debugLog';
 
 /** The original single-save key (now slot 1). */
-export const SAVE_KEY = LEGACY_SAVE_KEY;
+export { LEGACY_SAVE_KEY as SAVE_KEY } from '../saves';
 
 export function useEngine() {
   const [state, rawDispatch] = useReducer(gameReducer, initialGameState);
   /** The slot this session reads from and autosaves into. */
-  const [activeSlot, setActiveSlotState] = useState<number>(() => getActiveSlot());
+  const [activeSlot, setActiveSlot] = useState<number>(() => getActiveSlot());
 
   // --- Playtest log: every action, plus a snapshot whenever the world moves ---
   useEffect(() => {
@@ -35,8 +35,8 @@ export function useEngine() {
   }, [state, activeSlot]);
 
   const chooseSlot = (slot: number) => {
+    persistActiveSlot(slot);
     setActiveSlot(slot);
-    setActiveSlotState(slot);
   };
 
   // Auto-Save (GAME_OVER is saved too, so a dead run can't be reloaded one step before death)

@@ -1,7 +1,7 @@
 // src/ui/debug/DebugPanel.tsx
 // The hidden playtest log viewer. Locked behind a passphrase so players don't stumble into it.
 // This is a curtain, not security: anyone reading the game's code can get past it.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { downloadText } from '../saves';
 import { theme } from '../theme';
 import { clearDebugLog, getDebugLog, summarise, toCSV, type DebugEntry, type DebugKind } from './debugLog';
@@ -86,6 +86,15 @@ export function DebugPanel({ onClose }: Readonly<{ onClose: () => void }>) {
   const [tick, setTick] = useState(0);
   const [confirmClear, setConfirmClear] = useState(false);
   const [copied, setCopied] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // Open as a modal so focus stays inside and Escape closes it
+  useEffect(() => {
+    const d = dialogRef.current;
+    if (!d || d.open) return;
+    if (typeof d.showModal === 'function') d.showModal();
+    else d.setAttribute('open', '');
+  }, []);
 
   const entries = tick >= 0 ? getDebugLog() : [];
   const sum = summarise(entries);
@@ -102,7 +111,16 @@ export function DebugPanel({ onClose }: Readonly<{ onClose: () => void }>) {
   };
 
   return (
-    <div role="dialog" aria-label="Debug log" style={{ position: 'fixed', inset: 0, zIndex: 3000, backgroundColor: 'rgba(2,4,3,0.98)', fontFamily: theme.fontMono, color: theme.textTerminal, display: 'flex', flexDirection: 'column', padding: '10px 12px' }}>
+    <dialog
+      ref={dialogRef}
+      aria-label="Debug log"
+      onCancel={e => { e.preventDefault(); onClose(); }}
+      style={{
+        position: 'fixed', inset: 0, margin: 0, width: '100vw', height: '100dvh', maxWidth: 'none', maxHeight: 'none', border: 'none',
+        zIndex: 3000, backgroundColor: 'rgba(2,4,3,0.98)', fontFamily: theme.fontMono, color: theme.textTerminal,
+        display: 'flex', flexDirection: 'column', padding: '10px 12px', boxSizing: 'border-box'
+      }}
+    >
       {unlocked ? (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
@@ -147,6 +165,6 @@ export function DebugPanel({ onClose }: Readonly<{ onClose: () => void }>) {
       ) : (
         <LockScreen onUnlock={() => setUnlocked(true)} onClose={onClose} />
       )}
-    </div>
+    </dialog>
   );
 }

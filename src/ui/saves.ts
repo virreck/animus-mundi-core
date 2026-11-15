@@ -128,7 +128,11 @@ export function buildSaveFile(state: Partial<GameState>, now = new Date()): Save
 }
 
 export function saveFileName(state: Partial<GameState>, now = new Date()): string {
-  const who = (state.playerName || 'operative').toLowerCase().replaceAll(/[^a-z0-9]+/g, '-').replaceAll(/(^-+)|(-+$)/g, '') || 'operative';
+  let who = (state.playerName || 'operative').toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
+  // Runs are already collapsed to one dash, so at most one sits at each end
+  if (who.startsWith('-')) who = who.slice(1);
+  if (who.endsWith('-')) who = who.slice(0, -1);
+  who ||= 'operative';
   return `kage-save-${who}-${now.toISOString().slice(0, 10)}.json`;
 }
 

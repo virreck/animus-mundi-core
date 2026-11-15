@@ -88,3 +88,10 @@ test('a full storage is reported, not thrown', () => {
   const full = { getItem: () => null, setItem: () => { throw new Error('QuotaExceeded'); }, removeItem: () => undefined };
   assert.equal(writeSlot(2, newRun(), full), false);
 });
+
+test('save file names are tidy whatever the operative is called', () => {
+  const d = new Date('2026-11-15T10:00:00Z');
+  assert.equal(saveFileName({ playerName: '  --Dr. Who?! ' }, d), 'kage-save-dr-who-2026-11-15.json');
+  assert.equal(saveFileName({ playerName: '!!!' }, d), 'kage-save-operative-2026-11-15.json');
+  assert.equal(saveFileName({}, d), 'kage-save-operative-2026-11-15.json');
+});

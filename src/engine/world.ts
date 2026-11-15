@@ -137,7 +137,7 @@ export function advanceWorld(state: GameState, ticks: number, exclude?: string):
       const before = getRipeness(next, sec.id);
       const after = Math.min(100, before + getRipenRate(next, sec.id));
       next.sectorRipeness[sec.id] = after;
-      const crossed = WORLD_TUNING.warnAt.findLast(w => before < w && after >= w);
+      const crossed = WORLD_TUNING.warnAt.some(w => before < w && after >= w);
       if (crossed && after < 100) {
         next.notices.push(notice('WARN', `ANCHOR INSTABILITY at ${sec.label}: ${after}% toward manifestation.`));
       }
