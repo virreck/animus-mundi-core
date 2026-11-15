@@ -2,7 +2,7 @@
 // Boot / operative creation screen.
 import { useRef, useState } from 'react';
 import { normalizeLoadedState } from '../../engine/state';
-import { getFullBodyPath } from '../assets';
+import { assetUrl, getFullBodyPath } from '../assets';
 import { ThaumaturgicAudio } from '../audio';
 import { exportSlot, listSlots, parseSaveFile, writeSlot, type SlotSummary } from '../saves';
 import { theme } from '../theme';
@@ -191,11 +191,11 @@ export const StartScreen = ({
       <div style={{ width: '100%', maxWidth: '620px', maxHeight: '96dvh', border: `1px solid ${theme.textBright}`, backgroundColor: theme.bgPanel, boxShadow: `0 0 30px rgba(98, 240, 128, 0.12)`, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ width: '100%', position: 'relative', borderBottom: `1px solid ${theme.borderTerminal}`, backgroundColor: '#020403', flexShrink: 0 }}>
           <img
-            src="/title_art.jpg"
+            src={assetUrl('title_art.jpg')}
             onError={(e) => {
               const target = e.currentTarget;
-              if (target.src.endsWith('/title_art.jpg')) target.src = '/title_art.png';
-              else if (target.src.endsWith('/title_art.png')) target.src = '/branding/animus_mundi_start_banner.png';
+              if (target.src.endsWith('/title_art.jpg')) target.src = assetUrl('title_art.png');
+              else if (target.src.endsWith('/title_art.png')) target.src = assetUrl('branding/animus_mundi_start_banner.png');
             }}
             alt="Animus Mundi: Seals of the 4"
             style={{ width: '100%', height: 'auto', maxHeight: '240px', display: 'block', objectFit: 'contain' }}
@@ -291,7 +291,7 @@ export const StartScreen = ({
                     }}
                   >
                     <img
-                      src={p.src}
+                      src={assetUrl(p.src)}
                       alt="Operative"
                       style={{
                         width: '54px', height: '54px', objectFit: 'cover', borderRadius: '50%',
