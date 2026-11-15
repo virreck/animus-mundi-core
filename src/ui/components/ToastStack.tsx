@@ -3,6 +3,8 @@
 import { useSession } from '../session/SessionContext';
 import { theme } from '../theme';
 
+
+const TOAST_ACCENT: Record<string, string> = { INTEL: theme.textBright, ITEM: theme.accentAmber };
 export function ToastStack() {
   const {
     toasts
@@ -19,7 +21,7 @@ export function ToastStack() {
             backgroundColor: 'rgba(9, 13, 10, 0.96)',
             color: theme.textBright,
             border: `1px solid ${theme.borderTerminal}`,
-            borderLeft: `4px solid ${toast.type === 'INTEL' ? theme.textBright : toast.type === 'ITEM' ? theme.accentAmber : theme.accentRed}`,
+            borderLeft: `4px solid ${TOAST_ACCENT[toast.type] ?? theme.accentRed}`,
             padding: '8px 16px',
             fontFamily: theme.fontMono,
             fontSize: '0.76rem',

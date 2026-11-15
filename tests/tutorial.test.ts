@@ -98,7 +98,7 @@ test('every step either waits for CONTINUE or has an objective with a check', ()
     if (step.objective) assert.ok(step.done, `${step.id} has an objective but no check`);
     if (step.done) assert.ok(step.objective, `${step.id} has a check but no objective`);
   }
-  assert.ok(TUTORIAL_STEPS[0].fullscreen && TUTORIAL_STEPS[TUTORIAL_STEPS.length - 1].fullscreen);
+  assert.ok(TUTORIAL_STEPS[0].fullscreen && TUTORIAL_STEPS.at(-1)!.fullscreen);
 });
 
 test('no objective is already complete at the moment the run starts', () => {

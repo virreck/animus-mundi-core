@@ -62,11 +62,15 @@ export function HorsemenViewport() {
                   {lieutenants.map(g => {
                     const isSealed = state.sealedGoetia.includes(g.id);
                     const released = isReleased(g.id);
+                    let rowColour = '#a8ccaf';
+                    let status = 'ACTIVE';
+                    if (isSealed) { rowColour = theme.textBright; status = 'SEALED'; }
+                    else if (released) { rowColour = theme.accentRed; status = 'MANIFESTED'; }
                     return (
-                      <div key={g.id} onClick={() => { setSelectedSuspectId(g.id); setViewport('CODEX'); }} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 4px', fontSize: '0.68rem', cursor: 'pointer', color: isSealed ? theme.textBright : released ? theme.accentRed : '#a8ccaf', textDecoration: isSealed ? 'line-through' : 'none' }}>
+                      <button type="button" className="row-btn" key={g.id} onClick={() => { setSelectedSuspectId(g.id); setViewport('CODEX'); }} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 4px', fontSize: '0.68rem', color: rowColour, textDecoration: isSealed ? 'line-through' : 'none' }}>
                         <span>#{g.manifestId.toString().padStart(2, '0')} {g.name} ({g.rank})</span>
-                        <span style={{ color: isSealed ? theme.textBright : theme.accentRed }}>{isSealed ? 'SEALED' : released ? 'MANIFESTED' : 'ACTIVE'}</span>
-                      </div>
+                        <span style={{ color: isSealed ? theme.textBright : theme.accentRed }}>{status}</span>
+                      </button>
                     );
                   })}
                 </div>

@@ -40,6 +40,78 @@ export function createYokaiOps(s: SessionCore & SectorRules & RoomOps & Evidence
     addToast(`Pact severed: ${yName}`, 'ALERT');
   };
 
+  const reveal = (n: SubGridNode): SubGridNode => (n.status === 'LOCKED' ? { ...n, status: 'SCANNED' } : n);
+
+  /** Each daemon's active power. Returns false if it could not be used (nothing is spent). */
+  const ACTIVE_POWERS: Record<string, (codeName: string) => boolean> = {
+    yokai_kitsune: codeName => {
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -30 } });
+      appendLog(`[👹 ${codeName} // FOXFIRE SHROUD] Injected phantom telemetry (-30% Inquisition Heat).`, 'success');
+      return true;
+    },
+    yokai_tengu: codeName => {
+      if (!currentContract) return false;
+      if (state.humanity <= 5) { addToast('Requires 5% Humanity!', 'ALERT'); return false; }
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -5 });
+      updateContract(currentContract.sectorId, c => ({ ...c, subNodes: c.subNodes.map(reveal) }));
+      appendLog(`[👹 ${codeName} // GALE SWEEP] Aerial LiDAR scanned every room (-5% HUM)!`, 'success');
+      return true;
+    },
+    yokai_baku: codeName => {
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
+      dispatch({ type: 'MODIFY_HUMANITY', payload: 20 });
+      appendLog(`[👹 ${codeName} // DEVOUR NIGHTMARE] Converted -15% Inquisition Heat into +20% Humanity.`, 'success');
+      return true;
+    },
+    yokai_zashiki: codeName => {
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 35 } });
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 1 } });
+      appendLog(`[👹 ${codeName} // FORTUNE BOON] Liquidated syndicate cache for +35 Obols and +1 Scrap Metal!`, 'success');
+      return true;
+    },
+    yokai_kameosa: codeName => {
+      if (state.humanity <= 8) { addToast('Requires 8% Humanity!', 'ALERT'); return false; }
+      dispatch({ type: 'MODIFY_HUMANITY', payload: -8 });
+      ['scrap_metal', 'cursed_earth', 'alchemical_distillate'].forEach(itemId =>
+        dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount: 1 } }));
+      appendLog(`[👹 ${codeName} // FERMENT MATTER] Synthesized +1 Metal, +1 Earth, and +1 Distillate (-8% HUM)!`, 'success');
+      return true;
+    },
+    yokai_kamaitachi: codeName => {
+      if (!currentContract || !selectedSubNode) return false;
+      if (!isAdjacentOrEntry(selectedSubNode)) {
+        addToast('Select a reachable adjacent room first!', 'ALERT');
+        return false;
+      }
+      const targetId = selectedSubNode.id;
+      updateContract(currentContract.sectorId, c => ({
+        ...c,
+        activeSubNodeId: targetId,
+        subNodes: c.subNodes.map(n => (n.id === targetId ? { ...n, status: 'ENTERED' as const, hazard: 'NONE' as const, patrolActive: false } : n))
+      }));
+      appendLog(`[👹 ${codeName} // WIND SICKLE] Sliced silently into <strong>${selectedSubNode.label}</strong> (0% Heat, Patrols &amp; Traps disarmed)!`, 'success');
+      return true;
+    },
+    yokai_amabie: codeName => {
+      if ((state.inventory.obols || 0) < 10) { addToast('Requires 10 Obols!', 'ALERT'); return false; }
+      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -10 } });
+      addMicroEntropy(-2.5);
+      appendLog(`[👹 ${codeName} // PROPHETIC WARD] Purged -2.50% Global Entropy (-10 Obols).`, 'success');
+      return true;
+    },
+    yokai_noppera: codeName => {
+      if (currentContract) {
+        updateContract(currentContract.sectorId, c => ({
+          ...c,
+          subNodes: c.subNodes.map(n => (n.patrolActive ? { ...reveal(n), patrolActive: false } : n))
+        }));
+      }
+      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
+      appendLog(`[👹 ${codeName} // FACELESS DECOY] Disarmed sector Malleus Patrols and dropped Heat by -15%.`, 'success');
+      return true;
+    }
+  };
+
   const handleInvokeYokaiPower = (yokaiId: string) => {
     const spec = YOKAI_DAEMON_SPECS[yokaiId];
     if (!spec) return;
@@ -51,64 +123,9 @@ export function createYokaiOps(s: SessionCore & SectorRules & RoomOps & Evidence
     }
 
     const yName = allYokai.find(y => y.id === yokaiId)?.nameEn || yokaiId;
-
-    if (yokaiId === 'yokai_kitsune') {
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -30 } });
-      appendLog(`[👹 ${spec.codeName} // FOXFIRE SHROUD] Injected phantom telemetry (-30% Inquisition Heat).`, 'success');
-    } else if (yokaiId === 'yokai_tengu') {
-      if (!currentContract) return;
-      if (state.humanity <= 5) { addToast('Requires 5% Humanity!', 'ALERT'); return; }
-      dispatch({ type: 'MODIFY_HUMANITY', payload: -5 });
-      const revealedNodes = (nodes: SubGridNode[]) => nodes.map(n => n.status === 'LOCKED' ? { ...n, status: 'SCANNED' as const } : n);
-      updateContract(currentContract.sectorId, c => ({ ...c, subNodes: revealedNodes(c.subNodes) }));
-      appendLog(`[👹 ${spec.codeName} // GALE SWEEP] Aerial LiDAR scanned every room (-5% HUM)!`, 'success');
-    } else if (yokaiId === 'yokai_baku') {
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
-      dispatch({ type: 'MODIFY_HUMANITY', payload: 20 });
-      appendLog(`[👹 ${spec.codeName} // DEVOUR NIGHTMARE] Converted -15% Inquisition Heat into +20% Humanity.`, 'success');
-    } else if (yokaiId === 'yokai_zashiki') {
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: 35 } });
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 1 } });
-      appendLog(`[👹 ${spec.codeName} // FORTUNE BOON] Liquidated syndicate cache for +35 Obols and +1 Scrap Metal!`, 'success');
-    } else if (yokaiId === 'yokai_kameosa') {
-      if (state.humanity <= 8) { addToast('Requires 8% Humanity!', 'ALERT'); return; }
-      dispatch({ type: 'MODIFY_HUMANITY', payload: -8 });
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'scrap_metal', amount: 1 } });
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'cursed_earth', amount: 1 } });
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'alchemical_distillate', amount: 1 } });
-      appendLog(`[👹 ${spec.codeName} // FERMENT MATTER] Synthesized +1 Metal, +1 Earth, and +1 Distillate (-8% HUM)!`, 'success');
-    } else if (yokaiId === 'yokai_kamaitachi') {
-      if (!currentContract || !selectedSubNode) return;
-      if (!isAdjacentOrEntry(selectedSubNode)) {
-        addToast('Select a reachable adjacent room first!', 'ALERT');
-        return;
-      }
-      const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
-        n.id === selectedSubNode.id
-          ? { ...n, status: 'ENTERED' as const, hazard: 'NONE' as const, patrolActive: false }
-          : n
-      );
-      updateContract(currentContract.sectorId, c => ({
-        ...c,
-        activeSubNodeId: selectedSubNode.id,
-        subNodes: updatedNodes(c.subNodes)
-      }));
-      appendLog(`[👹 ${spec.codeName} // WIND SICKLE] Sliced silently into <strong>${selectedSubNode.label}</strong> (0% Heat, Patrols &amp; Traps disarmed)!`, 'success');
-    } else if (yokaiId === 'yokai_amabie') {
-      if ((state.inventory.obols || 0) < 10) { addToast('Requires 10 Obols!', 'ALERT'); return; }
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -10 } });
-      addMicroEntropy(-2.5);
-      appendLog(`[👹 ${spec.codeName} // PROPHETIC WARD] Purged -2.50% Global Entropy (-10 Obols).`, 'success');
-    } else if (yokaiId === 'yokai_noppera') {
-      if (currentContract) {
-        const disarmNodes = (nodes: SubGridNode[]) => nodes.map(n =>
-          n.patrolActive ? { ...n, patrolActive: false, status: n.status === 'LOCKED' ? ('SCANNED' as const) : n.status } : n
-        );
-        updateContract(currentContract.sectorId, c => ({ ...c, subNodes: disarmNodes(c.subNodes) }));
-      }
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -15 } });
-      appendLog(`[👹 ${spec.codeName} // FACELESS DECOY] Disarmed sector Malleus Patrols and dropped Heat by -15%.`, 'success');
-    }
+    const power = ACTIVE_POWERS[yokaiId];
+    // A power returns false when its cost can't be paid; nothing is spent then
+    if (power && !power(spec.codeName)) return;
 
     ThaumaturgicAudio.scryPing();
     const remaining = currentCharges - 1;

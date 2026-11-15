@@ -18,7 +18,7 @@ export function DossierViewport() {
 
   return (
     <main className="responsive-split" style={{ zoom: FONT_ZOOM_MAP[fontScale] }}>
-      <section className="pane-left" style={{ width: '38%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '18px', alignItems: 'center', justifyContent: 'space-between' }}>
+      <section className="pane-left pane-w38" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '18px', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '6px', fontSize: '0.74rem' }}>
           <span style={{ color: theme.textBright, fontWeight: 'bold' }}>BIOMETRIC TETHER FEED</span>
           <span style={{ color: theme.accentAmber }}>LOCKED</span>
@@ -29,10 +29,10 @@ export function DossierViewport() {
         </div>
       </section>
 
-      <section className="pane-right" style={{ width: '62%', backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '20px', justifyContent: 'space-between', overflowY: 'auto' }}>
+      <section className="pane-right pane-w62" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '20px', justifyContent: 'space-between', overflowY: 'auto' }}>
         <div>
           <h1 style={{ margin: '0 0 14px 0', color: theme.textBright, fontSize: '1.4rem', borderBottom: `1px solid ${theme.borderTerminal}`, paddingBottom: '8px' }}>
-            OPERATIVE {state.playerName.toUpperCase()} // {state.agencyName.toUpperCase()}
+            OPERATIVE {state.playerName.toUpperCase()} {'//'} {state.agencyName.toUpperCase()}
           </h1>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginBottom: '16px' }}>
             <div style={{ backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}`, padding: '12px' }}>

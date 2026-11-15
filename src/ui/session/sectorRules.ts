@@ -22,9 +22,9 @@ export function createSectorRules(s: SessionCore) {
 
   const resolveTargetRoom = (arg?: string): SubGridNode | null => {
     if (!currentContract) return null;
-    if (!arg || !arg.trim()) return selectedSubNode || currentSubNode;
-    const num = parseInt(arg.trim(), 10);
-    if (!isNaN(num)) return currentContract.subNodes.find(n => n.index === num) || null;
+    if (!arg?.trim()) return selectedSubNode || currentSubNode;
+    const num = Number.parseInt(arg.trim(), 10);
+    if (!Number.isNaN(num)) return currentContract.subNodes.find(n => n.index === num) || null;
     return currentContract.subNodes.find(n => n.label.toLowerCase().includes(arg.toLowerCase())) || null;
   };
 

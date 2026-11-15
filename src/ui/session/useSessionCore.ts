@@ -277,9 +277,13 @@ export function useSessionCore() {
   const excludedSigns = deducedSigns.filter(t => t.startsWith('!')).map(t => t.slice(1));
   /** Cycles a phenomenon filter: neutral -> required -> excluded -> neutral. */
   const cycleSignFilter = (tag: string) =>
-    setDeducedSigns(prev =>
-      prev.includes(tag) ? [...prev.filter(t => t !== tag), `!${tag}`] : prev.includes(`!${tag}`) ? prev.filter(t => t !== `!${tag}`) : [...prev, tag]
-    );
+    setDeducedSigns(prev => {
+      // Cycle: unset -> required -> excluded -> unset
+      const excluded = `!${tag}`;
+      if (prev.includes(tag)) return [...prev.filter(t => t !== tag), excluded];
+      if (prev.includes(excluded)) return prev.filter(t => t !== excluded);
+      return [...prev, tag];
+    });
   const struckSuspects: string[] = (currentContract && !isSectorClosed(currentContract.sectorId) && currentContract.struckSuspects) || [];
   const toggleStruckSuspect = (goetiaId: string) => {
     if (!currentContract) return;

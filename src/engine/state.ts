@@ -2,10 +2,6 @@
 import type { SectorContract } from './sectorGenerator';
 import { initialCampaign, type CampaignState } from './sites';
 
-export type NodeId = string;
-export type GoetiaId = string;
-export type YokaiId = string;
-export type FactionId = string;
 
 export interface Lead {
   id: string;
@@ -19,7 +15,7 @@ export interface GameState {
   playerPortrait: string;
   agencyName: string;
   
-  currentNode: NodeId;
+  currentNode: string;
   humanity: number;
   
   // --- THE THREAT TRACKERS ---
@@ -31,41 +27,41 @@ export interface GameState {
   flags: Record<string, boolean>;
   activeLeads: Lead[];
   
-  factions: Record<FactionId, number>;
+  factions: Record<string, number>;
   
-  identifiedGoetia: GoetiaId[];
-  sealedGoetia: GoetiaId[];
+  identifiedGoetia: string[];
+  sealedGoetia: string[];
   /** Demons that broke free of a failed Sealing Rite. They can never be sealed. */
-  releasedGoetia: GoetiaId[];
+  releasedGoetia: string[];
   
   /** @deprecated Legacy mirror of `tetheredYokai`, kept so old saves still load. */
-  activeContracts: YokaiId[];
+  activeContracts: string[];
   ink: number;
 
-  tetheredYokai: YokaiId[];
+  tetheredYokai: string[];
 
   // --- STATE THAT USED TO LIVE OUTSIDE THE SAVE FILE ---
   /** Low-precision entropy drift (travel, room entries, rests). Added to `globalEntropy` for display & game-over checks. */
   microEntropy: number;
   /** Remaining active-invocation charges per bound Yokai. */
-  yokaiCharges: Record<YokaiId, number>;
+  yokaiCharges: Record<string, number>;
   /** Sectors whose anchor has been attuned (+4s sealing bonus). */
-  attunedSectors: Record<NodeId, boolean>;
+  attunedSectors: Record<string, boolean>;
   /** Phenomena the player has ticked in the Codex for the current case. */
   deducedSigns: string[];
 
   // --- THE WORLD ---
   /** Every sector's case file (layout, target demon, evidence). Used to live outside the save. */
-  contracts: Record<NodeId, SectorContract>;
+  contracts: Record<string, SectorContract>;
   /** How close each open sector's anchor is to manifesting on its own (0-100). */
-  sectorRipeness: Record<NodeId, number>;
+  sectorRipeness: Record<string, number>;
   /** Where each released demon broke through (goetiaId -> sectorId). */
-  manifestations: Record<GoetiaId, NodeId>;
+  manifestations: Record<string, string>;
   /** Messages the engine wants shown in the terminal; the UI acknowledges them. */
   notices: EngineNotice[];
 
   /** KAGE NO SHO: bond points per Yokai, and how many more sectors an offended spirit stays away. */
-  kage: { bond: Record<YokaiId, number>; offended: Record<YokaiId, number> };
+  kage: { bond: Record<string, number>; offended: Record<string, number> };
 
   /** THE LONG CAMPAIGN: world clock, generated sites, re-infestation timers. */
   campaign: CampaignState;
@@ -143,9 +139,11 @@ export function normalizeLoadedState(
   raw: Partial<GameState>,
   legacyMicroEntropy = 0,
   /** Contracts from the pre-v3 separate localStorage key. */
-  legacyContracts: Record<NodeId, SectorContract> = {}
+  legacyContracts: Record<string, SectorContract> = {}
 ): GameState {
-  const tethered = raw.tetheredYokai || raw.activeContracts || [];
+  // Saves from before the rename only have the legacy `activeContracts` list
+  const legacyTether = (raw as { activeContracts?: string[] }).activeContracts;
+  const tethered = raw.tetheredYokai || legacyTether || [];
   return {
     ...initialGameState,
     ...raw,
@@ -156,7 +154,7 @@ export function normalizeLoadedState(
     intelLog: raw.intelLog || [],
     flags: raw.flags || {},
     activeLeads: raw.activeLeads || [],
-    factions: { ...initialGameState.factions, ...(raw.factions || {}) },
+    factions: { ...initialGameState.factions, ...raw.factions },
     identifiedGoetia: raw.identifiedGoetia || [],
     sealedGoetia: raw.sealedGoetia || [],
     releasedGoetia: raw.releasedGoetia || [],
@@ -169,6 +167,6 @@ export function normalizeLoadedState(
     manifestations: raw.manifestations || {},
     notices: raw.notices || [],
     kage: { bond: raw.kage?.bond || {}, offended: raw.kage?.offended || {} },
-    campaign: { ...initialCampaign(), ...(raw.campaign || {}) }
+    campaign: { ...initialCampaign(), ...raw.campaign }
   };
 }

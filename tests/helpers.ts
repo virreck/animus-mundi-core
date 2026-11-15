@@ -16,5 +16,5 @@ export function newRun(): GameState {
 
 /** Applies actions in order. */
 export function apply(state: GameState, ...actions: GameAction[]): GameState {
-  return actions.reduce(gameReducer, state);
+  return actions.reduce((s, a) => gameReducer(s, a), state);
 }

@@ -64,6 +64,7 @@ export const SmartGoetiaSigil = ({
       ) : (
         <svg
           viewBox="0 0 100 100"
+          aria-hidden="true"
           style={{
             width: '100%',
             height: '100%',
@@ -77,14 +78,14 @@ export const SmartGoetiaSigil = ({
           <circle cx="50" cy="50" r="39" fill="none" stroke="#62f080" strokeWidth="0.8" strokeDasharray="3 2" />
           <polygon points={polyPoints.join(' ')} fill="none" stroke="#62f080" strokeWidth="1.6" />
           <circle cx="50" cy="50" r={innerRadius} fill="none" stroke="#62f080" strokeWidth="1.4" />
-          {Array.from({ length: spokes }).map((_, i) => {
-            const angle = ((rotDeg + (i * 360) / spokes) * Math.PI) / 180;
+          {Array.from({ length: spokes }, (_, i) => (rotDeg + (i * 360) / spokes)).map(deg => {
+            const angle = (deg * Math.PI) / 180;
             const x2 = 50 + 36 * Math.cos(angle);
             const y2 = 50 + 36 * Math.sin(angle);
             const tx = 50 + 30 * Math.cos(angle + 0.18);
             const ty = 50 + 30 * Math.sin(angle + 0.18);
             return (
-              <g key={i} stroke="#62f080" strokeWidth="1.5" fill="none">
+              <g key={`spoke-${deg}`} stroke="#62f080" strokeWidth="1.5" fill="none">
                 <line x1="50" y1="50" x2={x2} y2={y2} />
                 <circle cx={x2} cy={y2} r="2.6" fill="#050706" stroke="#62f080" strokeWidth="1.4" />
                 <line x1={x2} y1={y2} x2={tx} y2={ty} />

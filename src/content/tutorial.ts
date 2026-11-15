@@ -263,4 +263,4 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
 ];
 
 export const fillTutorialText = (text: string, state: Pick<GameState, 'playerName' | 'agencyName'>) =>
-  text.replace(/\{name\}/g, (state.playerName || 'OPERATIVE').toUpperCase()).replace(/\{agency\}/g, (state.agencyName || 'DARKWIRE').toUpperCase());
+  text.replaceAll('{name}', (state.playerName || 'OPERATIVE').toUpperCase()).replaceAll('{agency}', (state.agencyName || 'DARKWIRE').toUpperCase());

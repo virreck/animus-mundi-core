@@ -1,11 +1,124 @@
 // src/ui/viewports/CodexViewport.tsx
 // [F2] CODEX: case evidence, phenomenon filter and suspect dossiers.
-import {  isAmbiguous } from '../../engine/evidence';
-import { PHENOMENON_CATALOG, getUniqueGoetiaSigns } from '../../engine/sectorGenerator';
+import { isAmbiguous, type EvidenceLog } from '../../engine/evidence';
+import { PHENOMENON_CATALOG, getUniqueGoetiaSigns, type SectorContract } from '../../engine/sectorGenerator';
 import { ThaumaturgicAudio } from '../audio';
 import { SmartGoetiaSigil } from '../components/SmartGoetiaSigil';
 import { useSession } from '../session/SessionContext';
 import { FONT_ZOOM_MAP, formatLabel, theme } from '../theme';
+
+/** How a phenomenon looks in the filter: required, excluded, or neither. */
+function filterLook(isRequired: boolean, isExcluded: boolean) {
+  if (isRequired) return { tint: theme.textBright, background: 'rgba(98, 240, 128, 0.2)', border: theme.textBright, mark: '✓' };
+  if (isExcluded) return { tint: theme.accentRed, background: 'rgba(255, 42, 85, 0.12)', border: theme.accentRed, mark: '✗' };
+  return { tint: '#a8ccaf', background: '#030504', border: theme.borderTerminal, mark: ' ' };
+}
+
+function EvidenceEntry({ log, readingNo, onRefine }: Readonly<{ log: EvidenceLog; readingNo: number; onRefine: (n: number) => void }>) {
+  if (log.kind === 'WITNESS') {
+    return (
+      <div style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.accentCyan}` }}>
+        <div style={{ color: theme.accentCyan, fontWeight: 'bold', fontSize: '0.7rem' }}>WITNESS {'//'} {log.witness || 'UNNAMED'} {'//'} {log.nodeLabel}</div>
+        <div style={{ color: '#ffffff', marginTop: '3px', fontStyle: 'italic' }}>"{log.text}"</div>
+      </div>
+    );
+  }
+  if (log.kind === 'COURT' || log.kind === 'RANK') {
+    return (
+      <div style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.accentAmber}` }}>
+        <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '0.7rem' }}>ANCHOR RESONANCE {'//'} {log.kind}: {String(log.value).toUpperCase()}</div>
+        <div style={{ color: '#ffffff', marginTop: '3px' }}>{log.text}</div>
+      </div>
+    );
+  }
+  const degraded = isAmbiguous(log);
+  const colour = degraded ? theme.accentAmber : theme.textBright;
+  const labels = (log.candidates || []).map(t => PHENOMENON_CATALOG.find(p => p.tag === t)?.label || formatLabel(t));
+  return (
+    <div style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${colour}` }}>
+      <div style={{ color: colour, fontWeight: 'bold', fontSize: '0.7rem' }}>
+        READING #{readingNo} [{log.channel}] {'//'} {log.nodeLabel}{degraded ? ' // DEGRADED' : ''}
+      </div>
+      {labels.length > 0 && (
+        <div style={{ color: colour, marginTop: '2px', fontSize: '0.72rem' }}>
+          {degraded ? `≈ ${labels.join(' / ')}` : `✓ ${labels[0]}`}
+        </div>
+      )}
+      <div style={{ color: '#ffffff', marginTop: '3px' }}>"{log.text}"</div>
+      {degraded && (
+        <button onClick={() => onRefine(readingNo)} className="macro-chip macro-chip-amber" style={{ marginTop: '5px', padding: '2px 8px' }}>
+          ≈ refine {readingNo}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function EvidenceList({ contract, lost, secured, onRefine }: Readonly<{
+  contract: SectorContract | null | undefined;
+  lost: boolean;
+  secured: boolean;
+  onRefine: (n: number) => void;
+}>) {
+  if (lost) return <div style={{ color: theme.accentRed }}>✗ SECTOR LOST. Anchor manifested.</div>;
+  if (!contract || secured) return <div style={{ color: theme.textBright }}>✓ SECTOR SECURED.</div>;
+  if (contract.discoveredLogs.length === 0) {
+    return <div style={{ color: theme.textMuted, fontStyle: 'italic' }}>NO EVIDENCE ON FILE.</div>;
+  }
+  const readings = contract.discoveredLogs.filter(l => l.kind === 'PHENOMENON' || !l.kind);
+  return (
+    <>
+      {contract.discoveredLogs.map(log => (
+        <EvidenceEntry key={log.id} log={log} readingNo={readings.indexOf(log) + 1} onRefine={onRefine} />
+      ))}
+    </>
+  );
+}
+
+function SealAction({ sealed, released, name, hasCatalysts, inLiveSector, onSeal }: Readonly<{
+  sealed: boolean;
+  released: boolean;
+  name: string;
+  hasCatalysts: boolean;
+  inLiveSector: boolean;
+  onSeal: () => void;
+}>) {
+  if (sealed) {
+    return (
+      <div style={{ padding: '10px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold' }}>
+        [ ENTITY SEALED IN VESSEL ]
+      </div>
+    );
+  }
+  if (released) {
+    return (
+      <div style={{ padding: '10px', textAlign: 'center', border: `1px solid ${theme.accentRed}`, color: theme.accentRed, fontWeight: 'bold' }}>
+        [ ENTITY MANIFESTED — BEYOND SEALING ]
+      </div>
+    );
+  }
+  const canAfford = hasCatalysts && inLiveSector;
+  let label = `> ENGAGE SEALING RITE: ${name.toUpperCase()}`;
+  if (!inLiveSector) label = '> NO LIVE ANCHOR IN SECTOR';
+  else if (!hasCatalysts) label = '> CATALYSTS MISSING';
+  return (
+    <button
+      onClick={onSeal}
+      disabled={!canAfford}
+      style={{
+        width: '100%', padding: '12px',
+        backgroundColor: canAfford ? theme.accentRed : '#1a1a1a',
+        color: canAfford ? 'white' : theme.textMuted,
+        border: `1px solid ${canAfford ? '#ff6680' : theme.borderTerminal}`,
+        cursor: canAfford ? 'pointer' : 'not-allowed',
+        fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.8rem',
+        boxShadow: canAfford ? '0 0 15px rgba(255, 42, 85, 0.35)' : 'none'
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 export function CodexViewport() {
   const {
@@ -47,58 +160,12 @@ export function CodexViewport() {
             <span style={{ color: theme.accentAmber }}>{currentContract?.sectorLabel}</span>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.76rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {currentContract && isSectorLost(currentContract.sectorId) ? (
-              <div style={{ color: theme.accentRed }}>✗ SECTOR LOST. Anchor manifested.</div>
-            ) : (!currentContract || isSectorSecured(currentContract.sectorId)) ? (
-              <div style={{ color: theme.textBright }}>✓ SECTOR SECURED.</div>
-            ) : currentContract.discoveredLogs.length === 0 ? (
-              <div style={{ color: theme.textMuted, fontStyle: 'italic' }}>
-                NO EVIDENCE ON FILE.
-              </div>
-            ) : (
-              (() => {
-                const readings = currentContract.discoveredLogs.filter(l => l.kind === 'PHENOMENON' || !l.kind);
-                return currentContract.discoveredLogs.map(log => {
-                  if (log.kind === 'WITNESS') {
-                    return (
-                      <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.accentCyan}` }}>
-                        <div style={{ color: theme.accentCyan, fontWeight: 'bold', fontSize: '0.7rem' }}>WITNESS // {log.witness || 'UNNAMED'} // {log.nodeLabel}</div>
-                        <div style={{ color: '#ffffff', marginTop: '3px', fontStyle: 'italic' }}>"{log.text}"</div>
-                      </div>
-                    );
-                  }
-                  if (log.kind === 'COURT' || log.kind === 'RANK') {
-                    return (
-                      <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${theme.accentAmber}` }}>
-                        <div style={{ color: theme.accentAmber, fontWeight: 'bold', fontSize: '0.7rem' }}>ANCHOR RESONANCE // {log.kind}: {String(log.value).toUpperCase()}</div>
-                        <div style={{ color: '#ffffff', marginTop: '3px' }}>{log.text}</div>
-                      </div>
-                    );
-                  }
-                  const n = readings.indexOf(log) + 1;
-                  const degraded = isAmbiguous(log);
-                  const labels = (log.candidates || []).map(t => PHENOMENON_CATALOG.find(p => p.tag === t)?.label || formatLabel(t));
-                  return (
-                    <div key={log.id} style={{ padding: '8px', backgroundColor: '#030504', borderLeft: `3px solid ${degraded ? theme.accentAmber : theme.textBright}` }}>
-                      <div style={{ color: degraded ? theme.accentAmber : theme.textBright, fontWeight: 'bold', fontSize: '0.7rem' }}>
-                        READING #{n} [{log.channel}] // {log.nodeLabel}{degraded ? ' // DEGRADED' : ''}
-                      </div>
-                      {labels.length > 0 && (
-                        <div style={{ color: degraded ? theme.accentAmber : theme.textBright, marginTop: '2px', fontSize: '0.72rem' }}>
-                          {degraded ? `≈ ${labels.join(' / ')}` : `✓ ${labels[0]}`}
-                        </div>
-                      )}
-                      <div style={{ color: '#ffffff', marginTop: '3px' }}>"{log.text}"</div>
-                      {degraded && (
-                        <button onClick={() => processCliCommand(`refine ${n}`)} className="macro-chip macro-chip-amber" style={{ marginTop: '5px', padding: '2px 8px' }}>
-                          ≈ refine {n}
-                        </button>
-                      )}
-                    </div>
-                  );
-                });
-              })()
-            )}
+            <EvidenceList
+              contract={currentContract}
+              lost={!!currentContract && isSectorLost(currentContract.sectorId)}
+              secured={!currentContract || isSectorSecured(currentContract.sectorId)}
+              onRefine={n => processCliCommand(`refine ${n}`)}
+            />
           </div>
         </div>
 
@@ -111,23 +178,22 @@ export function CodexViewport() {
           </div>
           <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
             {PHENOMENON_CATALOG.map(phenom => {
-              const isRequired = requiredSigns.includes(phenom.tag);
               const isExcluded = excludedSigns.includes(phenom.tag);
-              const tint = isRequired ? theme.textBright : isExcluded ? theme.accentRed : '#a8ccaf';
+              const look = filterLook(requiredSigns.includes(phenom.tag), isExcluded);
               return (
                 <button
                   key={phenom.tag}
                   onClick={() => { ThaumaturgicAudio.keyClick(); cycleSignFilter(phenom.tag); }}
                   style={{
                     padding: '6px 8px', textAlign: 'left',
-                    backgroundColor: isRequired ? 'rgba(98, 240, 128, 0.2)' : isExcluded ? 'rgba(255, 42, 85, 0.12)' : '#030504',
-                    border: `1px solid ${isRequired ? theme.textBright : isExcluded ? theme.accentRed : theme.borderTerminal}`,
-                    color: tint,
+                    backgroundColor: look.background,
+                    border: `1px solid ${look.border}`,
+                    color: look.tint,
                     textDecoration: isExcluded ? 'line-through' : 'none',
                     cursor: 'pointer', fontFamily: theme.fontMono, fontSize: '0.72rem'
                   }}
                 >
-                  {isRequired ? '[✓] ' : isExcluded ? '[✗] ' : '[ ] '} {phenom.label}
+                  [{look.mark}] {phenom.label}
                 </button>
               );
             })}
@@ -167,39 +233,48 @@ export function CodexViewport() {
             const isSealed = state.sealedGoetia.includes(g.id);
             const isSelected = g.id === selectedSuspectId;
             const isStruck = struckSuspects.includes(g.id);
+            const released = isReleased(g.id);
+            let status = '';
+            if (isSealed) status = 'SEALED';
+            else if (released) status = '☠ MANIFESTED';
             return (
               <div
                 key={g.id}
-                role="button"
-                onClick={() => { ThaumaturgicAudio.keyClick(); setSelectedSuspectId(g.id); }}
                 style={{
-                  padding: '7px 10px', textAlign: 'left',
+                  padding: '7px 10px',
                   backgroundColor: isSelected ? '#112217' : '#030504',
                   border: `1px solid ${isSelected ? theme.textBright : theme.borderTerminal}`,
                   color: isSealed || isStruck ? theme.textMuted : theme.textBright,
                   opacity: isStruck ? 0.55 : 1,
-                  cursor: 'pointer', fontFamily: theme.fontMono,
+                  fontFamily: theme.fontMono,
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px'
                 }}
               >
-                <div style={{ textDecoration: isStruck ? 'line-through' : 'none' }}>
-                  <strong>#{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()}</strong>
-                  <div style={{ fontSize: '0.68rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance}</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                  <span style={{ fontSize: '0.66rem', color: isSealed || isReleased(g.id) ? theme.accentRed : theme.accentAmber, fontWeight: 'bold' }}>
-                    {isSealed ? 'SEALED' : isReleased(g.id) ? '☠ MANIFESTED' : ''}
+                <button
+                  type="button"
+                  className="row-btn"
+                  aria-pressed={isSelected}
+                  onClick={() => { ThaumaturgicAudio.keyClick(); setSelectedSuspectId(g.id); }}
+                  style={{ color: 'inherit', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}
+                >
+                  <div style={{ textDecoration: isStruck ? 'line-through' : 'none' }}>
+                    <strong>#{g.manifestId.toString().padStart(2, '0')} {g.name.toUpperCase()}</strong>
+                    <div style={{ fontSize: '0.68rem', color: '#a8ccaf' }}>{g.rank} of {g.allegiance}</div>
+                  </div>
+                  <span style={{ fontSize: '0.66rem', color: isSealed || released ? theme.accentRed : theme.accentAmber, fontWeight: 'bold', flexShrink: 0 }}>
+                    {status}
                   </span>
-                  {currentContract && !isSectorClosed(currentContract.sectorId) && !isSealed && !isReleased(g.id) && (
-                    <button
-                      onClick={e => { e.stopPropagation(); ThaumaturgicAudio.keyClick(); toggleStruckSuspect(g.id); }}
-                      className={`macro-chip ${isStruck ? '' : 'macro-chip-danger'}`}
-                      style={{ padding: '1px 6px', fontSize: '0.64rem' }}
-                    >
-                      {isStruck ? 'RESTORE' : 'STRIKE'}
-                    </button>
-                  )}
-                </div>
+                </button>
+                {currentContract && !isSectorClosed(currentContract.sectorId) && !isSealed && !released && (
+                  <button
+                    type="button"
+                    onClick={() => { ThaumaturgicAudio.keyClick(); toggleStruckSuspect(g.id); }}
+                    className={`macro-chip ${isStruck ? '' : 'macro-chip-danger'}`}
+                    style={{ padding: '1px 6px', fontSize: '0.64rem', flexShrink: 0 }}
+                  >
+                    {isStruck ? 'RESTORE' : 'STRIKE'}
+                  </button>
+                )}
               </div>
             );
           })}
@@ -209,49 +284,20 @@ export function CodexViewport() {
       <section className="codex-col" style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px', overflowY: 'auto' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div>
-            <div style={{ fontSize: '0.7rem', color: theme.accentAmber }}>ARS GOETIA DOSSIER // #{selectedSuspect.manifestId.toString().padStart(2, '0')} ({selectedSuspect.allegiance})</div>
+            <div style={{ fontSize: '0.7rem', color: theme.accentAmber }}>ARS GOETIA DOSSIER {'//'} #{selectedSuspect.manifestId.toString().padStart(2, '0')} ({selectedSuspect.allegiance})</div>
             <h2 style={{ margin: '2px 0', color: theme.textBright }}>{selectedSuspect.name.toUpperCase()}</h2>
             <div style={{ fontSize: '0.78rem', color: '#ffffff', fontWeight: 'bold' }}>{selectedSuspect.rank} — "{selectedSuspect.title}"</div>
           </div>
 
-          {state.sealedGoetia.includes(selectedSuspect.id) ? (
-            <div style={{ padding: '10px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold' }}>
-              [ ENTITY SEALED IN VESSEL ]
-            </div>
-          ) : isReleased(selectedSuspect.id) ? (
-            <div style={{ padding: '10px', textAlign: 'center', border: `1px solid ${theme.accentRed}`, color: theme.accentRed, fontWeight: 'bold' }}>
-              [ ENTITY MANIFESTED — BEYOND SEALING ]
-            </div>
-          ) : (
-            (() => {
-              const sealCost = selectedSuspect.sealCost || {};
-              const hasCatalysts = Object.entries(sealCost).every(([item, amt]) => (state.inventory[item] || 0) >= amt);
-              // Sealing must happen inside a live sector (previously the Safehouse let you seal anything)
-              const inLiveSector = !!currentContract && !isSectorClosed(currentContract.sectorId);
-              const canAfford = hasCatalysts && inLiveSector;
-              return (
-                <button
-                  onClick={() => setActiveSealSuspectId(selectedSuspect.id)}
-                  disabled={!canAfford}
-                  style={{
-                    width: '100%', padding: '12px',
-                    backgroundColor: canAfford ? theme.accentRed : '#1a1a1a',
-                    color: canAfford ? 'white' : theme.textMuted,
-                    border: `1px solid ${canAfford ? '#ff6680' : theme.borderTerminal}`,
-                    cursor: canAfford ? 'pointer' : 'not-allowed',
-                    fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.8rem',
-                    boxShadow: canAfford ? '0 0 15px rgba(255, 42, 85, 0.35)' : 'none'
-                  }}
-                >
-                  {!inLiveSector
-                    ? `> NO LIVE ANCHOR IN SECTOR`
-                    : hasCatalysts
-                      ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}`
-                      : `> CATALYSTS MISSING`}
-                </button>
-              );
-            })()
-          )}
+          <SealAction
+            sealed={state.sealedGoetia.includes(selectedSuspect.id)}
+            released={isReleased(selectedSuspect.id)}
+            name={selectedSuspect.name}
+            hasCatalysts={Object.entries(selectedSuspect.sealCost || {}).every(([item, amt]) => (state.inventory[item] || 0) >= amt)}
+            // Sealing must happen inside a live sector (previously the Safehouse let you seal anything)
+            inLiveSector={!!currentContract && !isSectorClosed(currentContract.sectorId)}
+            onSeal={() => setActiveSealSuspectId(selectedSuspect.id)}
+          />
 
           {/* GLITCHED/OBSCURED WHEN UNSEALED; CRISP REVEAL + STAMP WHEN SEALED */}
           {(() => {
@@ -292,7 +338,7 @@ export function CodexViewport() {
                       pointerEvents: 'none'
                     }}
                   >
-                    // SIGIL ENCRYPTED //
+                    {'// SIGIL ENCRYPTED //'}
                   </div>
                 )}
                 {isTargetSealed && (
@@ -321,11 +367,10 @@ export function CodexViewport() {
             <div style={{ fontSize: '0.72rem', color: theme.textBright, fontWeight: 'bold', marginBottom: '4px' }}>UNIQUE 3-SIGN FINGERPRINT:</div>
             {getUniqueGoetiaSigns(selectedSuspect.id).map(tag => {
               const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
-              const isToggled = requiredSigns.includes(tag);
-              const isExcluded = excludedSigns.includes(tag);
+              const look = filterLook(requiredSigns.includes(tag), excludedSigns.includes(tag));
               return (
-                <div key={tag} style={{ fontSize: '0.72rem', color: isToggled ? theme.textBright : isExcluded ? theme.accentRed : '#a8ccaf' }}>
-                  {isToggled ? '✓ ' : isExcluded ? '✗ ' : '• '} <strong>{def?.label || formatLabel(tag)}</strong>
+                <div key={tag} style={{ fontSize: '0.72rem', color: look.tint }}>
+                  {look.mark === ' ' ? '•' : look.mark} <strong>{def?.label || formatLabel(tag)}</strong>
                 </div>
               );
             })}

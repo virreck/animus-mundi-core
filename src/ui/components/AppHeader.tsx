@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ThaumaturgicAudio } from '../audio';
 import { useSession } from '../session/SessionContext';
-import { theme } from '../theme';
+import { theme, type FontScale } from '../theme';
 
+
+const NEXT_FONT_SCALE: Record<FontScale, FontScale> = { SM: 'MD', MD: 'LG', LG: 'SM' };
 export function AppHeader() {
   const {
     state,
@@ -35,7 +37,7 @@ export function AppHeader() {
   }, []);
 
   return (
-    <header ref={headerRef} className="app-header" style={{ minHeight: '46px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', zIndex: 20 }}>
+    <header ref={headerRef} className="app-header" style={{ minHeight: '46px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20 }}>
       <nav className="header-tabs" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
         <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}><span className="fkey">[F1] </span>FIELD_OPS</button>
         <button
@@ -74,7 +76,7 @@ export function AppHeader() {
           MODE:{controlMode}
         </button>
         <button
-          onClick={() => { ThaumaturgicAudio.keyClick(); setFontScale(prev => prev === 'SM' ? 'MD' : prev === 'MD' ? 'LG' : 'SM'); }}
+          onClick={() => { ThaumaturgicAudio.keyClick(); setFontScale(prev => NEXT_FONT_SCALE[prev]); }}
           className="macro-chip"
           style={{ padding: '4px 7px' }}
         >

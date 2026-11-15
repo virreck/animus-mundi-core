@@ -53,8 +53,10 @@ export default function App() {
   } = session;
 
   /** Which screen the guided case should return to if it is (re)started right now. */
-  const replayReturn = (): TutorialReturn =>
-    !isTrainingRun ? 'RESUME_RUN' : state.flags[TUTORIAL_RESUME_FLAG] ? 'RESUME_RUN' : state.flags[TUTORIAL_TITLE_FLAG] ? 'TITLE' : 'NEW_RUN';
+  const replayReturn = (): TutorialReturn => {
+    if (!isTrainingRun || state.flags[TUTORIAL_RESUME_FLAG]) return 'RESUME_RUN';
+    return state.flags[TUTORIAL_TITLE_FLAG] ? 'TITLE' : 'NEW_RUN';
+  };
   const replayTutorial = () =>
     startTutorial({ name: state.playerName, portrait: state.playerPortrait, agency: state.agencyName }, replayReturn());
 

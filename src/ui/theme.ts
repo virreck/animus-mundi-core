@@ -28,10 +28,10 @@ export const theme = {
 
 /** Escapes text before it is interpolated into terminal HTML (rendered via dangerouslySetInnerHTML). */
 export const escapeHtml = (text: string) =>
-  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 
 export const SIGIL_REVEALED_FILTER = 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 6px rgba(98, 240, 128, 0.45))';
 
 // ============================================================================ //
 
-export const formatLabel = (str: string) => str.replace(/_/g, ' ').toUpperCase();
+export const formatLabel = (str: string) => str.replaceAll('_', ' ').toUpperCase();

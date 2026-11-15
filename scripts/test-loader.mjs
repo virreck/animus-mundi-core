@@ -6,11 +6,11 @@ import { register } from 'node:module';
 
 register(
   'data:text/javascript,' +
-    encodeURIComponent(`
+    encodeURIComponent(String.raw`
       const CANDIDATES = ['.ts', '.tsx', '/index.ts', '/index.tsx'];
       export async function resolve(specifier, context, next) {
         const isRelative = specifier.startsWith('./') || specifier.startsWith('../');
-        const hasExtension = /\\.[cm]?[jt]sx?$|\\.json$/.test(specifier);
+        const hasExtension = /\.[cm]?[jt]sx?$|\.json$/.test(specifier);
         if (!isRelative || hasExtension) return next(specifier, context);
         for (const suffix of CANDIDATES) {
           try {

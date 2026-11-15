@@ -33,6 +33,79 @@ export function createCommandLine(s: SessionCore & SectorRules & RoomOps & Evide
     handleLootRoom
   } = s;
 
+  const showHelp = () =>
+    appendLog(
+      `<div style="border-left:2px solid #1f3d26;padding-left:10px;line-height:1.6;color:#a8ccaf;">` +
+      `THAUMATURGIC OS 4.14 — COMMAND INDEX<br/>` +
+      `<code>scan [#]</code> <code>enter [#]</code> <code>loot</code> <code>interview</code> <code>attune</code><br/>` +
+      `<code>decoy [#]</code> <code>degauss [#]</code> <code>bypass [#]</code> <code>purge [#]</code> <code>dispel [#]</code><br/>` +
+      `<code>vox</code> <code>assay</code> <code>auspex</code> <code>refine [#]</code><br/>` +
+      `<code>spoof</code> <code>bribe</code> <code>status</code> <code>help</code><br/>` +
+      `<span style="color:#4f7a59;">Full documentation: F7 MANUAL.</span>` +
+      `</div>`,
+      'info'
+    );
+
+  /** Pays Obols to knock Heat down in the current sector (spoof / bribe). */
+  const buyHeatRelief = (opts: { cost: number; heat: number; refusal: string; log: string; toast: string; sound: () => void }) => {
+    if ((state.inventory.obols || 0) < opts.cost) {
+      ThaumaturgicAudio.errorBuzz();
+      appendLog(opts.refusal, 'error');
+      return;
+    }
+    opts.sound();
+    dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -opts.cost } });
+    dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -opts.heat } });
+    appendLog(opts.log, 'success');
+    addToast(opts.toast, 'SEAL');
+  };
+
+  const showStatus = () => {
+    if (!currentContract) return;
+    appendLog(`[+] SECTOR: <strong>${currentContract.sectorLabel}</strong> | POS: <strong>${currentSubNode?.label ?? 'PERIMETER TETHER'}</strong> | HEAT: <strong>${currentHeat}%</strong>`, 'info');
+  };
+
+  /** Every command and its aliases. Each handler gets the rest of the line as its argument. */
+  const COMMANDS: Array<[string[], (arg: string) => void]> = [
+    [['help', '?'], showHelp],
+    [['scan', 'probe'], arg => handleScanRoom(resolveTargetRoom(arg))],
+    [['enter', 'breach', 'move', 'node'], arg => handleEnterRoom(resolveTargetRoom(arg))],
+    [['loot', 'extract'], () => handleLootRoom(false)],
+    [['attune'], () => handleAttuneAnchor()],
+    [['interview', 'question', 'talk'], () => handleInterviewWitness()],
+    [['refine', 'enhance'], arg => handleRefineReading(arg)],
+    [['decoy'], arg => handleDecoyPatrol(arg)],
+    [['degauss'], arg => handleAttemptTrapCounter('degauss', arg)],
+    [['bypass'], arg => handleAttemptTrapCounter('bypass', arg)],
+    [['purge', 'purify'], arg => handleAttemptTrapCounter('purge', arg)],
+    [['dispel'], arg => handleAttemptTrapCounter('dispel', arg)],
+    [['vox'], () => handleRunForensicTool('vox', 'AUDIO', 'VOX SPECTROGRAM')],
+    [['assay', 'reagent'], () => handleRunForensicTool('assay', 'MATTER', 'MATTER ASSAY')],
+    [['auspex', 'lidar', 'lens'], () => handleRunForensicTool('auspex', 'ASTRAL', 'AUSPEX SENSOR')],
+    [['spoof'], () => buyHeatRelief({
+      cost: 15, heat: 25, sound: () => ThaumaturgicAudio.scryPing(),
+      refusal: `[-] Frequency Spoofing requires 15 Obols.`,
+      log: `[📡 SIGNAL SPOOFED] Broadcasted phantom telemetry (-15 Obols, -25% Inquisition Heat).`,
+      toast: `Inquisition Heat -25%`
+    })],
+    [['bribe'], () => buyHeatRelief({
+      cost: 25, heat: 45, sound: () => ThaumaturgicAudio.sealSuccess(),
+      refusal: `[-] Bribing Malleus Watch constables requires 25 Obols.`,
+      log: `[🪙 INQUISITION BRIBED] Paid 25 Obols to Malleus Watch officers (-45% Heat; Cordon lifted).`,
+      toast: `Inquisition Cordon Lifted (-45% Heat)!`
+    })],
+    [['status', 'look'], showStatus],
+    [['map'], () => setMapViewMode(prev => (prev === 'SUB_GRID' ? 'GEO_TRACKER' : 'SUB_GRID'))],
+    [['codex'], () => setViewport('CODEX')],
+    [['kage'], () => setViewport('KAGE_NO_SHO')],
+    [['safehouse', 'altar'], () => setViewport('SAFEHOUSE_ALTAR')],
+    [['horsemen'], () => setViewport('HORSEMEN')],
+    [['dossier'], () => setViewport('DOSSIER')],
+    [['manual'], () => setViewport('MANUAL')],
+    [['clear', 'cls'], () => setTerminalLines([])]
+  ];
+  const COMMAND_INDEX = new Map(COMMANDS.flatMap(([names, run]) => names.map(n => [n, run] as const)));
+
   const processCliCommand = (raw: string) => {
     const trimmed = raw.trim();
     if (!trimmed) return;
@@ -42,85 +115,13 @@ export function createCommandLine(s: SessionCore & SectorRules & RoomOps & Evide
 
     appendLog(`<span style="color:#62f080;">root@${escapeHtml(state.playerName.toLowerCase() || 'operative')}:~#</span> ${escapeHtml(trimmed)}`, 'command');
 
-    if (cmd === 'help' || cmd === '?') {
-      appendLog(
-        `<div style="border-left:2px solid #1f3d26;padding-left:10px;line-height:1.6;color:#a8ccaf;">` +
-        `THAUMATURGIC OS 4.14 — COMMAND INDEX<br/>` +
-        `<code>scan [#]</code> <code>enter [#]</code> <code>loot</code> <code>interview</code> <code>attune</code><br/>` +
-        `<code>decoy [#]</code> <code>degauss [#]</code> <code>bypass [#]</code> <code>purge [#]</code> <code>dispel [#]</code><br/>` +
-        `<code>vox</code> <code>assay</code> <code>auspex</code> <code>refine [#]</code><br/>` +
-        `<code>spoof</code> <code>bribe</code> <code>status</code> <code>help</code><br/>` +
-        `<span style="color:#4f7a59;">Full documentation: F7 MANUAL.</span>` +
-        `</div>`,
-        'info'
-      );
-    } else if (cmd === 'scan' || cmd === 'probe') {
-      handleScanRoom(resolveTargetRoom(arg));
-    } else if (cmd === 'enter' || cmd === 'breach' || cmd === 'move' || cmd === 'node') {
-      handleEnterRoom(resolveTargetRoom(arg));
-    } else if (cmd === 'loot' || cmd === 'extract') {
-      handleLootRoom(false);
-    } else if (cmd === 'attune') {
-      handleAttuneAnchor();
-    } else if (cmd === 'interview' || cmd === 'question' || cmd === 'talk') {
-      handleInterviewWitness();
-    } else if (cmd === 'refine' || cmd === 'enhance') {
-      handleRefineReading(arg);
-    } else if (cmd === 'decoy') {
-      handleDecoyPatrol(arg);
-    } else if (['degauss', 'bypass', 'purge', 'purify', 'dispel'].includes(cmd)) {
-      handleAttemptTrapCounter(cmd === 'purify' ? 'purge' : cmd, arg);
-    } else if (cmd === 'vox') {
-      handleRunForensicTool('vox', 'AUDIO', 'VOX SPECTROGRAM');
-    } else if (cmd === 'assay' || cmd === 'reagent') {
-      handleRunForensicTool('assay', 'MATTER', 'MATTER ASSAY');
-    } else if (cmd === 'auspex' || cmd === 'lidar' || cmd === 'lens') {
-      handleRunForensicTool('auspex', 'ASTRAL', 'AUSPEX SENSOR');
-    } else if (cmd === 'spoof') {
-      if ((state.inventory.obols || 0) < 15) {
-        ThaumaturgicAudio.errorBuzz();
-        appendLog(`[-] Frequency Spoofing requires 15 Obols.`, 'error');
-        return;
-      }
-      ThaumaturgicAudio.scryPing();
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -15 } });
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -25 } });
-      appendLog(`[📡 SIGNAL SPOOFED] Broadcasted phantom telemetry (-15 Obols, -25% Inquisition Heat).`, 'success');
-      addToast(`Inquisition Heat -25%`, 'SEAL');
-    } else if (cmd === 'bribe') {
-      if ((state.inventory.obols || 0) < 25) {
-        ThaumaturgicAudio.errorBuzz();
-        appendLog(`[-] Bribing Malleus Watch constables requires 25 Obols.`, 'error');
-        return;
-      }
-      ThaumaturgicAudio.sealSuccess();
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: -25 } });
-      dispatch({ type: 'MODIFY_SECTOR_ENTROPY', payload: { nodeId: state.currentNode, amount: -45 } });
-      appendLog(`[🪙 INQUISITION BRIBED] Paid 25 Obols to Malleus Watch officers (-45% Heat; Cordon lifted).`, 'success');
-      addToast(`Inquisition Cordon Lifted (-45% Heat)!`, 'SEAL');
-    } else if (cmd === 'status' || cmd === 'look') {
-      if (!currentContract) return;
-      appendLog(`[+] SECTOR: <strong>${currentContract.sectorLabel}</strong> | POS: <strong>${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}</strong> | HEAT: <strong>${currentHeat}%</strong>`, 'info');
-    } else if (cmd === 'map') {
-      setMapViewMode(prev => prev === 'SUB_GRID' ? 'GEO_TRACKER' : 'SUB_GRID');
-    } else if (cmd === 'codex') {
-      setViewport('CODEX');
-    } else if (cmd === 'kage') {
-      setViewport('KAGE_NO_SHO');
-    } else if (cmd === 'safehouse' || cmd === 'altar') {
-      setViewport('SAFEHOUSE_ALTAR');
-    } else if (cmd === 'horsemen') {
-      setViewport('HORSEMEN');
-    } else if (cmd === 'dossier') {
-      setViewport('DOSSIER');
-    } else if (cmd === 'manual') {
-      setViewport('MANUAL');
-    } else if (cmd === 'clear' || cmd === 'cls') {
-      setTerminalLines([]);
-    } else {
-      ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] command not found: ${escapeHtml(cmd)}`, 'error');
+    const run = COMMAND_INDEX.get(cmd);
+    if (run) {
+      run(arg);
+      return;
     }
+    ThaumaturgicAudio.errorBuzz();
+    appendLog(`[-] command not found: ${escapeHtml(cmd)}`, 'error');
   };
 
 

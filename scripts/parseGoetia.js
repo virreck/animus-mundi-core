@@ -1,6 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // 1. Get the absolute path of this exact script file (Bulletproof ES Module pathing)
 const __filename = fileURLToPath(import.meta.url);
@@ -39,11 +39,11 @@ try {
     if (idStr && name && rank) {
       // Assign an allegiance for the prototype
       const allegiances = ['CONQUEST', 'WAR', 'FAMINE', 'DEATH']; // must match HorsemanAllegiance
-      const assignedAllegiance = allegiances[parseInt(idStr, 10) % 4];
+      const assignedAllegiance = allegiances[Number.parseInt(idStr, 10) % 4];
 
       goetiaList.push({
         id: `${idStr}_${name.toLowerCase()}`,
-        manifestId: parseInt(idStr, 10),
+        manifestId: Number.parseInt(idStr, 10),
         name: name,
         rank: rank,
         allegiance: assignedAllegiance,

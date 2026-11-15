@@ -10,6 +10,9 @@ import type { RoomOps } from './roomOps';
 import type { SectorRules } from './sectorRules';
 import type { SessionCore } from './useSessionCore';
 
+const markCleared = (nodes: SubGridNode[], nodeId: string) =>
+  nodes.map(n => (n.id === nodeId ? { ...n, status: 'CLEARED' as const } : n));
+
 /** Evidence gathering: forensic tools, refine, witness interviews, anchor attunement, looting. */
 export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
   const {
@@ -157,10 +160,11 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
       appendLog(readings.length === 0 ? `[-] NO READINGS ON FILE.` : `[i] NO DEGRADED READINGS.`, 'system');
       return;
     }
-    const num = parseInt((arg || '').trim(), 10);
-    const log = !isNaN(num) ? readings[num - 1] : pending[pending.length - 1];
+    const num = Number.parseInt((arg || '').trim(), 10);
+    const log = Number.isNaN(num) ? pending.at(-1) : readings[num - 1];
     if (!log || !isAmbiguous(log)) {
-      appendLog(`[-] READING ${escapeHtml(arg || '')} NOT DEGRADED. DEGRADED: ${pending.map(l => `#${readings.indexOf(l) + 1}`).join(', ')}.`, 'warn');
+      const degraded = pending.map(l => '#' + (readings.indexOf(l) + 1)).join(', ');
+      appendLog(`[-] READING ${escapeHtml(arg || '')} NOT DEGRADED. DEGRADED: ${degraded}.`, 'warn');
       return;
     }
     if (currentHeat >= 100) {
@@ -193,43 +197,111 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
     addToast(`Reading resolved: ${def?.label || tag}`, 'INTEL');
   };
 
-  const handleRunForensicTool = (toolCmd: string, expectedChannel: ForensicChannel, toolLabel: string) => {
-    if (blockIfSectorLost()) return;
+  /** Common checks before touching a room: position, cordon, already cleared. True = stop. */
+  const roomUnavailable = (cordonMsg: string, clearedMsg: string): boolean => {
     if (!currentContract || !currentSubNode) {
       ThaumaturgicAudio.errorBuzz();
       appendLog(`[-] NO POSITION.`, 'error');
-      return;
+      return true;
     }
     if (currentHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] MALLEUS CORDON ACTIVE — INSTRUMENTS JAMMED.`, 'error');
-      return;
+      appendLog(cordonMsg, 'error');
+      return true;
     }
     if (currentSubNode.status === 'CLEARED') {
-      appendLog(`[i] <strong>${currentSubNode.label}</strong> has already been cleared.`, 'system');
+      appendLog(`[i] <strong>${currentSubNode.label}</strong> ${clearedMsg}`, 'system');
+      return true;
+    }
+    return false;
+  };
+
+  const collectSalvage = (node: SubGridNode, tag: string) => {
+    if (!node.salvageDrop) return;
+    const { itemId, amount, obols } = node.salvageDrop;
+    dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
+    dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
+    appendLog(`[📦 ${tag}] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
+  };
+
+  const readingFor = (node: SubGridNode, channel: ForensicChannel): EvidenceLog | null => {
+    if (!node.signTag) return null;
+    const group = node.ambiguityGroupId ? AMBIGUITY_GROUPS.find(g => g.id === node.ambiguityGroupId) : undefined;
+    return {
+      id: `${node.id}_log`,
+      kind: 'PHENOMENON',
+      nodeLabel: node.label,
+      channel,
+      trueTag: node.signTag,
+      candidates: group ? group.tags : [node.signTag],
+      text: group ? group.report : node.forensicText || ''
+    };
+  };
+
+  const logReading = (log: EvidenceLog, toolLabel: string, roomLabel: string) => {
+    const readingCount = sectorEvidence('PHENOMENON').length + 1;
+    const degraded = (log.candidates || []).length > 1;
+    const colour = degraded ? '#ffb800' : '#62f080';
+    const options = (log.candidates || []).map(t => PHENOMENON_CATALOG.find(p => p.tag === t)?.label || t);
+    const unresolved = degraded
+      ? `<div style="color:#a8ccaf;margin-top:4px;font-size:0.9em;">UNRESOLVED: <strong>${options.join(' / ')}</strong></div>`
+      : '';
+    const header = `[${degraded ? '≈' : '✓'} ${toolLabel} // READING ${readingCount}/3 AT ${roomLabel}${degraded ? ' — DEGRADED' : ''}]`;
+    appendLog(
+      `<div style="background:rgba(98,240,128,0.09);border-left:3px solid ${colour};padding:8px 10px;margin:4px 0;">` +
+      `<div style="color:${colour};font-weight:bold;">${header}</div>` +
+      `<div style="color:#ffffff;margin-top:4px;">"${escapeHtml(log.text)}"</div>` +
+      unresolved +
+      `</div>`,
+      'success'
+    );
+    addToast(degraded ? `Reading ${readingCount}/3: degraded` : `Reading ${readingCount}/3 decoded`, 'INTEL');
+  };
+
+  const awakenShrine = (node: SubGridNode) => {
+    if (node.nodeType !== 'SHRINE' || !node.shrineYokaiId) return;
+    const yokai = allYokai.find(y => y.id === node.shrineYokaiId);
+    if (!yokai?.unlockFlag) return;
+    if (state.flags[yokai.unlockFlag]) {
+      // A page already written: the spirit remembers you
+      dispatch({ type: 'ADD_BOND', payload: { yokaiId: yokai.id, amount: 1 } });
+      appendLog(`[⛩️ SHRINE] ${escapeHtml(yokai.nameEn.toUpperCase())} remembers you. Bond deepens.`, 'success');
       return;
     }
-    if (currentSubNode.hazard !== 'NONE') {
+    dispatch({ type: 'SET_FLAG', payload: { flagId: yokai.unlockFlag, value: true } });
+    appendLog(
+      `<div style="border-left:3px solid #00f3ff;padding-left:10px;margin:4px 0;color:#00f3ff;">` +
+      `<strong>[⛩️ SHRINE AWAKENED: ${yokai.nameEn.toUpperCase()}]</strong> A new page fills in the KAGE NO SHO.` +
+      `</div>`,
+      'success'
+    );
+    addToast(`Page written: ${yokai.nameEn}`, 'SEAL');
+  };
+
+  const handleRunForensicTool = (toolCmd: string, expectedChannel: ForensicChannel, toolLabel: string) => {
+    if (blockIfSectorLost()) return;
+    if (roomUnavailable(`[!] MALLEUS CORDON ACTIVE — INSTRUMENTS JAMMED.`, 'has already been cleared.')) return;
+    const contract = currentContract!;
+    const node = currentSubNode!;
+    if (node.hazard !== 'NONE') {
       ThaumaturgicAudio.errorBuzz();
       triggerHudFlash('DAMAGE');
       const shockHum = state.tetheredYokai.includes('yokai_baku') ? -3 : -6;
       dispatch({ type: 'MODIFY_HUMANITY', payload: shockHum });
       const shockHeat = addSectorHeat(10);
-      appendLog(`[!] FEEDBACK: <code>${toolCmd}</code> against <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> (${shockHum}% HUM, +${shockHeat}% Heat).`, 'error');
+      appendLog(`[!] FEEDBACK: <code>${toolCmd}</code> against <em>"${HAZARD_MANIFEST[node.hazard].symptom}"</em> (${shockHum}% HUM, +${shockHeat}% Heat).`, 'error');
       addToast(`Feedback shock ${shockHum}% HUM`, 'ALERT');
       return;
     }
-
-    if (currentSubNode.nodeType === 'WITNESS') {
+    if (node.nodeType === 'WITNESS') {
       appendLog(`[i] Instruments pick up nothing but a frightened heartbeat.`, 'system');
       return;
     }
-    if (!currentSubNode.signalChannel) {
+    if (!node.signalChannel) {
       handleLootRoom(true);
       return;
     }
-
-    if (currentSubNode.signalChannel !== expectedChannel) {
+    if (node.signalChannel !== expectedChannel) {
       ThaumaturgicAudio.errorBuzz();
       const wrongHeat = addSectorHeat(5);
       appendLog(`[-] ${toolLabel}: STATIC. (+${wrongHeat}% Heat)`, 'warn');
@@ -240,119 +312,45 @@ export function createEvidenceOps(s: SessionCore & SectorRules & RoomOps) {
     ThaumaturgicAudio.sealSuccess();
     triggerHudFlash('DECODE');
     addMicroEntropy(0.01);
-    const group = currentSubNode.ambiguityGroupId ? AMBIGUITY_GROUPS.find(g => g.id === currentSubNode.ambiguityGroupId) : undefined;
-    const readingCount = sectorEvidence('PHENOMENON').length + 1;
-    const newLog: EvidenceLog | null = currentSubNode.signTag ? {
-      id: `${currentSubNode.id}_log`,
-      kind: 'PHENOMENON',
-      nodeLabel: currentSubNode.label,
-      channel: expectedChannel,
-      trueTag: currentSubNode.signTag,
-      candidates: group ? group.tags : [currentSubNode.signTag],
-      text: group ? group.report : currentSubNode.forensicText || ''
-    } : null;
-    if (newLog) {
-      const options = (newLog.candidates || []).map(t => PHENOMENON_CATALOG.find(p => p.tag === t)?.label || t);
-      appendLog(
-        `<div style="background:rgba(98,240,128,0.09);border-left:3px solid ${group ? '#ffb800' : '#62f080'};padding:8px 10px;margin:4px 0;">` +
-        `<div style="color:${group ? '#ffb800' : '#62f080'};font-weight:bold;">[${group ? '≈' : '✓'} ${toolLabel} // READING ${readingCount}/3 AT ${currentSubNode.label}${group ? ' — DEGRADED' : ''}]</div>` +
-        `<div style="color:#ffffff;margin-top:4px;">"${escapeHtml(newLog.text)}"</div>` +
-        (group
-          ? `<div style="color:#a8ccaf;margin-top:4px;font-size:0.9em;">UNRESOLVED: <strong>${options.join(' / ')}</strong></div>`
-          : '') +
-        `</div>`,
-        'success'
-      );
-      addToast(group ? `Reading ${readingCount}/3: degraded` : `Reading ${readingCount}/3 decoded`, 'INTEL');
-    }
+    const newLog = readingFor(node, expectedChannel);
+    if (newLog) logReading(newLog, toolLabel, node.label);
+    collectSalvage(node, 'SALVAGE');
 
-    if (currentSubNode.salvageDrop) {
-      const { itemId, amount, obols } = currentSubNode.salvageDrop;
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
-      appendLog(`[📦 SALVAGE] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
-    }
-
-    const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
-      n.id === currentSubNode.id ? { ...n, status: 'CLEARED' as const } : n
-    );
-
-    updateContract(currentContract.sectorId, c => ({
+    updateContract(contract.sectorId, c => ({
       ...c,
-      subNodes: updatedNodes(c.subNodes),
+      subNodes: markCleared(c.subNodes, node.id),
       discoveredLogs: newLog && !c.discoveredLogs.some(l => l.id === newLog.id) ? [...c.discoveredLogs, newLog] : c.discoveredLogs
     }));
   };
 
   const handleLootRoom = (bypassSignalCheck = false) => {
     if (blockIfSectorLost()) return;
-    if (!currentContract || !currentSubNode) {
-      ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] NO POSITION.`, 'error');
-      return;
-    }
-    if (currentHeat >= 100) {
-      ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] MALLEUS CORDON ACTIVE — SECTOR HEAT 100%.`, 'error');
-      return;
-    }
-    if (currentSubNode.status === 'CLEARED') {
-      appendLog(`[i] <strong>${currentSubNode.label}</strong> is already cleared.`, 'system');
-      return;
-    }
-    if (currentSubNode.hazard !== 'NONE') {
+    if (roomUnavailable(`[!] MALLEUS CORDON ACTIVE — SECTOR HEAT 100%.`, 'is already cleared.')) return;
+    const contract = currentContract!;
+    const node = currentSubNode!;
+    if (node.hazard !== 'NONE') {
       ThaumaturgicAudio.errorBuzz();
       triggerHudFlash('DAMAGE');
       dispatch({ type: 'MODIFY_HUMANITY', payload: -6 });
       const lootHeat = addSectorHeat(10);
-      appendLog(`[!] FEEDBACK: <em>"${HAZARD_MANIFEST[currentSubNode.hazard].symptom}"</em> (-6% HUM, +${lootHeat}% Heat).`, 'error');
+      appendLog(`[!] FEEDBACK: <em>"${HAZARD_MANIFEST[node.hazard].symptom}"</em> (-6% HUM, +${lootHeat}% Heat).`, 'error');
       return;
     }
-    if (currentSubNode.nodeType === 'WITNESS') {
+    if (node.nodeType === 'WITNESS') {
       appendLog(`[i] The witness flinches away from your hands.`, 'system');
       return;
     }
-    if (!bypassSignalCheck && currentSubNode.signalChannel) {
-      appendLog(`[!] UNDECODED SIGNAL: <em>"${currentSubNode.rawSignalSymptom}"</em>`, 'warn');
+    if (!bypassSignalCheck && node.signalChannel) {
+      appendLog(`[!] UNDECODED SIGNAL: <em>"${node.rawSignalSymptom}"</em>`, 'warn');
       return;
     }
-
     ThaumaturgicAudio.sealSuccess();
     triggerHudFlash('DECODE');
     addMicroEntropy(0.01);
-
-    if (currentSubNode.nodeType === 'SHRINE' && currentSubNode.shrineYokaiId) {
-      const yokai = allYokai.find(y => y.id === currentSubNode.shrineYokaiId);
-      if (yokai && yokai.unlockFlag && state.flags[yokai.unlockFlag]) {
-        // A page already written: the spirit remembers you
-        dispatch({ type: 'ADD_BOND', payload: { yokaiId: yokai.id, amount: 1 } });
-        appendLog(`[⛩️ SHRINE] ${escapeHtml(yokai.nameEn.toUpperCase())} remembers you. Bond deepens.`, 'success');
-      } else if (yokai && yokai.unlockFlag) {
-        dispatch({ type: 'SET_FLAG', payload: { flagId: yokai.unlockFlag, value: true } });
-        appendLog(
-          `<div style="border-left:3px solid #00f3ff;padding-left:10px;margin:4px 0;color:#00f3ff;">` +
-          `<strong>[⛩️ SHRINE AWAKENED: ${yokai.nameEn.toUpperCase()}]</strong> A new page fills in the KAGE NO SHO.` +
-          `</div>`,
-          'success'
-        );
-        addToast(`Page written: ${yokai.nameEn}`, 'SEAL');
-      }
-    }
-
-    if (currentSubNode.salvageDrop) {
-      const { itemId, amount, obols } = currentSubNode.salvageDrop;
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId, amount } });
-      dispatch({ type: 'MODIFY_INVENTORY', payload: { itemId: 'obols', amount: obols } });
-      appendLog(`[📦 SALVAGE COLLECTED] +${amount}x <strong style="color:#ffb800;">${formatLabel(itemId)}</strong>, +${obols} <strong style="color:#ffb800;">OBOLS</strong>.`, 'info');
-    }
-
-    const updatedNodes = (nodes: SubGridNode[]) => nodes.map(n =>
-      n.id === currentSubNode.id ? { ...n, status: 'CLEARED' as const } : n
-    );
-
-    updateContract(currentContract.sectorId, c => ({ ...c, subNodes: updatedNodes(c.subNodes) }));
+    awakenShrine(node);
+    collectSalvage(node, 'SALVAGE COLLECTED');
+    updateContract(contract.sectorId, c => ({ ...c, subNodes: markCleared(c.subNodes, node.id) }));
   };
-
 
   return {
     sectorEvidence,

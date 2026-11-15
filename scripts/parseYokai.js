@@ -1,6 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // 1. Establish bulletproof absolute pathing
 const __filename = fileURLToPath(import.meta.url);
@@ -14,6 +14,60 @@ const outDir = path.join(repoRoot, 'data_ingest', 'generated');
 // overwritten — copy across anything you need by hand.
 const outFile = path.join(outDir, 'yokai.json');
 
+// --- DYNAMIC COST ENGINE ---
+// Each rule is [keywords, value]. Rules are checked in order and the LAST match wins.
+const HUMANITY_RULES = [
+  [['sanity', 'spiritual fatigue'], 10],
+  [['blood', 'stamina'], 5],
+  [['corruption', 'heavy sacrifice'], 20]
+];
+const ITEM_RULES = [
+  [['lamp oil'], 'lamp_oil'],
+  [['water', 'hydration'], 'water_flask'],
+  [['sand'], 'sacred_sand'],
+  [['food', 'meal'], 'food_ration'],
+  [['fuel'], 'fuel_item'],
+  [['spirit thread'], 'spirit_thread'],
+  [['paper doll'], 'paper_doll'],
+  [['mirror'], 'silver_mirror'],
+  [['cucumber'], 'cucumber']
+];
+
+const lastMatch = (text, rules, fallback) =>
+  rules.reduce((found, [words, value]) => (words.some(w => text.includes(w)) ? value : found), fallback);
+
+function inkCostFor(text) {
+  // Paper (but not a paper doll) is the cheaper ink cost, and overrides ink / seal
+  if (text.includes('paper') && !text.includes('paper doll')) return 1;
+  return text.includes('ink') || text.includes('seal') ? 2 : 0;
+}
+
+/** One table row -> a Yokai entry, or null for headers, rules and blank lines. */
+function parseYokaiLine(line) {
+  if (line.includes('ID | Name') || line.includes('---') || line.trim() === '') return null;
+  const [idStr, nameEn, kanji, utilityClass, utility, costDesc = ''] = line.split('|').map(s => s.trim());
+  if (!idStr || !nameEn || !kanji) return null;
+
+  const descLower = costDesc.toLowerCase();
+  const humanityCost = lastMatch(descLower, HUMANITY_RULES, 0);
+  const inkCost = inkCostFor(descLower);
+  const reqItem = lastMatch(descLower, ITEM_RULES, null);
+  return {
+    id: `${idStr}_${nameEn.toLowerCase().replaceAll(/[^a-z0-9]/g, '_')}`,
+    nameEn,
+    kanji,
+    utilityClass,
+    gameUtility: utility,
+    costDescription: costDesc,
+    draftCost: 50, // Standard base Obol cost to draft the contract
+    activationCost: {
+      humanity: humanityCost > 0 ? humanityCost : undefined,
+      ink: inkCost > 0 ? inkCost : undefined,
+      requiredItemId: reqItem || undefined
+    }
+  };
+}
+
 console.log('🚀 Starting Yokai parser with dynamic cost generation...');
 
 try {
@@ -23,60 +77,7 @@ try {
   }
 
   const rawText = fs.readFileSync(targetPath, 'utf-8');
-  const lines = rawText.split('\n');
-  const yokaiList = [];
-
-  lines.forEach(line => {
-    // Skip empty lines or the table header
-    if (line.includes('ID | Name') || line.includes('---') || line.trim() === '') return;
-
-    const [idStr, nameEn, kanji, utilityClass, utility, costDesc] = line.split('|').map(s => s.trim());
-    
-    if (idStr && nameEn && kanji) {
-      
-      // --- DYNAMIC COST ENGINE ---
-      let humanityCost = 0;
-      let inkCost = 0;
-      let reqItem = null;
-      const descLower = costDesc.toLowerCase();
-
-      // Detect Humanity / Spiritual / Sanity costs
-      if (descLower.includes('sanity') || descLower.includes('spiritual fatigue')) humanityCost = 10;
-      if (descLower.includes('blood') || descLower.includes('stamina')) humanityCost = 5;
-      if (descLower.includes('corruption') || descLower.includes('heavy sacrifice')) humanityCost = 20;
-
-      // Detect Ink / Paper costs
-      if (descLower.includes('ink') || descLower.includes('seal')) inkCost = 2;
-      if (descLower.includes('paper') && !descLower.includes('paper doll')) inkCost = 1;
-
-      // Detect specific required items
-      if (descLower.includes('lamp oil')) reqItem = 'lamp_oil';
-      if (descLower.includes('water') || descLower.includes('hydration')) reqItem = 'water_flask';
-      if (descLower.includes('sand')) reqItem = 'sacred_sand';
-      if (descLower.includes('food') || descLower.includes('meal')) reqItem = 'food_ration';
-      if (descLower.includes('fuel')) reqItem = 'fuel_item';
-      if (descLower.includes('spirit thread')) reqItem = 'spirit_thread';
-      if (descLower.includes('paper doll')) reqItem = 'paper_doll';
-      if (descLower.includes('mirror')) reqItem = 'silver_mirror';
-      if (descLower.includes('cucumber')) reqItem = 'cucumber';
-
-      // Push the fully compiled entity to the array
-      yokaiList.push({
-        id: `${idStr}_${nameEn.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
-        nameEn: nameEn,
-        kanji: kanji,
-        utilityClass: utilityClass,
-        gameUtility: utility,
-        costDescription: costDesc,
-        draftCost: 50, // Standard base Obol cost to draft the contract
-        activationCost: {
-          humanity: humanityCost > 0 ? humanityCost : undefined,
-          ink: inkCost > 0 ? inkCost : undefined,
-          requiredItemId: reqItem || undefined
-        }
-      });
-    }
-  });
+  const yokaiList = rawText.split('\n').map(parseYokaiLine).filter(Boolean);
 
   console.log(`🔨 Successfully parsed ${yokaiList.length} Yokai and Shikigami.`);
 

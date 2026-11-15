@@ -280,10 +280,10 @@ export function getUniqueGoetiaSigns(goetiaId: string): string[] {
 
     allGoetia.forEach(g => {
       const base = g.requiredIntel && g.requiredIntel.length >= 3
-        ? [...g.requiredIntel.slice(0, 3)]
+        ? g.requiredIntel.slice(0, 3)
         : ['hoarse_voice', 'weapon_decay', 'corpse_theft'];
 
-      const sigKey = (arr: string[]) => [...arr].sort().join('|');
+      const sigKey = (arr: string[]) => [...arr].sort((a, b) => a.localeCompare(b)).join('|');
 
       if (!usedSignatures.has(sigKey(base))) {
         usedSignatures.add(sigKey(base));
@@ -496,6 +496,97 @@ const AMBIGUITY_CHANCE = 0.75;
 
 type MiddleRole = 'CLUE' | 'WITNESS' | 'SHRINE' | 'PATROL';
 
+const pickRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+/** A spirit not yet sealed or anchored elsewhere (falling back to any unsealed one, then any at all). */
+function pickTarget(sealedGoetia: string[], usedGoetiaIds: string[], forcedTargetId?: string) {
+  const forced = allGoetia.find(g => g.id === forcedTargetId);
+  if (forced) return forced;
+  const available = allGoetia.filter(g => !sealedGoetia.includes(g.id) && !usedGoetiaIds.includes(g.id));
+  if (available.length > 0) return pickRandom(available);
+  const unsealed = allGoetia.filter(g => !sealedGoetia.includes(g.id));
+  return pickRandom(unsealed.length > 0 ? unsealed : allGoetia);
+}
+
+/** The middle always holds 2 clues and a witness, plus an optional shrine and 0–2 patrols. */
+function rollMiddleRoles(): MiddleRole[] {
+  const roles: MiddleRole[] = ['CLUE', 'CLUE', 'WITNESS'];
+  if (Math.random() < 0.75) roles.push('SHRINE');
+  const patrols = Math.floor(Math.random() * 3);
+  for (let i = 0; i < patrols; i++) roles.push('PATROL');
+  return shuffle(roles);
+}
+
+interface Layout {
+  columns: number[][];
+  coords: { x: number; y: number }[];
+  anchorIdx: number;
+}
+
+/**
+ * Columns left -> right: [entry] [middle...] [anchor]. Middle rooms are spread over
+ * 1–3 columns (never more than 3 stacked), so every sector has a different shape.
+ */
+function layoutColumns(middleCount: number): Layout {
+  const middleCols = Math.min(3, Math.max(Math.ceil(middleCount / 3), Math.round(middleCount / 2) - (Math.random() < 0.5 ? 0 : 1)));
+  const columnSizes: number[] = new Array(middleCols).fill(0);
+  for (let i = 0; i < middleCount; i++) columnSizes[i % middleCols]++;
+  const columns: number[][] = [[0]];
+  let cursor = 1;
+  shuffle(columnSizes).forEach(size => {
+    columns.push(Array.from({ length: size }, (_, k) => cursor + k));
+    cursor += size;
+  });
+  columns.push([cursor]);
+
+  const coords: { x: number; y: number }[] = [];
+  columns.forEach((col, ci) => {
+    const x = 0.14 + (0.72 * ci) / (columns.length - 1);
+    col.forEach((roomIdx, ri) => {
+      if (col.length === 1) {
+        coords[roomIdx] = { x, y: 0.5 };
+        return;
+      }
+      const y = 0.2 + (0.6 * ri) / (col.length - 1) + (Math.random() - 0.5) * 0.06;
+      coords[roomIdx] = { x, y: Math.min(0.82, Math.max(0.18, y)) };
+    });
+  });
+  return { columns, coords, anchorIdx: cursor };
+}
+
+/**
+ * Every room links to the nearest room in the neighbouring column(s), plus the odd
+ * extra corridor and same-column side passage. Returns "a-b" pairs with a < b.
+ */
+function linkRooms({ columns, coords }: Layout): Set<string> {
+  const links = new Set<string>();
+  const link = (a: number, b: number) => { if (a !== b) links.add(a < b ? `${a}-${b}` : `${b}-${a}`); };
+  const nearest = (from: number, candidates: number[]) =>
+    candidates.reduce((best, c) => (Math.abs(coords[c].y - coords[from].y) < Math.abs(coords[best].y - coords[from].y) ? c : best), candidates[0]);
+  for (let ci = 0; ci < columns.length - 1; ci++) {
+    const here = columns[ci];
+    const next = columns[ci + 1];
+    next.forEach(n => link(n, nearest(n, here)));
+    here.forEach(h => link(h, nearest(h, next)));
+    const branching = here.length > 1 || next.length > 1;
+    if (branching && Math.random() < 0.45) link(pickRandom(here), pickRandom(next));
+  }
+  columns.forEach(col => {
+    for (let k = 0; k < col.length - 1; k++) if (Math.random() < 0.2) link(col[k], col[k + 1]);
+  });
+  return links;
+}
+
+function roomNamesFor(sectorId: string, roomNames?: string[]) {
+  const baseNames = roomNames?.slice(0, 6) || ROOM_NAMES_BY_SECTOR[sectorId] || GENERIC_ROOM_NAMES.slice(0, 6);
+  const spares = roomNames?.slice(6, 8) || EXTRA_ROOM_NAMES[sectorId] || GENERIC_ROOM_NAMES.slice(6, 8);
+  return {
+    entry: baseNames[0],
+    anchor: baseNames.at(-1)!,
+    middle: shuffle([...baseNames.slice(1, -1), ...spares])
+  };
+}
+
 export function generateSectorContract(
   sectorId: string,
   sectorLabel: string,
@@ -506,73 +597,15 @@ export function generateSectorContract(
   /** Room names for a generated site: entry, four middle rooms, anchor, two spares. */
   roomNames?: string[]
 ): SectorContract {
-  const available = allGoetia.filter(g => !sealedGoetia.includes(g.id) && !usedGoetiaIds.includes(g.id));
-  const fallbackPool = allGoetia.filter(g => !sealedGoetia.includes(g.id));
-  const pool = available.length > 0 ? available : fallbackPool.length > 0 ? fallbackPool : allGoetia;
-  const target = allGoetia.find(g => g.id === forcedTargetId) || pool[Math.floor(Math.random() * pool.length)];
+  const target = pickTarget(sealedGoetia, usedGoetiaIds, forcedTargetId);
   const quirk = rollQuirk(sectorId);
 
-  // --- ROOM ROLES ---------------------------------------------------------
-  // Entry (a clue) + anchor are fixed. The middle always holds the other 2 clues and a
-  // witness, plus an optional shrine and 0–2 patrols: 5 to 8 rooms in total.
-  const middleRoles: MiddleRole[] = ['CLUE', 'CLUE', 'WITNESS'];
-  if (Math.random() < 0.75) middleRoles.push('SHRINE');
-  const patrols = Math.floor(Math.random() * 3);
-  for (let i = 0; i < patrols; i++) middleRoles.push('PATROL');
-  const roles = shuffle(middleRoles);
-
-  // --- LAYOUT ---------------------------------------------------------------
-  // Columns left -> right: [entry] [middle...] [anchor]. Middle rooms are spread over
-  // 1–3 columns, so every sector has a different shape.
-  const m = roles.length;
-  // 1–3 middle columns, never more than 3 rooms stacked in one column
-  const middleCols = Math.min(3, Math.max(Math.ceil(m / 3), Math.round(m / 2) - (Math.random() < 0.5 ? 0 : 1)));
-  const columnSizes: number[] = Array(middleCols).fill(0);
-  roles.forEach((_, i) => { columnSizes[i % middleCols]++; });
-  shuffle(columnSizes).forEach((v, i) => { columnSizes[i] = v; });
-  const columns: number[][] = [[0]];
-  let cursor = 1;
-  columnSizes.forEach(size => {
-    columns.push(Array.from({ length: size }, (_, k) => cursor + k));
-    cursor += size;
-  });
-  const anchorIdx = cursor;
-  columns.push([anchorIdx]);
-  const totalRooms = anchorIdx + 1;
-
-  const coords: { x: number; y: number }[] = [];
-  columns.forEach((col, ci) => {
-    const x = 0.14 + (0.72 * ci) / (columns.length - 1);
-    col.forEach((roomIdx, ri) => {
-      const y = col.length === 1 ? 0.5 : 0.2 + (0.6 * ri) / (col.length - 1);
-      coords[roomIdx] = { x, y: Math.min(0.82, Math.max(0.18, y + (col.length > 1 ? (Math.random() - 0.5) * 0.06 : 0))) };
-    });
-  });
-
-  // Connections: every room links to the nearest room in the neighbouring column(s),
-  // plus the odd extra corridor and same-column side passage.
-  const links = new Set<string>();
-  const link = (a: number, b: number) => { if (a !== b) links.add(a < b ? `${a}-${b}` : `${b}-${a}`); };
-  const nearest = (from: number, candidates: number[]) =>
-    candidates.reduce((best, c) => (Math.abs(coords[c].y - coords[from].y) < Math.abs(coords[best].y - coords[from].y) ? c : best), candidates[0]);
-  for (let ci = 0; ci < columns.length - 1; ci++) {
-    const here = columns[ci];
-    const next = columns[ci + 1];
-    next.forEach(n => link(n, nearest(n, here)));
-    here.forEach(h => link(h, nearest(h, next)));
-    if (here.length > 1 || next.length > 1) {
-      if (Math.random() < 0.45) link(here[Math.floor(Math.random() * here.length)], next[Math.floor(Math.random() * next.length)]);
-    }
-  }
-  columns.forEach(col => {
-    for (let k = 0; k < col.length - 1; k++) if (Math.random() < 0.2) link(col[k], col[k + 1]);
-  });
-
-  // --- NAMES ----------------------------------------------------------------
-  const baseNames = (roomNames && roomNames.slice(0, 6)) || ROOM_NAMES_BY_SECTOR[sectorId] || GENERIC_ROOM_NAMES.slice(0, 6);
-  const entryName = baseNames[0];
-  const anchorName = baseNames[baseNames.length - 1];
-  const middleNames = shuffle([...baseNames.slice(1, -1), ...((roomNames && roomNames.slice(6, 8)) || EXTRA_ROOM_NAMES[sectorId] || GENERIC_ROOM_NAMES.slice(6, 8))]);
+  // Entry (a clue) + anchor are fixed; the middle holds everything else: 5 to 8 rooms in total.
+  const roles = rollMiddleRoles();
+  const layout = layoutColumns(roles.length);
+  const { columns, coords, anchorIdx } = layout;
+  const links = [...linkRooms(layout)].map(l => l.split('-').map(Number));
+  const names = roomNamesFor(sectorId, roomNames);
 
   // --- CLUES ----------------------------------------------------------------
   const requiredTags = getUniqueGoetiaSigns(target.id);
@@ -583,7 +616,7 @@ export function generateSectorContract(
     const tag = requiredTags[clueIdx];
     const def = PHENOMENON_CATALOG.find(p => p.tag === tag);
     const group = ambiguous[clueIdx] ? getAmbiguityGroup(tag) : undefined;
-    const precise = def ? def.forensicReports[Math.floor(Math.random() * def.forensicReports.length)] : `AUSPEX LOG: Anomalous resonance signature [${tag}] isolated.`;
+    const precise = def ? pickRandom(def.forensicReports) : `AUSPEX LOG: Anomalous resonance signature [${tag}] isolated.`;
     return {
       signalChannel: (def?.channel || 'ASTRAL') as ForensicChannel,
       rawSignalSymptom: group ? group.symptom : def?.rawSignalSymptom || 'Unidentified spatial distortion vibrating in the room.',
@@ -599,47 +632,48 @@ export function generateSectorContract(
     [target.name, ...target.name.split('-')]
   );
 
-  const randomYokai = allYokai[Math.floor(Math.random() * allYokai.length)];
+  const randomYokai = pickRandom(allYokai);
   const rawMaterials: ('scrap_metal' | 'cursed_earth' | 'alchemical_distillate')[] = shuffle(['scrap_metal', 'cursed_earth', 'alchemical_distillate']);
   const traps: RoomHazardType[] = ['STATIC', 'WIRE', 'MIASMA', 'HEX'];
-  const randomTrap = () => traps[Math.floor(Math.random() * traps.length)];
-  const maybeTrap = (chance: number): RoomHazardType => (quirk === 'WARDED' || Math.random() < chance ? randomTrap() : 'NONE');
+  const maybeTrap = (chance: number): RoomHazardType => (quirk === 'WARDED' || Math.random() < chance ? pickRandom(traps) : 'NONE');
 
   let clueCursor = 1; // clue 0 is in the entry room
+  /** The room-specific part of a middle room, by role. */
+  const middleRoom = (role: MiddleRole, wardLevel: number): Omit<SubGridNode, 'id' | 'index' | 'x' | 'y' | 'connections' | 'status' | 'label'> => {
+    switch (role) {
+      case 'CLUE': {
+        const clue = clueFor(clueCursor++);
+        return { wardLevel, nodeType: 'ANOMALY', hazard: maybeTrap(0.6), ...clue, salvageDrop: { itemId: rawMaterials[clueCursor % 3], amount: 2, obols: 15 } };
+      }
+      case 'WITNESS':
+        return { wardLevel, nodeType: 'WITNESS', hazard: maybeTrap(0.3), witnessText: witness.text, witnessName: witness.witness, salvageDrop: { itemId: rawMaterials[1], amount: 1, obols: 10 } };
+      case 'SHRINE':
+        return { wardLevel, nodeType: 'SHRINE', hazard: quirk === 'WARDED' ? pickRandom(traps) : 'NONE', shrineYokaiId: randomYokai.id, salvageDrop: { itemId: 'alchemical_distillate', amount: 2, obols: 18 } };
+      default:
+        // Patrols never share a room with a trap, so you can always decoy cleanly
+        return { wardLevel: Math.max(2, wardLevel), nodeType: 'PATROL', hazard: 'NONE', patrolActive: true, salvageDrop: { itemId: rawMaterials[2], amount: 3, obols: 22 } };
+    }
+  };
+
   const subNodes: SubGridNode[] = [];
-  for (let idx = 0; idx < totalRooms; idx++) {
-    const id = `${sectorId}_n${idx}`;
+  for (let idx = 0; idx <= anchorIdx; idx++) {
     const colIdx = columns.findIndex(c => c.includes(idx));
     const base = {
-      id,
+      id: `${sectorId}_n${idx}`,
       index: idx + 1,
       x: coords[idx].x,
       y: coords[idx].y,
-      connections: [...links]
-        .map(l => l.split('-').map(Number))
-        .filter(([a, b]) => a === idx || b === idx)
-        .map(([a, b]) => `${sectorId}_n${a === idx ? b : a}`),
-      wardLevel: Math.min(3, 1 + Math.floor((colIdx * 3) / columns.length)),
+      connections: links.filter(([a, b]) => a === idx || b === idx).map(([a, b]) => `${sectorId}_n${a === idx ? b : a}`),
       status: 'LOCKED' as const
     };
-
+    const wardLevel = Math.min(3, 1 + Math.floor((colIdx * 3) / columns.length));
     if (idx === 0) {
-      subNodes.push({ ...base, label: `1: ${entryName}`, nodeType: 'ANOMALY', hazard: 'NONE', ...clueFor(0), salvageDrop: { itemId: rawMaterials[0], amount: 2, obols: 12 } });
+      subNodes.push({ ...base, label: `1: ${names.entry}`, wardLevel, nodeType: 'ANOMALY', hazard: 'NONE', ...clueFor(0), salvageDrop: { itemId: rawMaterials[0], amount: 2, obols: 12 } });
     } else if (idx === anchorIdx) {
-      subNodes.push({ ...base, label: `${idx + 1}: ${anchorName} [ANCHOR]`, wardLevel: 3, nodeType: 'ANCHOR', hazard: maybeTrap(0.8), salvageDrop: { itemId: 'cursed_earth', amount: 3, obols: 28 } });
+      subNodes.push({ ...base, label: `${idx + 1}: ${names.anchor} [ANCHOR]`, wardLevel: 3, nodeType: 'ANCHOR', hazard: maybeTrap(0.8), salvageDrop: { itemId: 'cursed_earth', amount: 3, obols: 28 } });
     } else {
-      const role = roles[idx - 1];
-      const label = `${idx + 1}: ${middleNames[(idx - 1) % middleNames.length]}`;
-      if (role === 'CLUE') {
-        subNodes.push({ ...base, label, nodeType: 'ANOMALY', hazard: maybeTrap(0.6), ...clueFor(clueCursor++), salvageDrop: { itemId: rawMaterials[clueCursor % 3], amount: 2, obols: 15 } });
-      } else if (role === 'WITNESS') {
-        subNodes.push({ ...base, label, nodeType: 'WITNESS', hazard: maybeTrap(0.3), witnessText: witness.text, witnessName: witness.witness, salvageDrop: { itemId: rawMaterials[1], amount: 1, obols: 10 } });
-      } else if (role === 'SHRINE') {
-        subNodes.push({ ...base, label, nodeType: 'SHRINE', hazard: quirk === 'WARDED' ? randomTrap() : 'NONE', shrineYokaiId: randomYokai.id, salvageDrop: { itemId: 'alchemical_distillate', amount: 2, obols: 18 } });
-      } else {
-        // Patrols never share a room with a trap, so you can always decoy cleanly
-        subNodes.push({ ...base, label, wardLevel: Math.max(2, base.wardLevel), nodeType: 'PATROL', hazard: 'NONE', patrolActive: true, salvageDrop: { itemId: rawMaterials[2], amount: 3, obols: 22 } });
-      }
+      const label = `${idx + 1}: ${names.middle[(idx - 1) % names.middle.length]}`;
+      subNodes.push({ ...base, label, ...middleRoom(roles[idx - 1], wardLevel) });
     }
   }
 
