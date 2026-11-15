@@ -12,7 +12,9 @@ import {
   buildTutorialContract, createTutorialState, isTraining,
   TUTORIAL_ROOMS, TUTORIAL_SECTOR_ID, TUTORIAL_TARGET_ID, TUTORIAL_YOKAI_ID, TUTORIAL_RESUME_FLAG
 } from '../src/engine/tutorial';
-import { TUTORIAL_STEPS, fillTutorialText, type TutorialContext } from '../src/content/tutorial';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { TUTORIAL_STEPS, fillTutorialText, getTutorialGuide, type TutorialContext } from '../src/content/tutorial';
 
 const identity = { name: 'Vergil', portrait: '/portraits/thaumaturge_m1.png', agency: 'Darkwire' };
 const target = allGoetia.find(g => g.id === TUTORIAL_TARGET_ID)!;
@@ -122,4 +124,78 @@ test('steps complete as the crypt is worked through', () => {
 
 test('text placeholders are filled with the operative\'s details', () => {
   assert.equal(fillTutorialText('{name} of {agency}', { playerName: 'vergil', agencyName: 'darkwire' }), 'VERGIL of DARKWIRE');
+});
+
+// ---------------------------------------------------------------------------
+// Guides: the overlay points at real controls
+// ---------------------------------------------------------------------------
+
+/** Every `data-tour` id in the UI: exact ids, plus prefixes of templated ones (`tab-${...}`). */
+function tourIds() {
+  const exact = new Set<string>();
+  const prefixes = new Set<string>();
+  const walk = (dir: string) => {
+    for (const f of readdirSync(dir)) {
+      const p = join(dir, f);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (p.endsWith('.tsx')) {
+        const src = readFileSync(p, 'utf8');
+        for (const m of src.matchAll(/data-tour="([^"]+)"/g)) exact.add(m[1]);
+        for (const m of src.matchAll(/data-tour=\{`([^$`]*)\$\{/g)) prefixes.add(m[1]);
+      }
+    }
+  };
+  walk(join(process.cwd(), 'src'));
+  return { exact, prefixes };
+}
+
+const TAB_IDS = ['FIELD_OPS', 'CODEX', 'KAGE_NO_SHO', 'SAFEHOUSE_ALTAR', 'HORSEMEN'];
+
+test('every guide points at a control that exists, in every screen the player might be on', () => {
+  const { exact, prefixes } = tourIds();
+  const known = (id: string) => exact.has(id) || [...prefixes].some(p => id.startsWith(p));
+  const base = createTutorialState(identity, 'NEW_RUN');
+  for (const step of TUTORIAL_STEPS.filter(s => !s.fullscreen && s.objective)) {
+    assert.ok(step.guide, `${step.id} has an objective but no guide`);
+    for (const viewport of TAB_IDS) {
+      for (const mapViewMode of ['SUB_GRID', 'GEO_TRACKER']) {
+        const g = getTutorialGuide(step, { state: base, viewport, mapViewMode, selectedSuspectId: '01_bael' })!;
+        assert.ok(g.hint.length > 5, `${step.id}: empty hint`);
+        if (g.target) assert.ok(known(g.target), `${step.id} on ${viewport}: unknown target ${g.target}`);
+      }
+    }
+  }
+  for (const tab of TAB_IDS) assert.ok(known(`tab-${tab}`), `tab ${tab} is not tagged`);
+});
+
+test('room steps first ask you to select the room on the map, then point at the button', () => {
+  const s = createTutorialState(identity, 'NEW_RUN');
+  const ctx = (state = s, patch: Partial<TutorialContext> = {}): TutorialContext => ({ state, viewport: 'FIELD_OPS', mapViewMode: 'SUB_GRID', selectedSuspectId: '01_bael', ...patch });
+  const scan1 = TUTORIAL_STEPS.find(x => x.id === 'scan_1')!;
+  // Room 1 is selected at the start
+  assert.deepEqual(getTutorialGuide(scan1, ctx()), { room: 1, target: 'palette-scan', pane: 'WIRE', hint: 'Room 1 is selected. Now tap SCAN.' });
+  // On another screen: go back to Field Ops first
+  assert.equal(getTutorialGuide(scan1, ctx(s, { viewport: 'CODEX' }))!.target, 'tab-FIELD_OPS');
+  // Regional map open: back to the rooms
+  assert.equal(getTutorialGuide(scan1, ctx(s, { mapViewMode: 'GEO_TRACKER' }))!.target, 'map-local');
+
+  const scan2 = TUTORIAL_STEPS.find(x => x.id === 'scan_2')!;
+  const g = getTutorialGuide(scan2, ctx())!;
+  assert.equal(g.room, 2);
+  assert.equal(g.target, undefined, 'nothing to press until Room 2 is selected');
+  const selected = { ...s, contracts: { [TUTORIAL_SECTOR_ID]: { ...s.contracts[TUTORIAL_SECTOR_ID], selectedSubNodeId: TUTORIAL_ROOMS.nave } } };
+  assert.equal(getTutorialGuide(scan2, ctx(selected))!.target, 'palette-scan');
+});
+
+test('tasks inside a room walk you in first', () => {
+  const s = createTutorialState(identity, 'NEW_RUN');
+  const witness = TUTORIAL_STEPS.find(x => x.id === 'witness_4')!;
+  const ctx = (state = s): TutorialContext => ({ state, viewport: 'FIELD_OPS', mapViewMode: 'SUB_GRID', selectedSuspectId: '01_bael' });
+  assert.equal(getTutorialGuide(witness, ctx())!.room, 4);
+  const inside = { ...s, contracts: { [TUTORIAL_SECTOR_ID]: { ...s.contracts[TUTORIAL_SECTOR_ID], activeSubNodeId: TUTORIAL_ROOMS.vestry, selectedSubNodeId: TUTORIAL_ROOMS.vestry } } };
+  assert.equal(getTutorialGuide(witness, ctx(inside))!.target, 'palette-interview');
+});
+
+test('every docked step has a plain-English summary', () => {
+  for (const step of TUTORIAL_STEPS.filter(s => !s.fullscreen)) assert.ok(step.plain && step.plain.length > 20, `${step.id} has no plain summary`);
 });

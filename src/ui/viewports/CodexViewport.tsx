@@ -103,6 +103,7 @@ function SealAction({ sealed, released, name, hasCatalysts, inLiveSector, onSeal
   else if (!hasCatalysts) label = '> CATALYSTS MISSING';
   return (
     <button
+      data-tour="codex-seal"
       onClick={onSeal}
       disabled={!canAfford}
       style={{
@@ -176,7 +177,7 @@ export function CodexViewport() {
               <button onClick={() => setDeducedSigns([])} className="macro-chip macro-chip-danger" style={{ padding: '2px 8px' }}>CLEAR</button>
             )}
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
+          <div data-tour="codex-filters" style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
             {PHENOMENON_CATALOG.map(phenom => {
               const isExcluded = excludedSigns.includes(phenom.tag);
               const look = filterLook(requiredSigns.includes(phenom.tag), isExcluded);
@@ -228,7 +229,7 @@ export function CodexViewport() {
             </button>
           ))}
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        <div data-tour="codex-suspects" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
           {filteredCodexGoetia.map(g => {
             const isSealed = state.sealedGoetia.includes(g.id);
             const isSelected = g.id === selectedSuspectId;

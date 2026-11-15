@@ -19,11 +19,19 @@ No hand-holding. No quest markers. Just raw forensic clues, a command line, and 
 
 ### The Guided First Case
 
-New operatives start with a training run at **St. Lawrence Crypt**, talked through it over the wire by their handler, **Vesper**. It opens with the story of how the seals failed, then walks through every instrument once — scanning, wards, the three forensic tools, degraded readings and `refine`, patrols, the witness, a kami shrine and its Shikigami, anchor resonance, the Codex, the altar, the Sealing Rite, the Regional Map clock and the Horsemen. The world clock is frozen and failures are refunded; nothing in training touches your save. The Grand Rite is left to the **[F7] MANUAL**, and the whole case can be replayed from there at any time.
+New operatives can start with a training run at **St. Lawrence Crypt**, talked through it over the wire by their handler, **Vesper**. It opens with the story of how the seals failed, then walks through every instrument once: scanning, traps, the three forensic tools, unclear readings and `refine`, patrols, the witness, a shrine and its Shikigami, the anchor, the Codex, the altar, the Sealing Rite, the Regional Map clock and the Horsemen.
 
-Outside the training run the interface gives no tips — what you know, you learned.
+The guide is written for people who have never played a game like this:
 
----
+* **It points.** A pulsing ring marks the button to press next, and a second ring marks the room to tap on the map. The guide panel moves to whichever part of the screen you are *not* using.
+* **It speaks plainly.** Every step has a short plain-English summary and a one-line "what to do now". Vesper's in-character lines are folded away behind **VESPER SAYS…**.
+* **It follows you.** If you wander to another screen, it points you back to the right tab first. On phones it points at the MAP / WIRE switch when the button is in the hidden pane.
+
+The world clock is frozen and failures are refunded; nothing in training touches your save. A **"Play the training case first"** box on the new-operative screen is ticked for your first game on a device and can be ticked again any time. The case can also be replayed from the **[F7] MANUAL**, which now has a **"What the words mean"** glossary of every term in the game.
+
+### Save Slots
+
+There are **three save slots** on the title screen. Each saves on its own, automatically. Select a slot to **CONTINUE**, **EXPORT** it to a `.json` file, **IMPORT** a save file into it, or **DELETE** it. A run can also be exported from **[F6] DOSSIER**. Exported saves load on any device, which is the way to back up a long campaign, since browser storage can be cleared. A save from before slots existed appears as slot 1.
 
 ## // THE CORE LOOP: INFILTRATE, TRIANGULATE, BIND
 
@@ -109,6 +117,16 @@ Open `http://localhost:5173` in your browser.
 
 * **Build Command:** `npm run build` (or `npx vite build`)
 * **Publish Directory:** `dist`
+
+### Playtest Debug Log
+
+The game keeps a log of every action, plus a snapshot of the numbers (humanity, entropy, heat, open sectors, highest ripeness, sealed, lost, cases closed) whenever the world clock moves or a spirit is sealed or lost. It also records engine notices and script errors. The newest 4,000 entries are kept in browser storage, so you can look back after a play session.
+
+* **Open it:** tap the **THAUMATURGIC OS // NET-OPS v4.14** stamp on the title screen five times quickly, or type `debug` in the in-game terminal (not listed in `help`).
+* **Unlock it:** the default passphrase is `lesser-key`. To change it, put the SHA-256 of your own passphrase in `.env.local` as `VITE_DEBUG_PASSPHRASE_SHA256=<hex>` and rebuild. To get the hash, run `node -e "console.log(require('crypto').createHash('sha256').update('my passphrase').digest('hex'))"`.
+* **Use it:** filter by kind, export everything as **JSON** or **CSV** (one row per entry, snapshot numbers in their own columns), copy it to the clipboard, or clear it.
+
+The passphrase only keeps players from wandering in by accident. It is not security: anyone reading the game's code can get past it.
 
 ### Tests
 

@@ -95,6 +95,7 @@ function BindAction({ yokai, saturated }: Readonly<{ yokai: Yokai; saturated: bo
           addToast(`Pact sealed: ${yokai.nameEn}`, 'SEAL');
         }}
         disabled={!canAfford}
+        data-tour={`bind-${yokai.id}`}
         className="macro-chip"
         style={{ width: '100%', padding: '7px', fontWeight: 'bold', opacity: canAfford ? 1 : 0.45 }}
       >

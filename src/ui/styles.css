@@ -2,6 +2,11 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050706; }
 @keyframes blink { 50% { opacity: 0; } }
+/* Training guide: the ring around the control to press */
+@keyframes tourPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.55); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 184, 0, 0); }
+}
 @keyframes sigilBindPulse {
   0%, 100% { filter: drop-shadow(0 0 4px rgba(98, 240, 128, 0.35)); opacity: 0.82; }
   50% { filter: drop-shadow(0 0 18px rgba(98, 240, 128, 0.95)) drop-shadow(0 0 34px rgba(98, 240, 128, 0.45)); opacity: 1; }

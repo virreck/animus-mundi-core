@@ -1,53 +1,64 @@
 // src/ui/hooks/useEngine.ts
-import { useReducer, useEffect } from 'react';
-import type { GameState } from '../../engine/state';
-import { initialGameState, normalizeLoadedState } from '../../engine/state';
-import { gameReducer } from '../../engine/reducer';
+import { useCallback, useReducer, useEffect, useRef, useState, type Dispatch } from 'react';
+import { initialGameState, normalizeLoadedState, type GameState } from '../../engine/state';
+import { gameReducer, type GameAction } from '../../engine/reducer';
 import { isTraining } from '../../engine/tutorial';
 import type { ContractCost } from '../../content/yokai/types';
+import {
+  LEGACY_CONTRACTS_KEY, LEGACY_MICRO_ENTROPY_KEY, LEGACY_SAVE_KEY, deleteSlot, getActiveSlot, readSlot, setActiveSlot, writeSlot
+} from '../saves';
+import { describeAction, installErrorCapture, logDebug, setDebugContext, snapshotOf, snapshotWorthy } from '../debug/debugLog';
 
-export const SAVE_KEY = 'thaumaturgic_os_save_v1';
-/** Older saves kept micro entropy and contracts in their own keys; read once on load for migration. */
-const LEGACY_MICRO_ENTROPY_KEY = 'thaumaturgic_os_micro_entropy_v2';
-const LEGACY_CONTRACTS_KEY = 'thaumaturgic_os_contracts_v2';
-
-/** Reads the operative name from the save slot without loading it. */
-export function peekSavedOperative(): string | null {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    return raw ? (JSON.parse(raw).playerName ?? null) : null;
-  } catch {
-    return null;
-  }
-}
+/** The original single-save key (now slot 1). */
+export const SAVE_KEY = LEGACY_SAVE_KEY;
 
 export function useEngine() {
-  const [state, dispatch] = useReducer(gameReducer, initialGameState);
+  const [state, rawDispatch] = useReducer(gameReducer, initialGameState);
+  /** The slot this session reads from and autosaves into. */
+  const [activeSlot, setActiveSlotState] = useState<number>(() => getActiveSlot());
+
+  // --- Playtest log: every action, plus a snapshot whenever the world moves ---
+  useEffect(() => {
+    installErrorCapture();
+    logDebug('SESSION', 'App opened', { userAgent: globalThis.navigator?.userAgent });
+  }, []);
+  const dispatch: Dispatch<GameAction> = useCallback(action => {
+    const line = describeAction(action);
+    if (line) logDebug('ACTION', line);
+    rawDispatch(action);
+  }, []);
+  const lastLogged = useRef<GameState | null>(null);
+  useEffect(() => {
+    setDebugContext({ slot: activeSlot, training: isTraining(state) });
+    if (snapshotWorthy(lastLogged.current, state)) logDebug('SNAPSHOT', `tick ${state.campaign?.tick ?? 0}`, snapshotOf(state));
+    lastLogged.current = state;
+  }, [state, activeSlot]);
+
+  const chooseSlot = (slot: number) => {
+    setActiveSlot(slot);
+    setActiveSlotState(slot);
+  };
 
   // Auto-Save (GAME_OVER is saved too, so a dead run can't be reloaded one step before death)
   useEffect(() => {
     // The guided first case is a sandbox and never overwrites the real save
     if ((state.gameStage === 'ACTIVE' || state.gameStage === 'GAME_OVER') && !isTraining(state)) {
-      try {
-        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-      } catch (error) {
-        console.error('Failed to write local save data.', error);
-      }
+      if (!writeSlot(activeSlot, state)) console.error('Failed to write local save data.');
     }
-  }, [state]);
+  }, [state, activeSlot]);
 
-  const loadGame = () => {
-    const savedData = localStorage.getItem(SAVE_KEY);
-    if (!savedData) return;
-    try {
-      const parsed: Partial<GameState> = JSON.parse(savedData);
-      const legacyMicro = Number.parseFloat(localStorage.getItem(LEGACY_MICRO_ENTROPY_KEY) || '0') || 0;
-      let legacyContracts = {};
+  /** Loads a slot (the active one by default) and makes it the active slot. */
+  const loadGame = (slot: number = activeSlot) => {
+    const parsed = readSlot(slot);
+    if (!parsed) return;
+    chooseSlot(slot);
+    let legacyMicro = 0;
+    let legacyContracts = {};
+    if (slot === 1) {
+      legacyMicro = Number.parseFloat(localStorage.getItem(LEGACY_MICRO_ENTROPY_KEY) || '0') || 0;
       try { legacyContracts = JSON.parse(localStorage.getItem(LEGACY_CONTRACTS_KEY) || '{}'); } catch { /* ignore */ }
-      dispatch({ type: 'LOAD_GAME', payload: normalizeLoadedState(parsed, legacyMicro, legacyContracts) });
-    } catch (error) {
-      console.error('Failed to parse local save data.', error);
     }
+    dispatch({ type: 'LOAD_GAME', payload: normalizeLoadedState(parsed, legacyMicro, legacyContracts) });
   };
 
   const startInvestigation = (name: string, portrait: string, agency: string) => dispatch({ type: 'START_INVESTIGATION', payload: { name, portrait, agency } });
@@ -62,14 +73,15 @@ export function useEngine() {
   const identifyGoetia = (goetiaId: string) => dispatch({ type: 'IDENTIFY_GOETIA', payload: goetiaId });
   const sealGoetia = (goetiaId: string) => dispatch({ type: 'SEAL_GOETIA', payload: goetiaId });
 
-  const resetGame = () => {
-    localStorage.removeItem(SAVE_KEY);
+  /** Clears a slot (the active one by default) and returns to a blank state. */
+  const resetGame = (slot: number = activeSlot) => {
+    deleteSlot(slot);
     dispatch({ type: 'RESET_GAME' });
   };
 
   return {
     state, dispatch, startInvestigation, loadGame, modifyFaction, modifyHumanity,
     setFlag, resolveLead, draftContract, advanceTime, modifySectorEntropy,
-    travelTo, identifyGoetia, sealGoetia, resetGame
+    travelTo, identifyGoetia, sealGoetia, resetGame, activeSlot, chooseSlot
   };
 }

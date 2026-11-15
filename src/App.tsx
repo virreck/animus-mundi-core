@@ -1,4 +1,5 @@
 // src/App.tsx
+import { useRef } from 'react';
 // Thaumaturgic OS shell: wires the session hooks together and lays out the active viewport.
 // Game logic lives in src/engine, field operations in src/ui/session, screens in src/ui/viewports.
 import { AppHeader } from './ui/components/AppHeader';
@@ -21,6 +22,8 @@ import { ManualViewport } from './ui/viewports/ManualViewport';
 import { SafehouseViewport } from './ui/viewports/SafehouseViewport';
 import { TutorialOverlay } from './ui/components/TutorialOverlay';
 import { TUTORIAL_DONE_KEY, TUTORIAL_RESUME_FLAG, TUTORIAL_TITLE_FLAG, type TutorialReturn } from './engine/tutorial';
+import { DebugPanel } from './ui/debug/DebugPanel';
+import { deleteSlot } from './ui/saves';
 import './ui/styles.css';
 
 const hasSeenTutorial = () => {
@@ -49,8 +52,24 @@ export default function App() {
     handleFullReset,
     currentHeat,
     startTutorial,
-    isTrainingRun
+    isTrainingRun,
+    activeSlot,
+    chooseSlot,
+    debugOpen,
+    setDebugOpen
   } = session;
+
+  // Five quick taps on the version stamp open the (passphrase-locked) playtest log
+  const secretTaps = useRef<number[]>([]);
+  const onSecretTap = () => {
+    const now = Date.now();
+    secretTaps.current = [...secretTaps.current.filter(t => now - t < 2500), now];
+    if (secretTaps.current.length >= 5) {
+      secretTaps.current = [];
+      setDebugOpen(true);
+    }
+  };
+  const debugPanel = debugOpen ? <DebugPanel onClose={() => setDebugOpen(false)} /> : null;
 
   /** Which screen the guided case should return to if it is (re)started right now. */
   const replayReturn = (): TutorialReturn => {
@@ -92,13 +111,20 @@ export default function App() {
           </div>
         )}
         <StartScreen
-          onStart={(name, portrait, agency) =>
-            hasSeenTutorial() ? startInvestigation(name, portrait, agency) : startTutorial({ name, portrait, agency }, 'NEW_RUN')
-          }
+          activeSlot={activeSlot}
+          trainingSeen={hasSeenTutorial()}
+          onStart={(name, portrait, agency, slot, withTraining) => {
+            chooseSlot(slot);
+            handleFullReset(slot);
+            if (withTraining) startTutorial({ name, portrait, agency }, 'NEW_RUN');
+            else startInvestigation(name, portrait, agency);
+          }}
           onLoad={loadGame}
           onOpenManual={() => setShowManual(true)}
-          onFullReset={handleFullReset}
+          onDeleteSlot={slot => deleteSlot(slot)}
+          onSecretTap={onSecretTap}
         />
+        {debugPanel}
       </>
     );
   }
@@ -134,6 +160,7 @@ export default function App() {
         <ActiveRituals />
         <TutorialOverlay />
         <ToastStack />
+        {debugPanel}
       </div>
     </SessionContext.Provider>
   );

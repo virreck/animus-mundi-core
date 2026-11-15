@@ -39,19 +39,20 @@ export function AppHeader() {
   return (
     <header ref={headerRef} className="app-header" style={{ minHeight: '46px', flexShrink: 0, backgroundColor: '#030504', borderBottom: `1px solid ${theme.borderTerminal}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20 }}>
       <nav className="header-tabs" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-        <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}><span className="fkey">[F1] </span>FIELD_OPS</button>
+        <button className={`viewport-tab ${viewport === 'FIELD_OPS' ? 'active' : ''}`} data-tour="tab-FIELD_OPS" onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('FIELD_OPS'); }}><span className="fkey">[F1] </span>FIELD_OPS</button>
         <button
           className={`viewport-tab ${viewport === 'CODEX' ? 'active' : ''}`}
+          data-tour="tab-CODEX"
           onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('CODEX'); }}
           style={activeReadingCount >= 3 && viewport !== 'CODEX' ? { borderColor: theme.accentAmber, color: theme.accentAmber, boxShadow: '0 0 8px rgba(255,184,0,0.4)' } : undefined}
         >
           <span className="fkey">[F2] </span>CODEX ({activeSectorClueCount})
         </button>
-        <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}><span className="fkey">[F3] </span>KAGE_NO_SHO ({state.tetheredYokai.length}/2)</button>
-        <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}><span className="fkey">[F4] </span>SAFEHOUSE</button>
-        <button className={`viewport-tab ${viewport === 'HORSEMEN' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('HORSEMEN'); }} style={viewport !== 'HORSEMEN' ? { borderColor: theme.accentRed, color: theme.accentRed } : undefined}><span className="fkey">[F5] </span>HORSEMEN</button>
-        <button className={`viewport-tab ${viewport === 'DOSSIER' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('DOSSIER'); }}><span className="fkey">[F6] </span>DOSSIER</button>
-        <button className={`viewport-tab ${viewport === 'MANUAL' ? 'active' : ''}`} onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('MANUAL'); }}><span className="fkey">[F7] </span>MANUAL</button>
+        <button className={`viewport-tab ${viewport === 'KAGE_NO_SHO' ? 'active' : ''}`} data-tour="tab-KAGE_NO_SHO" onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('KAGE_NO_SHO'); }}><span className="fkey">[F3] </span>KAGE_NO_SHO ({state.tetheredYokai.length}/2)</button>
+        <button className={`viewport-tab ${viewport === 'SAFEHOUSE_ALTAR' ? 'active' : ''}`} data-tour="tab-SAFEHOUSE_ALTAR" onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('SAFEHOUSE_ALTAR'); }}><span className="fkey">[F4] </span>SAFEHOUSE</button>
+        <button className={`viewport-tab ${viewport === 'HORSEMEN' ? 'active' : ''}`} data-tour="tab-HORSEMEN" onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('HORSEMEN'); }} style={viewport !== 'HORSEMEN' ? { borderColor: theme.accentRed, color: theme.accentRed } : undefined}><span className="fkey">[F5] </span>HORSEMEN</button>
+        <button className={`viewport-tab ${viewport === 'DOSSIER' ? 'active' : ''}`} data-tour="tab-DOSSIER" onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('DOSSIER'); }}><span className="fkey">[F6] </span>DOSSIER</button>
+        <button className={`viewport-tab ${viewport === 'MANUAL' ? 'active' : ''}`} data-tour="tab-MANUAL" onClick={() => { ThaumaturgicAudio.keyClick(); setViewport('MANUAL'); }}><span className="fkey">[F7] </span>MANUAL</button>
       </nav>
 
       <div className="header-vitals" style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, fontSize: '0.72rem' }}>

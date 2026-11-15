@@ -6,6 +6,7 @@ import { MACRO_SECTORS, type MacroSectorDef } from '../../content/map';
 import { type EvidenceLog } from '../../engine/evidence';
 import { type SectorContract, generateSectorContract, getUniqueGoetiaSigns } from '../../engine/sectorGenerator';
 import { getMaxHumanity, getTotalGlobalEntropy, isSectorFailed } from '../../engine/state';
+import { logDebug } from '../debug/debugLog';
 import { useEngine } from '../hooks/useEngine';
 import type { GoeticRank } from '../../content/goetia/types';
 import {
@@ -27,7 +28,7 @@ import {
 import { type ControlMode, type FontScale, type TerminalEntry, type ViewportMode, escapeHtml } from '../theme';
 
 export function useSessionCore() {
-  const { state, dispatch, draftContract, resetGame, sealGoetia, startInvestigation, loadGame, travelTo } = useEngine();
+  const { state, dispatch, draftContract, resetGame, sealGoetia, startInvestigation, loadGame, travelTo, activeSlot, chooseSlot } = useEngine();
 
   const [viewport, setViewport] = useState<ViewportMode>('FIELD_OPS');
   const [mapViewMode, setMapViewMode] = useState<'SUB_GRID' | 'GEO_TRACKER'>('SUB_GRID');
@@ -49,6 +50,8 @@ export function useSessionCore() {
   const mapWrapRef = useRef<HTMLDivElement>(null);
   /** Phones and folded foldables show Field Ops as map + wire split, or either one full-height. */
   const [mobilePane, setMobilePane] = useState<'SPLIT' | 'MAP' | 'WIRE'>('SPLIT');
+  /** The hidden playtest log viewer. */
+  const [debugOpen, setDebugOpen] = useState(false);
 
   // Contracts live in the game state (and the save file); these helpers keep the old call style.
   const contracts: Record<string, SectorContract> = state.contracts || {};
@@ -118,8 +121,14 @@ export function useSessionCore() {
     setTerminalLines([]);
     setViewport('FIELD_OPS');
     setMapViewMode('SUB_GRID');
+    setMapZoom(1);
+    setMapPan({ x: 0, y: 0 });
+    // The guide points at buttons, so start with the button palette and both panes showing
+    setControlMode('PALETTE');
+    setMobilePane('SPLIT');
     setSelectedSuspectId('01_bael');
     setTutorialStep(0);
+    logDebug('SESSION', `Training started (${returnTo})`);
     dispatch({ type: 'LOAD_GAME', payload: createTutorialState(identity, returnTo) });
     appendLog(`[+] TRAINING TETHER ESTABLISHED // ${escapeHtml(TUTORIAL_SECTOR_LABEL)}`, 'info');
   };
@@ -127,6 +136,7 @@ export function useSessionCore() {
   /** Ends (or skips) the guided case: back to the saved run, the title screen, or a brand-new run. */
   const finishTutorial = () => {
     try { localStorage.setItem(TUTORIAL_DONE_KEY, '1'); } catch { /* ignore */ }
+    logDebug('SESSION', `Training ended at step ${tutorialStep + 1}`);
     const identity = { name: state.playerName, portrait: state.playerPortrait, agency: state.agencyName };
     const resume = !!state.flags[TUTORIAL_RESUME_FLAG];
     const toTitle = !!state.flags[TUTORIAL_TITLE_FLAG];
@@ -143,15 +153,13 @@ export function useSessionCore() {
     }
   };
 
-  const handleFullReset = () => {
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith('thaumaturgic_os')) localStorage.removeItem(k);
-    });
+  /** Wipes one save slot (the active one by default). Other slots are untouched. */
+  const handleFullReset = (slot: number = activeSlot) => {
     setContracts({});
     setTerminalLines([]);
     setActiveSealSuspectId(null);
     setActiveBanishmentTarget(null);
-    resetGame();
+    resetGame(slot);
   };
 
   const addMicroEntropy = (delta: number) => dispatch({ type: 'ADD_MICRO_ENTROPY', payload: delta });
@@ -173,6 +181,7 @@ export function useSessionCore() {
   useEffect(() => {
     if (!state.notices || state.notices.length === 0) return;
     state.notices.forEach(n => {
+      logDebug('NOTICE', n.text, { kind: n.kind });
       if (n.kind === 'MANIFEST') {
         appendLog(`<div style="border-left:3px solid #ff2a55;padding-left:10px;margin:4px 0;color:#ff2a55;"><strong>[☠ ${escapeHtml(n.text)}]</strong></div>`, 'error');
         addToast(n.text, 'ALERT');
@@ -346,6 +355,8 @@ export function useSessionCore() {
     pinchRef,
     mapWrapRef,
     mobilePane,
+    debugOpen,
+    setDebugOpen,
     setMobilePane,
     contracts,
     setContracts,
@@ -388,6 +399,8 @@ export function useSessionCore() {
     securedSectorsCount,
     triggerHudFlash,
     handleFullReset,
+    activeSlot,
+    chooseSlot,
     addMicroEntropy,
     totalGlobalEntropy,
     maxHumanity,
