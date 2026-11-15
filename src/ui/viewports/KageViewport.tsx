@@ -21,9 +21,9 @@ export function KageViewport() {
     <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: '10px', padding: '12px', zoom: FONT_ZOOM_MAP[fontScale] }}>
       <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
         <div>
-          <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.88rem' }}>KAGE-NO-SHO // SHIKIGAMI KERNEL INTERCEPTORS (MAX 2 BOUND)</div>
+          <div style={{ color: theme.textBright, fontWeight: 'bold', fontSize: '0.88rem' }}>KAGE-NO-SHO // SHIKIGAMI KERNEL INTERCEPTORS</div>
           <div style={{ color: '#a8ccaf', fontSize: '0.74rem', marginTop: '2px' }}>
-            Bind up to 2 Shikigami Daemons into your Thaumaturgic OS. Having any daemon bound cuts your <code>scan</code> Humanity cost in half (-2% HUM instead of -5% HUM) and unlocks finite Active Invocations in the field.
+            TETHER SLOTS: {state.tetheredYokai.length}/2
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -36,7 +36,7 @@ export function KageViewport() {
                 dispatch({ type: 'MODIFY_INK', payload: 1 });
                 addToast(`Distilled +1 Esoteric Ink`, 'ITEM');
               } else {
-                addToast(`Requires 10 Obols to distill Esoteric Ink.`, 'ALERT');
+                addToast(`INSUFFICIENT OBOLS`, 'ALERT');
               }
             }}
             className="macro-chip macro-chip-amber"
@@ -91,7 +91,7 @@ export function KageViewport() {
                   <button
                     onClick={() => {
                       if (state.tetheredYokai.length >= 2) {
-                        addToast('Rule of Two: Unbind an active daemon first!', 'ALERT');
+                        addToast('TETHER SATURATED (2/2)', 'ALERT');
                         return;
                       }
                       ThaumaturgicAudio.sealSuccess();

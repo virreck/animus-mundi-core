@@ -1,6 +1,6 @@
 // src/ui/viewports/CodexViewport.tsx
 // [F2] CODEX: case evidence, phenomenon filter and suspect dossiers.
-import { REFINE_COST, isAmbiguous } from '../../engine/evidence';
+import {  isAmbiguous } from '../../engine/evidence';
 import { PHENOMENON_CATALOG, getUniqueGoetiaSigns } from '../../engine/sectorGenerator';
 import { ThaumaturgicAudio } from '../audio';
 import { SmartGoetiaSigil } from '../components/SmartGoetiaSigil';
@@ -44,12 +44,12 @@ export function CodexViewport() {
           </div>
           <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.76rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {currentContract && isSectorLost(currentContract.sectorId) ? (
-              <div style={{ color: theme.accentRed }}>✗ Sector lost — its anchor has manifested and can never be sealed. Deploy to a new sector on the Regional Map.</div>
+              <div style={{ color: theme.accentRed }}>✗ SECTOR LOST. Anchor manifested.</div>
             ) : (!currentContract || isSectorSecured(currentContract.sectorId)) ? (
-              <div style={{ color: theme.textBright }}>✓ Sector secured. Deploy to a new sector on the Regional Map!</div>
+              <div style={{ color: theme.textBright }}>✓ SECTOR SECURED.</div>
             ) : currentContract.discoveredLogs.length === 0 ? (
               <div style={{ color: theme.textMuted, fontStyle: 'italic' }}>
-                No evidence gathered in this sector yet. Decode clue rooms, interview the witness, and attune at the anchor.
+                NO EVIDENCE ON FILE.
               </div>
             ) : (
               (() => {
@@ -87,7 +87,7 @@ export function CodexViewport() {
                       <div style={{ color: '#ffffff', marginTop: '3px' }}>"{log.text}"</div>
                       {degraded && (
                         <button onClick={() => processCliCommand(`refine ${n}`)} className="macro-chip macro-chip-amber" style={{ marginTop: '5px', padding: '2px 8px' }}>
-                          ≈ refine {n} (-{REFINE_COST.humanity}% HUM)
+                          ≈ refine {n}
                         </button>
                       )}
                     </div>
@@ -223,10 +223,10 @@ export function CodexViewport() {
                   }}
                 >
                   {!inLiveSector
-                    ? `> DEPLOY TO AN UNSECURED SECTOR FIRST`
+                    ? `> NO LIVE ANCHOR IN SECTOR`
                     : hasCatalysts
                       ? `> ENGAGE SEALING RITE: ${selectedSuspect.name.toUpperCase()}`
-                      : `> CRAFT CATALYSTS IN [F4] SAFEHOUSE FIRST`}
+                      : `> CATALYSTS MISSING`}
                 </button>
               );
             })()
@@ -311,7 +311,7 @@ export function CodexViewport() {
           </div>
 
           <div style={{ fontSize: '0.76rem', color: '#a8ccaf', lineHeight: '1.5', margin: 0, padding: '8px', backgroundColor: '#030504', border: `1px solid ${theme.borderTerminal}` }}>
-            <div style={{ fontSize: '0.68rem', color: theme.accentCyan, fontWeight: 'bold', marginBottom: '3px' }}>LEMEGETON ENTRY (compare with witness statements):</div>
+            <div style={{ fontSize: '0.68rem', color: theme.accentCyan, fontWeight: 'bold', marginBottom: '3px' }}>LEMEGETON ENTRY</div>
             {selectedSuspect.description}
           </div>
         </div>

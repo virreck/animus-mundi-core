@@ -4,12 +4,14 @@ import { allGoetia } from '../../content/goetia';
 import { HORSEMAN_LORE } from '../../content/horsemen';
 import { countManifestedOfCourt, getBanishmentOdds } from '../../engine/world';
 import { HorsemanSigilSvg } from '../components/HorsemanSigilSvg';
+import { isTraining } from '../../engine/tutorial';
 import { useSession } from '../session/SessionContext';
 import { FONT_ZOOM_MAP, theme } from '../theme';
 
 export function HorsemenViewport() {
   const {
     state,
+    addToast,
     setViewport,
     fontScale,
     setSelectedSuspectId,
@@ -72,7 +74,7 @@ export function HorsemenViewport() {
                 {isBanished ? (
                   <div style={{ padding: '10px', textAlign: 'center', border: `1px solid ${theme.textBright}`, color: theme.textBright, fontWeight: 'bold', fontSize: '0.74rem' }}>✓ {h} BANISHED</div>
                 ) : (
-                  <button onClick={() => setActiveBanishmentTarget(h)} style={{ width: '100%', padding: '11px', backgroundColor: '#2a0808', color: '#ffffff', border: `1px solid ${info.color}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.73rem' }}>
+                  <button onClick={() => (isTraining(state) ? addToast('TRAINING TETHER: RITE LOCKED', 'ALERT') : setActiveBanishmentTarget(h))} style={{ width: '100%', padding: '11px', backgroundColor: '#2a0808', color: '#ffffff', border: `1px solid ${info.color}`, cursor: 'pointer', fontFamily: theme.fontMono, fontWeight: 'bold', fontSize: '0.73rem' }}>
                     &gt; INITIATE {h} RITE ({winProb}%)
                   </button>
                 )}

@@ -54,7 +54,7 @@ export function createSectorRules(s: SessionCore) {
     if (!currentContract || !isSectorLost(currentContract.sectorId)) return false;
     ThaumaturgicAudio.errorBuzz();
     const demon = allGoetia.find(g => g.id === currentContract.targetGoetiaId);
-    appendLog(`[✗] SECTOR LOST: <strong>${escapeHtml(demon?.name.toUpperCase() || 'THE ANCHOR')}</strong> has manifested here and can no longer be contained. Switch to the REGIONAL MAP and deploy elsewhere.`, 'error');
+    appendLog(`[✗] SECTOR LOST: <strong>${escapeHtml(demon?.name.toUpperCase() || 'THE ANCHOR')}</strong> has manifested here. Containment impossible.`, 'error');
     return true;
   };
 

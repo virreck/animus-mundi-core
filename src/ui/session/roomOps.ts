@@ -13,7 +13,6 @@ export function createRoomOps(s: SessionCore & SectorRules) {
     updateContract,
     visualFxRef,
     isSectorSecured,
-    consumeFirstTimeHint,
     triggerHudFlash,
     addMicroEntropy,
     addToast,
@@ -39,7 +38,7 @@ export function createRoomOps(s: SessionCore & SectorRules) {
     }
     if (currentHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] MALLEUS LOCKDOWN (100% HEAT)! Execute <code>spoof</code> or <code>bribe</code> first.`, 'error');
+      appendLog(`[!] MALLEUS CORDON ACTIVE — SECTOR HEAT 100%.`, 'error');
       return;
     }
 
@@ -52,14 +51,14 @@ export function createRoomOps(s: SessionCore & SectorRules) {
     if (!isAdjacentOrEntry(node)) {
       ThaumaturgicAudio.errorBuzz();
       const reachableList = currentContract.subNodes.filter(n => isAdjacentOrEntry(n)).map(n => `Room ${n.index}`).join(', ');
-      appendLog(`[-] Cannot scan <strong>${node.label}</strong>—not connected to your current position (${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}). Reachable rooms: <strong>${reachableList}</strong>.`, 'error');
+      appendLog(`[-] NO LINE OF SIGHT: <strong>${node.label}</strong>. Linked from ${currentSubNode ? currentSubNode.label : 'PERIMETER'}: ${reachableList}.`, 'error');
       return;
     }
 
     const humCost = state.tetheredYokai.length > 0 ? 2 : 5;
     if (state.humanity <= humCost) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Insufficient Humanity to run Auspex Scan.`, 'error');
+      appendLog(`[-] TETHER TOO WEAK TO SCAN.`, 'error');
       return;
     }
 
@@ -82,15 +81,9 @@ export function createRoomOps(s: SessionCore & SectorRules) {
 
     let warningTxt = `<br/><span style="color:#a8ccaf;">• Entry Ward Cost: <strong>+${entryHeat}% Heat</strong></span>`;
     if (node.patrolActive) {
-      const patrolHint = consumeFirstTimeHint('patrol_scan')
-        ? ` — Run <code>decoy ${node.index}</code> BEFORE entering to lure them away safely.`
-        : '';
-      warningTxt += `<br/><span style="color:#ff2a55;">⚠️ THRESHOLD ALERT: Malleus Hound Patrol inside!${patrolHint}</span>`;
+      warningTxt += `<br/><span style="color:#ff2a55;">⚠️ THRESHOLD ALERT: Malleus Hound Patrol inside.</span>`;
     } else if (node.hazard !== 'NONE') {
-      const trapHint = consumeFirstTimeHint('trap_scan')
-        ? ` — Disarm BEFORE entering (<code>degauss ${node.index}</code> / <code>bypass ${node.index}</code> / <code>purge ${node.index}</code> / <code>dispel ${node.index}</code>).`
-        : '';
-      warningTxt += `<br/><span style="color:#00f3ff;">⚠️ THRESHOLD TRAP: "${HAZARD_MANIFEST[node.hazard].symptom}"${trapHint}</span>`;
+      warningTxt += `<br/><span style="color:#00f3ff;">⚠️ THRESHOLD ANOMALY: "${HAZARD_MANIFEST[node.hazard].symptom}"</span>`;
     } else {
       warningTxt += `<br/><span style="color:#62f080;">✓ Threshold clear.</span>`;
     }
@@ -137,7 +130,7 @@ export function createRoomOps(s: SessionCore & SectorRules) {
     if (!target) return;
 
     if (target.status === 'LOCKED') {
-      appendLog(`[-] Scan <strong>${target.label}</strong> first (<code>scan ${target.index}</code>) before attempting to disarm its threshold.`, 'warn');
+      appendLog(`[-] THRESHOLD UNREAD: <strong>${target.label}</strong>.`, 'warn');
       return;
     }
     if (target.hazard === 'NONE') {
@@ -184,7 +177,7 @@ export function createRoomOps(s: SessionCore & SectorRules) {
     }
     if (currentHeat >= 100) {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[!] 100% HEAT LOCKDOWN! Run <code>spoof</code> or <code>bribe</code> to lift the Malleus cordon.`, 'error');
+      appendLog(`[!] MALLEUS CORDON ACTIVE — SECTOR HEAT 100%.`, 'error');
       return;
     }
 
@@ -197,7 +190,7 @@ export function createRoomOps(s: SessionCore & SectorRules) {
     if (!isAdjacentOrEntry(node)) {
       ThaumaturgicAudio.errorBuzz();
       const reachableList = currentContract.subNodes.filter(n => isAdjacentOrEntry(n)).map(n => `Room ${n.index}`).join(', ');
-      appendLog(`[-] <strong>${node.label}</strong> is not connected to your current room (${currentSubNode ? currentSubNode.label : 'PERIMETER TETHER'}). Connected rooms: <strong>${reachableList}</strong>.`, 'error');
+      appendLog(`[-] NO ROUTE: <strong>${node.label}</strong>. Linked from ${currentSubNode ? currentSubNode.label : 'PERIMETER'}: ${reachableList}.`, 'error');
       return;
     }
 
@@ -229,24 +222,16 @@ export function createRoomOps(s: SessionCore & SectorRules) {
       appendLog(`[⚡ ENTER] Moved into <strong>${node.label}</strong> (+${heatGain}% Inquisition Heat).`, 'info');
     }
 
-    if (node.nodeType === 'ANCHOR' && consumeFirstTimeHint('anchor_intro')) {
-      appendLog(
-        `<div style="border-left:2px solid #ffb800;padding-left:8px;margin:4px 0;color:#ffb800;">` +
-        `<strong>[⚡ GOETIAN CONDUIT ANCHOR REACHED]</strong> This chamber is the epicenter of the demon's tear in reality. Type <code style="color:#62f080;">attune</code> to read which Horseman's <strong>court</strong> it serves (and gain <strong>+4s</strong> on this sector's Sealing Rite). Attune a second time for a costly deep reading of its <strong>rank</strong>.` +
-        `</div>`,
-        'warn'
-      );
+    if (node.nodeType === 'ANCHOR') {
+      appendLog(`[⚡ CONDUIT ANCHOR] The air is thick enough to chew. Your vessel hums against your ribs.`, 'warn');
     }
 
     if (node.rawSignalSymptom && node.status !== 'CLEARED') {
-      const toolHint = consumeFirstTimeHint('clue_tool_intro')
-        ? ` — Match <code>vox</code> (Audio), <code>assay</code> (Matter), or <code>auspex</code> (Astral/Thermal) to decode.`
-        : '';
-      appendLog(`[🔎 CLUE SIGNAL IN <strong>${node.label}</strong>] <em>"${node.rawSignalSymptom}"</em>${toolHint}`, 'info');
+      appendLog(`[🔎 SIGNAL] <em>"${node.rawSignalSymptom}"</em>`, 'info');
     } else if (node.nodeType === 'SHRINE' && node.status !== 'CLEARED') {
-      appendLog(`[⛩️ KAMI SHRINE] Dormant spirit altar found.`, 'info');
+      appendLog(`[⛩️ SHRINE] A dormant spirit altar. Offerings still wet.`, 'info');
     } else if (node.nodeType === 'WITNESS' && node.status !== 'CLEARED') {
-      appendLog(`[🗣 WITNESS] Someone is huddled in the corner, staring at nothing. Run <code>interview</code> to take their statement.`, 'info');
+      appendLog(`[🗣 LIFE SIGNS] Someone is huddled in the corner, staring at nothing.`, 'info');
     }
 
     const newHeat = Math.min(100, currentHeat + heatGain);

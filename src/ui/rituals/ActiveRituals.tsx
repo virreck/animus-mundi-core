@@ -2,6 +2,7 @@
 // Mounts the Sealing / Banishment overlays when a rite is active.
 import { allGoetia } from '../../content/goetia';
 import { MACRO_SECTORS } from '../../content/map';
+import { isTraining, TUTORIAL_SEAL_BONUS_SECONDS } from '../../engine/tutorial';
 import { useSession } from '../session/SessionContext';
 import { BanishmentTerminal } from './BanishmentTerminal';
 import { SealingTerminal } from './SealingTerminal';
@@ -21,7 +22,6 @@ export function ActiveRituals() {
     setActiveBanishmentTarget,
     isSectorSecured,
     isReleased,
-    isFirstRun,
     addToast,
     appendLog,
     currentContract
@@ -33,14 +33,14 @@ export function ActiveRituals() {
         const suspect = allGoetia.find(g => g.id === activeSealSuspectId);
         if (!suspect || !currentContract) return null;
         const actualAnchorId = currentContract.targetGoetiaId;
-        const attunedBonus = (currentContract && attunedSectors[currentContract.sectorId]) ? 4 : 0;
+        const training = isTraining(state);
+        const attunedBonus = ((currentContract && attunedSectors[currentContract.sectorId]) ? 4 : 0) + (training ? TUTORIAL_SEAL_BONUS_SECONDS : 0);
         return (
           <SealingTerminal
             suspect={suspect}
             actualAnchorId={actualAnchorId}
             sealCost={suspect.sealCost || {}}
             attunedBonusSeconds={attunedBonus}
-            showFirstTimeHint={isFirstRun}
             onClose={() => setActiveSealSuspectId(null)}
             sectorId={currentContract.sectorId}
             onSuccessSeal={(sealedId) => {
@@ -101,6 +101,7 @@ export function ActiveRituals() {
             sealGoetia={sealGoetia}
             addToast={addToast}
             tetheredYokai={state.tetheredYokai}
+            isTraining={training}
           />
         );
       })()}

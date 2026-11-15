@@ -44,11 +44,13 @@ export function createCommandLine(s: SessionCore & SectorRules & RoomOps & Evide
 
     if (cmd === 'help' || cmd === '?') {
       appendLog(
-        `<div style="background:rgba(31,61,38,0.25);border:1px solid #1f3d26;padding:10px;line-height:1.55;">` +
-        `<strong style="color:#62f080;">1. RECON &amp; ENTRY:</strong> <code style="color:#ffb800;">scan [#]</code> | <code style="color:#ffb800;">enter [#]</code> | <code style="color:#ffb800;">loot</code> | <code style="color:#ffb800;">interview</code> (Witness) | <code style="color:#ffb800;">attune</code> (Anchor: court, then rank)<br/>` +
-        `<strong style="color:#00f3ff;">2. PRE-ENTRY COUNTERS:</strong> <code style="color:#ff2a55;">decoy [#]</code> | <code style="color:#00f3ff;">degauss [#]</code> | <code style="color:#00f3ff;">bypass [#]</code> | <code style="color:#00f3ff;">purge [#]</code> | <code style="color:#00f3ff;">dispel [#]</code><br/>` +
-        `<strong style="color:#62f080;">3. FORENSIC SUITE:</strong> <code style="color:#62f080;">vox</code> (Audio) | <code style="color:#62f080;">assay</code> (Matter/Bio) | <code style="color:#62f080;">auspex</code> (Astral/Thermal) | <code style="color:#62f080;">refine [#]</code> (resolve a degraded reading)<br/>` +
-        `<strong style="color:#ff2a55;">4. INQUISITION HEAT:</strong> <code style="color:#ff2a55;">spoof</code> (-15 Obols: -25% Heat) | <code style="color:#ff2a55;">bribe</code> (-25 Obols: -45% Heat)` +
+        `<div style="border-left:2px solid #1f3d26;padding-left:10px;line-height:1.6;color:#a8ccaf;">` +
+        `THAUMATURGIC OS 4.14 — COMMAND INDEX<br/>` +
+        `<code>scan [#]</code> <code>enter [#]</code> <code>loot</code> <code>interview</code> <code>attune</code><br/>` +
+        `<code>decoy [#]</code> <code>degauss [#]</code> <code>bypass [#]</code> <code>purge [#]</code> <code>dispel [#]</code><br/>` +
+        `<code>vox</code> <code>assay</code> <code>auspex</code> <code>refine [#]</code><br/>` +
+        `<code>spoof</code> <code>bribe</code> <code>status</code> <code>help</code><br/>` +
+        `<span style="color:#4f7a59;">Full documentation: F7 MANUAL.</span>` +
         `</div>`,
         'info'
       );
@@ -117,7 +119,7 @@ export function createCommandLine(s: SessionCore & SectorRules & RoomOps & Evide
       setTerminalLines([]);
     } else {
       ThaumaturgicAudio.errorBuzz();
-      appendLog(`[-] Unknown command "${escapeHtml(cmd)}". Type <code>help</code> or use the buttons below.`, 'error');
+      appendLog(`[-] command not found: ${escapeHtml(cmd)}`, 'error');
     }
   };
 

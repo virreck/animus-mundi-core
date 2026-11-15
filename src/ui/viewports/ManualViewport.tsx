@@ -5,8 +5,8 @@ import { DEEP_ATTUNE_COST, REFINE_COST } from '../../engine/evidence';
 import { ThaumaturgicAudio } from '../audio';
 import { FONT_ZOOM_MAP, type FontScale, theme } from '../theme';
 
-export const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
-  const [tab, setTab] = useState<'FORENSICS' | 'COUNTERS' | 'LORE' | 'INQUISITION'>('FORENSICS');
+export const ManualViewport = ({ fontScale, onReplayTutorial }: { fontScale: FontScale; onReplayTutorial?: () => void }) => {
+  const [tab, setTab] = useState<'FORENSICS' | 'COUNTERS' | 'LORE' | 'INQUISITION' | 'SHIKIGAMI' | 'GRAND_RITE'>('FORENSICS');
   const subTabStyle = (active: boolean): ReactCSSProperties => ({
     padding: '8px 12px', fontFamily: theme.fontMono, fontSize: '0.74rem', fontWeight: 'bold', cursor: 'pointer',
     border: `1px solid ${active ? theme.textBright : theme.borderTerminal}`,
@@ -26,6 +26,13 @@ export const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
           <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('COUNTERS'); }} style={subTabStyle(tab === 'COUNTERS')}>2. PRE-ENTRY COUNTERS</button>
           <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('LORE'); }} style={subTabStyle(tab === 'LORE')}>3. SOLOMONIC DEMONOLOGY</button>
           <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('INQUISITION'); }} style={subTabStyle(tab === 'INQUISITION')}>4. ORDO MALLEUS &amp; HEAT</button>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('SHIKIGAMI'); }} style={subTabStyle(tab === 'SHIKIGAMI')}>5. SHIKIGAMI &amp; SAFEHOUSE</button>
+          <button onClick={() => { ThaumaturgicAudio.keyClick(); setTab('GRAND_RITE'); }} style={subTabStyle(tab === 'GRAND_RITE')}>6. THE GRAND RITE</button>
+          {onReplayTutorial && (
+            <button onClick={() => { ThaumaturgicAudio.keyClick(); onReplayTutorial(); }} style={{ ...subTabStyle(false), borderColor: theme.accentAmber, color: theme.accentAmber }}>
+              ▶ REPLAY GUIDED CASE
+            </button>
+          )}
         </div>
       </div>
 
@@ -139,6 +146,44 @@ export const ManualViewport = ({ fontScale }: { fontScale: FontScale }) => {
               <li><strong>75%–99% Heat:</strong> Malleus strike teams sweep the perimeter. The CRT display flickers crimson.</li>
               <li><strong>100% Heat (TOTAL SECTOR LOCKDOWN):</strong> All room actions are locked out! Execute <code>spoof</code> (-15 Obols for -25% Heat) or <code>bribe</code> (-25 Obols for -45% Heat) to lift the cordon.</li>
             </ul>
+          </div>
+        )}
+
+        {tab === 'SHIKIGAMI' && (
+          <div style={{ maxWidth: '940px' }}>
+            <h3 style={{ color: theme.accentCyan, marginTop: 0 }}>SHIKIGAMI DAEMONS [F3] &amp; THE SAFEHOUSE [F4]</h3>
+            <p>
+              <strong>Kami shrines</strong> turn up in some sectors. <code>loot</code> one to wake it, and its spirit's contract appears in <strong>[F3] KAGE</strong>.
+              Binding costs Obols, Humanity and sometimes Esoteric Ink (distilled in KAGE for 10 Obols).
+            </p>
+            <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
+              <li><strong>Two at most.</strong> Unbind one before binding a third.</li>
+              <li>Any bound daemon halves the Humanity cost of <code>scan</code>.</li>
+              <li>Every daemon has a <strong>passive</strong> effect, usually with a price attached, and a few <strong>charges</strong> of an active invocation, used from the daemon panel in Field Ops. When the last charge is spent the daemon leaves.</li>
+            </ul>
+            <p style={{ marginTop: '14px' }}>
+              The <strong>Safehouse altar</strong> turns raw salvage (Scrap Metal, Cursed Earth, Alchemical Distillate) plus Obols into the planetary catalysts each spirit's seal needs — every dossier in the Codex lists its own.
+              The <strong>hearth</strong> restores 30% Humanity, but resting is time: the world clock ticks and open anchors ripen.
+              <strong> Counter-intelligence</strong> suppresses 35% Heat in a chosen sector for 20 Obols.
+            </p>
+          </div>
+        )}
+
+        {tab === 'GRAND_RITE' && (
+          <div style={{ maxWidth: '940px' }}>
+            <h3 style={{ color: theme.accentRed, marginTop: 0 }}>THE GRAND RITE OF BANISHMENT [F5]</h3>
+            <p>
+              Each Horseman is held in the world by its 18 Goetian lieutenants. The Grand Rite severs a Horseman for good — but it is a single roll of the dice, and the dice are weighted by your work in the field.
+            </p>
+            <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
+              <li><strong>Odds:</strong> 5% base, <strong>+5%</strong> for every sealed lieutenant of that court, <strong>−5%</strong> for every manifested one. Never below 5% or above 95%.</li>
+              <li><strong>The rite:</strong> trace three binding matrices in a row against one timer (60 seconds; Kamaitachi adds 15; every manifested lieutenant of that court takes 3).</li>
+              <li><strong>Resolution:</strong> complete all three and the odds are rolled. Success banishes the Horseman. Failure — or running out of time — spikes Global Entropy by 25%. You may try again.</li>
+              <li><strong>Victory:</strong> banish all four Horsemen to close the operation. Your debrief scores sectors lost, spirits left loose and final entropy.</li>
+            </ul>
+            <p style={{ marginTop: '14px', color: theme.accentAmber }}>
+              The Rite is not available during the guided training case.
+            </p>
           </div>
         )}
       </div>

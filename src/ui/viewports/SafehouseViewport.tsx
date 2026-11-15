@@ -25,7 +25,7 @@ export function SafehouseViewport() {
           <div>
             <h2 style={{ margin: 0, color: theme.textBright, fontSize: '0.95rem' }}>&gt; SAFEHOUSE ALTAR // CATALYST SYNTHESIS</h2>
             <div style={{ fontSize: '0.72rem', color: '#a8ccaf' }}>
-              Transmute raw salvage into planetary Solomonic catalysts.
+              RAW SALVAGE → PLANETARY CATALYSTS
               {state.tetheredYokai.includes('yokai_kameosa') && <span style={{ color: theme.accentAmber }}> [KAMEOSA.ALC ACTIVE: 0 Obol Cost, -2% HUM!]</span>}
             </div>
           </div>
@@ -83,7 +83,7 @@ export function SafehouseViewport() {
         <div style={{ backgroundColor: theme.bgPanel, border: `1px solid ${theme.borderTerminal}`, padding: '14px' }}>
           <h3 style={{ margin: '0 0 6px 0', color: theme.textBright, fontSize: '0.88rem' }}>&gt; SAFEHOUSE HEARTH // TETHER RECOVERY</h3>
           <p style={{ fontSize: '0.74rem', color: '#a8ccaf', lineHeight: '1.5' }}>
-            Restore +30% Humanity (+0.05% Global Entropy &amp; +4% Inquisition Heat in active sectors).
+            TETHER: {state.humanity}% / {maxHumanity}%
           </p>
           <button
             onClick={() => {
